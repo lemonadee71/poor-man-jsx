@@ -92,9 +92,7 @@ const Component = (() => {
     // Add children
     if (template.children) {
       template.children.forEach((child) => {
-        element.appendChild(
-          Component.createElement(child, reference)
-        );
+        element.appendChild(createElement(child, reference));
       });
     }
 
@@ -141,9 +139,7 @@ const Component = (() => {
       id ? ` id="${id}"` : ''
     }${_parseAttr(attr)}${_parseStyle(style)}>\n${text || ''}\n${
       children && children.constructor === Array
-        ? children
-            .map((child) => Component.objectToString(child))
-            .join('\n')
+        ? children.map((child) => objectToString(child)).join('\n')
         : ''
     }</${type}>`;
   };
@@ -232,20 +228,18 @@ const Component = (() => {
   const render = (root, ...children) => {
     children.forEach((child) => {
       if (child.constructor === Array) {
-        let createdElement = Component.fromString(...child);
+        let createdElement = fromString(...child);
         root.appendChild(createdElement);
       } else if (typeof child === 'string') {
-        let createdElement = Component.fromString(child);
+        let createdElement = fromString(child);
         root.appendChild(createdElement);
       } else if (typeof child === 'object') {
         let template = child.hasOwnProperty('render')
           ? child.render()
           : child;
-        console.log(template);
+
         for (let element in template) {
-          let createdElement = Component.createElement(
-            template[element]
-          );
+          let createdElement = createElement(template[element]);
           root.appendChild(createdElement);
         }
       }
