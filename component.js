@@ -1,5 +1,5 @@
 const Component = (() => {
-  const createElement = (template, reference = null) => {
+  const createElementFromObject = (template, reference = null) => {
     let element, type, text;
 
     /*
@@ -92,7 +92,9 @@ const Component = (() => {
     // Add children
     if (template.children) {
       template.children.forEach((child) => {
-        element.appendChild(createElement(child, reference));
+        element.appendChild(
+          createElementFromObject(child, reference)
+        );
       });
     }
 
@@ -104,6 +106,23 @@ const Component = (() => {
     return element;
   };
 
+  const createElementFromString = (str, handlers = []) => {
+    let createdElement = document
+      .createRange()
+      .createContextualFragment(str);
+
+    handlers.forEach((handler) => {
+      let el = createdElement.querySelector(handler.query);
+      el.addEventListener(handler.type, handler.callback);
+
+      if (handler.remove) {
+        el.removeAttribute(handler.attr);
+      }
+    });
+
+    return createdElement;
+  };
+
   const objectToString = (template) => {
     let {
       type,
@@ -113,59 +132,56 @@ const Component = (() => {
       attr,
       style,
       children,
+      listeners,
     } = template;
 
-    const _parseStyle = (style) => {
-      let styleString = '';
-      for (let name in style) {
-        let value = style[name];
-        styleString += `${name}: ${value};`;
-      }
+    let idStr = id ? ` id="${id}" ` : '';
+    let classStr = className ? ` class="${className}"` : '';
 
-      return styleString ? ` style="${styleString}"` : '';
-    };
+    let styleStr = ` style="${Object.keys(style)
+      .map((type) => `${type}: ${style[type]};`)
+      .join(' ')}"`;
 
-    const _parseAttr = (attr) => {
-      let attrString = ' ';
-      for (let name in attr) {
-        let value = attr[name];
-        attrString += `${name}="${value}" `;
-      }
+    let attrStr = Object.keys(attr)
+      .map((type) => `${type}="${attr[type]}"`)
+      .join(' ');
 
-      return attrString;
-    };
+    let childrenStr = Array.isArray(children)
+      ? children.map((child) => objectToString(child)).join('\n')
+      : '';
 
-    return `<${type}${className ? ` class="${className}"` : ''}${
-      id ? ` id="${id}"` : ''
-    }${_parseAttr(attr)}${_parseStyle(style)}>\n${text || ''}\n${
-      children && children.constructor === Array
-        ? children.map((child) => objectToString(child)).join('\n')
-        : ''
-    }</${type}>`;
+    return `<${type}${idStr}${classStr}${attrStr}${styleStr}>
+      ${text || ''}${childrenStr}
+      </${type}>`;
   };
 
-  const parseString = (strings, ...keys) => {
+  const parseString = (strings, ...exprs) => {
     let eventHandlers = [];
 
     const _randNo = (seed) => Math.floor(Math.random() * seed);
 
-    const _parser = (value) => {
-      if (typeof value === 'object') {
-        if (value.constructor && value.constructor === Array) {
-          return value.map((item) => _parser(item)).join('');
-        } else if (value._type && value._type === 'parsedString') {
-          eventHandlers.push(...value[1]);
-          return value[0];
+    const _generateID = () =>
+      `${_randNo(10)}${_randNo(10)}${_randNo(50)}`;
+
+    const _parser = (expr) => {
+      if (typeof expr === 'object') {
+        if (Array.isArray(expr)) {
+          return expr.map((item) => _parser(item)).join('');
         } else if (
-          Object.keys(value).every((prop) => prop.includes('on'))
+          expr._type &&
+          (expr._type === 'parsedString' ||
+            expr._type === 'parsedObject')
         ) {
-          let callbacks = value;
+          eventHandlers.push(...expr[1]);
+          return expr[0];
+        } else if (
+          Object.keys(expr).every((prop) => prop.includes('on'))
+        ) {
+          let callbacks = expr;
           let temporaryPlaceholder = '';
 
           for (let type in callbacks) {
-            let callbackId = `${type}${_randNo(10)}${_randNo(
-              10
-            )}${_randNo(50)}`;
+            let callbackId = `${type}${_generateID()}`;
 
             eventHandlers.push({
               type: type.replace('on', '').toLowerCase(),
@@ -181,17 +197,19 @@ const Component = (() => {
           return temporaryPlaceholder;
         }
 
-        return objectToString(value);
+        return objectToString(expr);
       }
 
-      return value;
+      return expr;
     };
 
-    let parsedKeys = keys.map((key) => _parser(key));
+    let evaluatedExprs = exprs.map((expr) => _parser(expr));
 
-    let parsedString = parsedKeys.reduce((fullString, current, i) => {
-      return (fullString += `${current}${strings[i + 1]}`);
-    }, strings[0]);
+    let parsedString = evaluatedExprs.reduce(
+      (fullString, expr, i) =>
+        (fullString += `${expr}${strings[i + 1]}`),
+      strings[0]
+    );
 
     let parsedObj = {
       0: parsedString,
@@ -206,51 +224,10 @@ const Component = (() => {
     return parsedObj;
   };
 
-  const fromString = (str, handlers = []) => {
-    let createdElement = document
-      .createRange()
-      .createContextualFragment(str);
-
-    handlers.forEach((handler) => {
-      let element = createdElement.querySelector(handler.query);
-      element.addEventListener(handler.type, handler.callback);
-
-      if (handler.remove) {
-        element.removeAttribute(handler.attr);
-      }
-    });
-
-    return createdElement;
-  };
-
-  // Bug here
-  // Should check typeof template
-  const render = (root, ...children) => {
-    children.forEach((child) => {
-      if (child.constructor === Array) {
-        let createdElement = fromString(...child);
-        root.appendChild(createdElement);
-      } else if (typeof child === 'string') {
-        let createdElement = fromString(child);
-        root.appendChild(createdElement);
-      } else if (typeof child === 'object') {
-        let template = child.hasOwnProperty('render')
-          ? child.render()
-          : child;
-
-        for (let element in template) {
-          let createdElement = createElement(template[element]);
-          root.appendChild(createdElement);
-        }
-      }
-    });
-  };
-
   return {
-    createElement,
-    objectToString,
     parseString,
-    fromString,
-    render,
+    objectToString,
+    createElementFromObject,
+    createElementFromString,
   };
 })();
