@@ -36,11 +36,33 @@ const Component = (() => {
     if (template.className) {
       let classes = template.className.split(' ');
       element.classList.add(...classes);
+    } else {
+      try {
+        let _className = '';
+        _className = type
+          .match(/.(\w+)/g)
+          .map((cls) => cls.replace('.', ''));
+
+        element.classList.add(..._className);
+      } catch (error) {
+        console.log('No matches');
+      }
     }
 
     // Add id
     if (template.id) {
       element.id = template.id;
+    } else {
+      try {
+        let _id = '';
+
+        _id = type.match(/#(\w+)/)[1];
+        type.replace(`#${_id}`, '');
+
+        element.id = _id;
+      } catch (error) {
+        console.log('No matches');
+      }
     }
 
     // Add text
@@ -167,11 +189,7 @@ const Component = (() => {
       if (typeof expr === 'object') {
         if (Array.isArray(expr)) {
           return expr.map((item) => _parser(item)).join('');
-        } else if (
-          expr._type &&
-          (expr._type === 'parsedString' ||
-            expr._type === 'parsedObject')
-        ) {
+        } else if (expr._type && expr._type === 'parsedString') {
           eventHandlers.push(...expr[1]);
           return expr[0];
         } else if (
