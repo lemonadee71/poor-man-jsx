@@ -1,6 +1,45 @@
 const Component = (() => {
   const createElementFromObject = (template, reference = null) => {
     let element, type, text;
+    let id, className;
+
+    const _checkForClass = (type) => {
+      try {
+        let _className = '';
+        let _type = type;
+
+        _className = type.match(/(\.\w+)/g);
+        _className.forEach((cls) => {
+          _type = _type.replace(cls, '');
+        });
+        className = _className
+          .map((cls) => cls.replace('.', ''))
+          .join(' ');
+        console.log(_className);
+        return _type;
+      } catch (error) {
+        className = template.className;
+
+        return type;
+      }
+    };
+
+    const _checkForId = (type) => {
+      try {
+        let _id = '';
+        let _type = type;
+
+        _id = _type.match(/#(\w+)/)[1];
+        _type = _type.replace(`#${_id}`, '');
+        id = _id;
+
+        return _type;
+      } catch (error) {
+        id = template.id;
+
+        return type;
+      }
+    };
 
     /*
       Special properties paragraph, span, link
@@ -17,6 +56,9 @@ const Component = (() => {
       */
     if (template.type) {
       type = template.type;
+      type = _checkForClass(type);
+      type = _checkForId(type);
+
       text = template.text || '';
     } else if (template.paragraph) {
       type = 'p';
@@ -30,39 +72,18 @@ const Component = (() => {
     }
 
     // Create element
+    console.log(type, className, id);
     element = document.createElement(type);
 
     // Add classes
-    if (template.className) {
-      let classes = template.className.split(' ');
+    if (className) {
+      let classes = className.split(' ');
       element.classList.add(...classes);
-    } else {
-      try {
-        let _className = '';
-        _className = type
-          .match(/.(\w+)/g)
-          .map((cls) => cls.replace('.', ''));
-
-        element.classList.add(..._className);
-      } catch (error) {
-        console.log('No matches');
-      }
     }
 
     // Add id
-    if (template.id) {
-      element.id = template.id;
-    } else {
-      try {
-        let _id = '';
-
-        _id = type.match(/#(\w+)/)[1];
-        type.replace(`#${_id}`, '');
-
-        element.id = _id;
-      } catch (error) {
-        console.log('No matches');
-      }
+    if (id) {
+      element.id = id;
     }
 
     // Add text
@@ -249,3 +270,5 @@ const Component = (() => {
     createElementFromString,
   };
 })();
+
+export default Component;
