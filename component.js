@@ -15,7 +15,7 @@ const Component = (() => {
         className = _className
           .map((cls) => cls.replace('.', ''))
           .join(' ');
-        console.log(_className);
+
         return _type;
       } catch (error) {
         className = template.className;
@@ -72,8 +72,11 @@ const Component = (() => {
     }
 
     // Create element
-    console.log(type, className, id);
-    element = document.createElement(type);
+    if (type === 'frag') {
+      element = document.createDocumentFragment();
+    } else {
+      element = document.createElement(type);
+    }
 
     // Add classes
     if (className) {
