@@ -1,4 +1,23 @@
 const Component = (() => {
+  const _generateID = () => `${Math.random()}`.replace(/0./, '');
+
+  const _createArrayLikeObject = (arr, type) => {
+    let arrayLikeObj = {};
+
+    for (let i in arr) {
+      arrayLikeObj[i] = arr[i];
+    }
+
+    arrayLikeObj.length = arr.length;
+    arrayLikeObj._type = type;
+
+    Object.defineProperty(arrayLikeObj, '_type', {
+      enumerable: false,
+    });
+
+    return arrayLikeObj;
+  };
+
   const createElementFromObject = (template, reference = null) => {
     let element, type, text;
     let id, className;
@@ -12,9 +31,7 @@ const Component = (() => {
         _className.forEach((cls) => {
           _type = _type.replace(cls, '');
         });
-        className = _className
-          .map((cls) => cls.replace('.', ''))
-          .join(' ');
+        className = _className.map((cls) => cls.replace('.', '')).join(' ');
 
         return _type;
       } catch (error) {
@@ -72,7 +89,8 @@ const Component = (() => {
     }
 
     // Create element
-    if (type === 'frag') {
+    // Use fragment if template doesn't have a parent
+    if (type === 'fragment') {
       element = document.createDocumentFragment();
     } else {
       element = document.createElement(type);
@@ -138,9 +156,11 @@ const Component = (() => {
     // Add children
     if (template.children) {
       template.children.forEach((child) => {
-        element.appendChild(
-          createElementFromObject(child, reference)
-        );
+        let el =
+          typeof child === 'string'
+            ? createElementFromString(child)
+            : createElementFromObject(child, reference);
+        element.appendChild(el);
       });
     }
 
@@ -152,10 +172,8 @@ const Component = (() => {
     return element;
   };
 
-  const createElementFromString = (str, handlers = []) => {
-    let createdElement = document
-      .createRange()
-      .createContextualFragment(str);
+  const createElementFromString = (str, handlers = [], children = []) => {
+    let createdElement = document.createRange().createContextualFragment(str);
 
     handlers.forEach((handler) => {
       let el = createdElement.querySelector(handler.query);
@@ -164,6 +182,14 @@ const Component = (() => {
       if (handler.remove) {
         el.removeAttribute(handler.attr);
       }
+    });
+
+    children.forEach((child) => {
+      let placeholder = createdElement.querySelector(child.query);
+      let parent = placeholder.parentElement;
+
+      parent.appendChild(child.element);
+      placeholder.remove();
     });
 
     return createdElement;
@@ -184,89 +210,115 @@ const Component = (() => {
     let idStr = id ? ` id="${id}" ` : '';
     let classStr = className ? ` class="${className}"` : '';
 
-    let styleStr = ` style="${Object.keys(style)
-      .map((type) => `${type}: ${style[type]};`)
-      .join(' ')}"`;
+    let styleStr = style
+      ? ` style="${Object.keys(style)
+          .map((type) => (style[type] ? `${type}: ${style[type]};` : ''))
+          .join(' ')}"`
+      : '';
 
-    let attrStr = Object.keys(attr)
-      .map((type) => `${type}="${attr[type]}"`)
-      .join(' ');
+    let attrStr = attr
+      ? Object.keys(attr)
+          .map((type) => (attr[type] ? `${type}="${attr[type]}"` : ''))
+          .join(' ')
+      : '';
 
     let childrenStr = Array.isArray(children)
       ? children.map((child) => objectToString(child)).join('\n')
       : '';
 
-    return `<${type}${idStr}${classStr}${attrStr}${styleStr}>
+    return `<${type} ${idStr} ${classStr} ${attrStr} ${styleStr}>
       ${text || ''}${childrenStr}
       </${type}>`;
   };
 
   const parseString = (strings, ...exprs) => {
     let eventHandlers = [];
-
-    const _randNo = (seed) => Math.floor(Math.random() * seed);
-
-    const _generateID = () =>
-      `${_randNo(10)}${_randNo(10)}${_randNo(50)}`;
+    let children = [];
 
     const _parser = (expr) => {
-      if (typeof expr === 'object') {
+      if (expr instanceof HTMLElement) {
+        let temporaryId = _generateID();
+
+        children.push({
+          element: expr,
+          query: `div[data-tempid="${temporaryId}"]`,
+        });
+
+        return `<div data-tempid="${temporaryId}"></div>`;
+      } else if (typeof expr === 'object') {
+        // if expr is array, map and parse each item
+        // items must be all strings after parsing
         if (Array.isArray(expr)) {
           return expr.map((item) => _parser(item)).join('');
+
+          // if parsedString (the Array-like object returned by parseString)
+          // add its eventHandlers to ours
+          // then return the string
         } else if (expr._type && expr._type === 'parsedString') {
           eventHandlers.push(...expr[1]);
+          children.push(...expr[2]);
           return expr[0];
-        } else if (
-          Object.keys(expr).every((prop) => prop.includes('on'))
-        ) {
+
+          // if Object and that object contains only keys which name is an event
+          // generate a temporary id and replace the object with it
+          // then add the event listeners to our eventHandlers
+        } else if (Object.keys(expr).every((key) => key.includes('on'))) {
           let callbacks = expr;
           let temporaryPlaceholder = '';
+          let temporaryId = _generateID();
 
           for (let type in callbacks) {
-            let callbackId = `${type}${_generateID()}`;
-
             eventHandlers.push({
               type: type.replace('on', '').toLowerCase(),
-              query: `[data-tempId="${callbackId}"]`,
+              query: `[data-tempid="${temporaryId}"]`,
               callback: callbacks[type],
-              attr: 'data-tempId',
-              remove: true,
+              attr: 'data-tempid',
+              remove: false,
             });
-
-            temporaryPlaceholder += `data-tempId="${callbackId}"`;
           }
+
+          temporaryPlaceholder = `data-tempid="${temporaryId}"`;
+          // This is to allow for multiple event handlers for one element
+          eventHandlers[eventHandlers.length - 1].remove = true;
 
           return temporaryPlaceholder;
         }
 
+        // If the argument isn't one of the three object kinds above
+        // We assume it's an object with a specific structure
+        // so parse it with objectToString
         return objectToString(expr);
-      }
 
-      return expr;
+        // if string, just return it
+      } else if (typeof expr === 'string') {
+        return expr;
+
+        // otherwise we have an error
+        // we only accept objects and string
+      } else {
+        throw new Error('Invalid type');
+      }
     };
 
     let evaluatedExprs = exprs.map((expr) => _parser(expr));
 
     let parsedString = evaluatedExprs.reduce(
-      (fullString, expr, i) =>
-        (fullString += `${expr}${strings[i + 1]}`),
+      (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
       strings[0]
     );
 
-    let parsedObj = {
-      0: parsedString,
-      1: eventHandlers,
-      _type: 'parsedString',
-    };
+    return _createArrayLikeObject(
+      [parsedString, eventHandlers, children],
+      'parsedString'
+    );
+  };
 
-    Object.defineProperty(parsedObj, '_type', {
-      enumerable: false,
-    });
-
-    return parsedObj;
+  const render = (arrayLikeObj, callbacks = []) => {
+    return Component.createElementFromString(...Array.from(arrayLikeObj));
   };
 
   return {
+    render,
     parseString,
     objectToString,
     createElementFromObject,
