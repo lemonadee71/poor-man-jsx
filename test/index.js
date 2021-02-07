@@ -1,457 +1,64 @@
 import Component from '../component.js';
 
-console.time('Appending');
-document.body.appendChild(
-  Component.createElementFromObject({
-    type: 'div',
-    id: 'test',
-    text: 'test',
-    children: [
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-      {
-        type: 'div#text',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'div#texts',
-        text: 'foo bar',
-        className: 'foo bar',
-      },
-      {
-        type: 'ol',
-        text: 'foo bar',
-        className: 'foo bar',
-        children: [
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-          {
-            type: 'li',
-            text: 'foo bar',
-            className: 'foo bar',
-          },
-        ],
-      },
-    ],
-  })
+let obj = {
+  name: '',
+};
+
+let onChange = (e) => {
+  obj.name = e.currentTarget.value;
+};
+
+document.body.prepend(
+  Component.createElementFromString(`
+  <p id="test1">Hello</p>
+  <p id="test2">Howdy<span class="delete">X</span></p>
+  <p id="test3">Yo</p>
+  <input id="test-input" type="text" placeholder="Text"/>
+`)
 );
-console.timeEnd('Appending');
+
+document.getElementById('test-input').addEventListener('keydown', onChange);
+document
+  .querySelector('.delete')
+  .addEventListener('click', (e) => e.target.parentElement.remove());
+
+obj = Component.bind(
+  {
+    target: obj,
+    prop: 'name',
+  },
+  {
+    target: '#test1',
+    prop: 'textContent',
+  }
+);
+
+obj = Component.bind(
+  {
+    target: obj,
+    prop: 'name',
+  },
+  {
+    target: '#test2',
+    prop: 'innerHTML',
+    func(val) {
+      return `<strong>Testing this ${val}</strong>`;
+    },
+  }
+);
+
+obj = Component.bind(
+  {
+    target: obj,
+    prop: 'name',
+    func(val) {
+      return `${Math.random()} + ${val}`;
+    },
+  },
+  {
+    target: '#test3',
+    prop: 'textContent',
+  }
+);
+
+console.log(obj);
