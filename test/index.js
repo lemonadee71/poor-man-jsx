@@ -60,5 +60,3 @@ obj = Component.bind(
     prop: 'textContent',
   }
 );
-
-console.log(obj);

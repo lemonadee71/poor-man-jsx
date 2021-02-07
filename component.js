@@ -20,7 +20,7 @@ const Component = (() => {
     return arrayLikeObj;
   };
 
-  const createElementFromObject = (template, reference = null) => {
+  const createElementFromObject = (template) => {
     let element, type, text;
     let id, className;
 
@@ -161,14 +161,9 @@ const Component = (() => {
         let el =
           typeof child === 'string'
             ? createElementFromString(child)
-            : createElementFromObject(child, reference);
+            : createElementFromObject(child);
         element.appendChild(el);
       });
-    }
-
-    // Store elements in the object passed to our function
-    if (reference && template.name) {
-      reference[template.name] = element;
     }
 
     return element;
@@ -298,7 +293,7 @@ const Component = (() => {
         // otherwise we have an error
         // we only accept objects and string
       } else {
-        throw new Error('Invalid type');
+        throw new TypeError('Invalid type');
       }
     };
 
