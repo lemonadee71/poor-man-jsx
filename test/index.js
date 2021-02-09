@@ -11,10 +11,29 @@ let onChange = (e) => {
 document.body.prepend(
   Component.createElementFromString(`
   <p id="test1">Hello</p>
-  <p id="test2">Howdy<span class="delete">X</span></p>
+  <p id="test4">Howdy<span class="delete">X</span></p>
   <p id="test3">Yo</p>
   <input id="test-input" type="text" placeholder="Text"/>
 `)
+);
+
+document.body.prepend(
+  Component.render(Component.parseString`
+    <div>
+      ${{
+        type: 'p',
+        id: 'test2',
+        text: '<h1>Testing this shit</h1>',
+      }}
+    </div>
+    ${{
+      type: 'button',
+      text: 'alert me',
+      listeners: {
+        click: () => alert("It's working"),
+      },
+    }}
+  `)
 );
 
 document.getElementById('test-input').addEventListener('keydown', onChange);

@@ -169,27 +169,98 @@ const Component = (() => {
     return element;
   };
 
-  const createElementFromString = (str, handlers = [], children = []) => {
+  const createElementFromString = (str, handlers = []) => {
     let createdElement = document.createRange().createContextualFragment(str);
 
     handlers.forEach((handler) => {
       let el = createdElement.querySelector(handler.query);
-      el.addEventListener(handler.type, handler.callback);
+
+      if (handler.type === 'prop') {
+        el[handler.propName] = handler.value;
+      } else if (handler.type === 'listener') {
+        el.addEventListener(handler.eventName, handler.callback);
+      }
 
       if (handler.remove) {
         el.removeAttribute(handler.attr);
       }
     });
 
-    children.forEach((child) => {
-      let placeholder = createdElement.querySelector(child.query);
-      let parent = placeholder.parentElement;
+    // children.forEach((child) => {
+    //   let placeholder = createdElement.querySelector(child.query);
+    //   let parent = placeholder.parentElement;
 
-      parent.appendChild(child.element);
-      placeholder.remove();
-    });
+    //   parent.appendChild(child.element);
+    //   placeholder.remove();
+    // });
 
     return createdElement;
+  };
+
+  const _generateEventListenerIds = (listeners) => {
+    let arr = [];
+    let temporaryId = _generateID();
+
+    for (let type in listeners) {
+      arr.push({
+        type: 'listener',
+        eventName: type.replace('on', '').toLowerCase(),
+        query: `[data-tempid="${temporaryId}"]`,
+        callback: listeners[type],
+        attr: 'data-tempid',
+        remove: false,
+      });
+    }
+
+    arr[arr.length - 1].remove = true;
+
+    return [arr, temporaryId];
+  };
+
+  const _parser = (expr, handlers) => {
+    if (typeof expr === 'object') {
+      // if expr is array, map and parse each item
+      // items must be all strings after parsing
+      if (Array.isArray(expr)) {
+        return expr.map((item) => _parser(item, handlers)).join('');
+
+        // if parsedString or parsedObject
+        // add its eventHandlers to ours
+        // then return the string
+      } else if (
+        expr._type &&
+        (expr._type === 'parsedString' || expr._type === 'parsedObject')
+      ) {
+        handlers.push(...expr[1]);
+        return expr[0];
+
+        // if Object and that object contains only keys which name is an event
+        // generate a temporary id and replace the object with it
+        // then add the event listeners to our eventHandlers
+      } else if (Object.keys(expr).every((key) => key.includes('on'))) {
+        let temporaryPlaceholder = '';
+        let [eventHandlers, temporaryId] = _generateEventListenerIds(expr);
+
+        temporaryPlaceholder = `data-tempid="${temporaryId}"`;
+        handlers.push(...eventHandlers);
+
+        return temporaryPlaceholder;
+      }
+
+      // If the argument isn't one of the three object kinds above
+      // We assume it's an object with a specific structure
+      // so parse it with objectToString
+      return _parser(objectToString(expr), handlers);
+
+      // if string, just return it
+    } else if (typeof expr === 'string') {
+      return expr;
+
+      // otherwise we have an error
+      // we only accept objects and string
+    } else {
+      throw new TypeError('Invalid type');
+    }
   };
 
   const objectToString = (template) => {
@@ -203,6 +274,8 @@ const Component = (() => {
       children,
       listeners,
     } = template;
+
+    let handlers = [];
 
     let idStr = id ? ` id="${id}" ` : '';
     let classStr = className ? ` class="${className}"` : '';
@@ -220,94 +293,48 @@ const Component = (() => {
       : '';
 
     let childrenStr = Array.isArray(children)
-      ? children.map((child) => objectToString(child)).join('\n')
+      ? children.map((child) => _parser(child, handlers)).join('\n')
       : '';
 
-    return `<${type} ${idStr} ${classStr} ${attrStr} ${styleStr}>
-      ${text || ''}${childrenStr}
-      </${type}>`;
+    let eventPlaceholder = '';
+    if (listeners) {
+      let [eventHandlers, id] = _generateEventListenerIds(listeners);
+      handlers.push(...eventHandlers);
+      eventPlaceholder = `data-tempid="${id}"`;
+    }
+
+    let propPlaceholder = '';
+    if (text) {
+      let id = _generateID();
+      handlers.push({
+        type: 'prop',
+        propName: 'textContent',
+        value: text,
+        query: `[data-propid="${id}"]`,
+        attr: 'data-propid',
+        remove: true,
+      });
+
+      propPlaceholder = `data-propid="${id}"`;
+    }
+
+    let fullString = `<${type} ${propPlaceholder} ${eventPlaceholder} ${idStr} ${classStr} ${attrStr} ${styleStr}>
+      ${childrenStr}</${type}>`;
+
+    return _createArrayLikeObject([fullString, handlers], 'parsedObject');
   };
 
   const parseString = (strings, ...exprs) => {
-    let eventHandlers = [];
-    let children = [];
+    let handlers = [];
 
-    const _parser = (expr) => {
-      if (expr instanceof HTMLElement) {
-        let temporaryId = _generateID();
-
-        children.push({
-          element: expr,
-          query: `div[data-tempid="${temporaryId}"]`,
-        });
-
-        return `<div data-tempid="${temporaryId}"></div>`;
-      } else if (typeof expr === 'object') {
-        // if expr is array, map and parse each item
-        // items must be all strings after parsing
-        if (Array.isArray(expr)) {
-          return expr.map((item) => _parser(item)).join('');
-
-          // if parsedString (the Array-like object returned by parseString)
-          // add its eventHandlers to ours
-          // then return the string
-        } else if (expr._type && expr._type === 'parsedString') {
-          eventHandlers.push(...expr[1]);
-          children.push(...expr[2]);
-          return expr[0];
-
-          // if Object and that object contains only keys which name is an event
-          // generate a temporary id and replace the object with it
-          // then add the event listeners to our eventHandlers
-        } else if (Object.keys(expr).every((key) => key.includes('on'))) {
-          let callbacks = expr;
-          let temporaryPlaceholder = '';
-          let temporaryId = _generateID();
-
-          for (let type in callbacks) {
-            eventHandlers.push({
-              type: type.replace('on', '').toLowerCase(),
-              query: `[data-tempid="${temporaryId}"]`,
-              callback: callbacks[type],
-              attr: 'data-tempid',
-              remove: false,
-            });
-          }
-
-          temporaryPlaceholder = `data-tempid="${temporaryId}"`;
-          // This is to allow for multiple event handlers for one element
-          eventHandlers[eventHandlers.length - 1].remove = true;
-
-          return temporaryPlaceholder;
-        }
-
-        // If the argument isn't one of the three object kinds above
-        // We assume it's an object with a specific structure
-        // so parse it with objectToString
-        return objectToString(expr);
-
-        // if string, just return it
-      } else if (typeof expr === 'string') {
-        return expr;
-
-        // otherwise we have an error
-        // we only accept objects and string
-      } else {
-        throw new TypeError('Invalid type');
-      }
-    };
-
-    let evaluatedExprs = exprs.map((expr) => _parser(expr));
+    let evaluatedExprs = exprs.map((expr) => _parser(expr, handlers));
 
     let parsedString = evaluatedExprs.reduce(
       (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
       strings[0]
     );
 
-    return _createArrayLikeObject(
-      [parsedString, eventHandlers, children],
-      'parsedString'
-    );
+    return _createArrayLikeObject([parsedString, handlers], 'parsedString');
   };
 
   const render = (arrayLikeObj) => {
