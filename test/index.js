@@ -22,24 +22,26 @@ document.body.prepend(
     <div>
       ${{
         type: 'p',
-        id: 'test2',
         text: '<h1>Testing this shit</h1>',
+        children: [
+          {
+            type: 'button',
+            text: 'alert me',
+            listeners: {
+              click: () => alert("It's working"),
+            },
+          },
+          '<button>Another button</button>',
+        ],
       }}
     </div>
-    ${{
-      type: 'button',
-      text: 'alert me',
-      listeners: {
-        click: () => alert("It's working"),
-      },
-    }}
   `)
 );
 
 document.getElementById('test-input').addEventListener('keydown', onChange);
-document
-  .querySelector('.delete')
-  .addEventListener('click', (e) => e.target.parentElement.remove());
+// document
+//   .querySelector('.delete')
+//   .addEventListener('click', (e) => e.target.parentElement.remove());
 
 obj = Component.bind(
   {

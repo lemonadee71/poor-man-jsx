@@ -179,20 +179,14 @@ const Component = (() => {
         el[handler.propName] = handler.value;
       } else if (handler.type === 'listener') {
         el.addEventListener(handler.eventName, handler.callback);
+      } else if (handler.type === 'text') {
+        el.prepend(document.createTextNode(handler.value));
       }
 
       if (handler.remove) {
         el.removeAttribute(handler.attr);
       }
     });
-
-    // children.forEach((child) => {
-    //   let placeholder = createdElement.querySelector(child.query);
-    //   let parent = placeholder.parentElement;
-
-    //   parent.appendChild(child.element);
-    //   placeholder.remove();
-    // });
 
     return createdElement;
   };
@@ -225,7 +219,7 @@ const Component = (() => {
         return expr.map((item) => _parser(item, handlers)).join('');
 
         // if parsedString or parsedObject
-        // add its eventHandlers to ours
+        // add its handlers to ours
         // then return the string
       } else if (
         expr._type &&
@@ -293,7 +287,7 @@ const Component = (() => {
       : '';
 
     let childrenStr = Array.isArray(children)
-      ? children.map((child) => _parser(child, handlers)).join('\n')
+      ? _parser(children, handlers)
       : '';
 
     let eventPlaceholder = '';
@@ -307,8 +301,7 @@ const Component = (() => {
     if (text) {
       let id = _generateID();
       handlers.push({
-        type: 'prop',
-        propName: 'textContent',
+        type: 'text',
         value: text,
         query: `[data-propid="${id}"]`,
         attr: 'data-propid',
