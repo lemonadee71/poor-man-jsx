@@ -22,6 +22,7 @@ document.body.prepend(
     <div>
       ${{
         type: 'p',
+        id: 'test2',
         text: '<h1>Testing this shit</h1>',
         children: [
           {
@@ -31,7 +32,9 @@ document.body.prepend(
               click: () => alert("It's working"),
             },
           },
-          '<button>Another button</button>',
+          Component.parseString`<button ${{
+            onClick: () => alert('Another alert'),
+          }}>Another button</button>`,
         ],
       }}
     </div>

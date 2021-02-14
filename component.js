@@ -177,6 +177,8 @@ const Component = (() => {
 
       if (handler.type === 'prop') {
         el[handler.propName] = handler.value;
+      } else if (handler.type === 'attribute') {
+        el.setAttribute(handler.attrName, handler.value);
       } else if (handler.type === 'listener') {
         el.addEventListener(handler.eventName, handler.callback);
       } else if (handler.type === 'text') {
@@ -230,7 +232,7 @@ const Component = (() => {
 
         // if Object and that object contains only keys which name is an event
         // generate a temporary id and replace the object with it
-        // then add the event listeners to our eventHandlers
+        // then add the event listeners to our handlers
       } else if (Object.keys(expr).every((key) => key.includes('on'))) {
         let temporaryPlaceholder = '';
         let [eventHandlers, temporaryId] = _generateEventListenerIds(expr);
@@ -264,6 +266,7 @@ const Component = (() => {
       id,
       text,
       attr,
+      prop,
       style,
       children,
       listeners,
@@ -297,24 +300,43 @@ const Component = (() => {
       eventPlaceholder = `data-tempid="${id}"`;
     }
 
-    let propPlaceholder = '';
+    let textPlaceholder = '';
     if (text) {
       let id = _generateID();
       handlers.push({
         type: 'text',
         value: text,
-        query: `[data-propid="${id}"]`,
-        attr: 'data-propid',
+        query: `[data-textid="${id}"]`,
+        attr: 'data-textid',
         remove: true,
       });
 
+      textPlaceholder = `data-textid="${id}"`;
+    }
+
+    let propPlaceholder = '';
+    if (prop) {
+      let id = _generateID();
+      for (let key in prop) {
+        handlers.push({
+          type: 'prop',
+          propName: key,
+          value: prop[key],
+          query: `[data-propid="${id}"]`,
+          attr: 'data-propid',
+          remove: false,
+        });
+      }
+
+      handlers[handlers.length - 1].remove = true;
       propPlaceholder = `data-propid="${id}"`;
     }
 
-    let fullString = `<${type} ${propPlaceholder} ${eventPlaceholder} ${idStr} ${classStr} ${attrStr} ${styleStr}>
+    let htmlString = `<${type} ${textPlaceholder} ${propPlaceholder} ${eventPlaceholder} 
+      ${idStr} ${classStr} ${attrStr} ${styleStr}>
       ${childrenStr}</${type}>`;
 
-    return _createArrayLikeObject([fullString, handlers], 'parsedObject');
+    return _createArrayLikeObject([htmlString, handlers], 'parsedObject');
   };
 
   const parseString = (strings, ...exprs) => {
@@ -322,12 +344,12 @@ const Component = (() => {
 
     let evaluatedExprs = exprs.map((expr) => _parser(expr, handlers));
 
-    let parsedString = evaluatedExprs.reduce(
+    let htmlString = evaluatedExprs.reduce(
       (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
       strings[0]
     );
 
-    return _createArrayLikeObject([parsedString, handlers], 'parsedString');
+    return _createArrayLikeObject([htmlString, handlers], 'parsedString');
   };
 
   const render = (arrayLikeObj) => {
@@ -355,7 +377,7 @@ const Component = (() => {
             // then we revoke our proxy
             // then delete it from our store
           } else {
-            console.log(`Revoking this shit ${targetEl.target}`);
+            console.log(`Revoking ${targetEl.target}`);
             // dataStore[targetEl.target].revoke();
             // delete dataStore[targetEl.target];
           }
