@@ -4,22 +4,35 @@ let obj = {
   name: '',
 };
 
-let changeHandler = (e) => {
-  obj.name = e.currentTarget.value;
+let state = Component.createState(obj);
+
+const changeHandler = (e) => {
+  state.value.name = e.currentTarget.value;
+  console.log(state.value);
 };
 
 let { parseString: html } = Component;
 
 document.body.prepend(
   Component.render(html`
-    <p id="test1">Hello</p>
-    <p id="test4">Howdy<span class="delete">X</span></p>
-    <p id="test3">Yo</p>
+    <p
+      id="test1"
+      ${{ $innerHTML: state.bind('name', (val) => `<strong>${val}</strong>`) }}
+    >
+      Hello
+    </p>
+    <p
+      id="test4"
+      ${{ $textContent: state.bind('name', (val) => `${Math.random()}`) }}
+    >
+      Howdy
+    </p>
+    <p id="test3" ${{ $textContent: state.bind('name') }}>Yo</p>
     <input
       id="test-input"
       type="text"
       placeholder="Text"
-      ${{ onChange: changeHandler }}
+      ${{ onkeydown: changeHandler }}
     />
   `)
 );
@@ -56,44 +69,44 @@ document.body.prepend(
 //   .querySelector('.delete')
 //   .addEventListener('click', (e) => e.target.parentElement.remove());
 
-obj = Component.bind(
-  {
-    target: obj,
-    prop: 'name',
-  },
-  {
-    target: '#test1',
-    prop: 'textContent',
-  }
-);
+// obj = Component.bind(
+//   {
+//     target: obj,
+//     prop: 'name',
+//   },
+//   {
+//     target: '#test1',
+//     prop: 'textContent',
+//   }
+// );
 
-obj = Component.bind(
-  {
-    target: obj,
-    prop: 'name',
-  },
-  {
-    target: '#test2',
-    prop: 'innerHTML',
-    func(val) {
-      return `<strong>Testing this ${val}</strong>`;
-    },
-  }
-);
+// obj = Component.bind(
+//   {
+//     target: obj,
+//     prop: 'name',
+//   },
+//   {
+//     target: '#test2',
+//     prop: 'innerHTML',
+//     func(val) {
+//       return `<strong>Testing this ${val}</strong>`;
+//     },
+//   }
+// );
 
-obj = Component.bind(
-  {
-    target: obj,
-    prop: 'name',
-    func(val) {
-      return `${Math.random()} + ${val}`;
-    },
-  },
-  {
-    target: '#test3',
-    prop: 'textContent',
-  }
-);
+// obj = Component.bind(
+//   {
+//     target: obj,
+//     prop: 'name',
+//     func(val) {
+//       return `${Math.random()} + ${val}`;
+//     },
+//   },
+//   {
+//     target: '#test3',
+//     prop: 'textContent',
+//   }
+// );
 
 // create state
 //
