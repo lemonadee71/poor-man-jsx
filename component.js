@@ -1,173 +1,5 @@
 const Component = (() => {
-  const dataStore = {};
-
-  const _generateID = () => `${Math.random()}`.replace(/0./, '');
-
-  const _createArrayLikeObject = (arr, type) => {
-    let arrayLikeObj = {};
-
-    for (let i in arr) {
-      arrayLikeObj[i] = arr[i];
-    }
-
-    arrayLikeObj.length = arr.length;
-    arrayLikeObj._type = type;
-
-    Object.defineProperty(arrayLikeObj, '_type', {
-      enumerable: false,
-    });
-
-    return arrayLikeObj;
-  };
-
-  const createElementFromObject = (template) => {
-    let element, type, text;
-    let id, className;
-
-    const _checkForClass = (type) => {
-      try {
-        let _className = '';
-        let _type = type;
-
-        _className = type.match(/(\.\w+)/g);
-        _className.forEach((cls) => {
-          _type = _type.replace(cls, '');
-        });
-        className = _className.map((cls) => cls.replace('.', '')).join(' ');
-
-        return _type;
-      } catch (error) {
-        className = template.className;
-
-        return type;
-      }
-    };
-
-    const _checkForId = (type) => {
-      try {
-        let _id = '';
-        let _type = type;
-
-        _id = _type.match(/#(\w+)/)[1];
-        _type = _type.replace(`#${_id}`, '');
-        id = _id;
-
-        return _type;
-      } catch (error) {
-        id = template.id;
-
-        return type;
-      }
-    };
-
-    /*
-      Special properties paragraph, span, link
-      Example: 
-        {
-          paragraph: 'Text',
-        } 
-        or
-        {
-          type: 'p',
-          text: 'Text',
-        }
-        creates <p>Text</p>
-      */
-    if (template.type) {
-      type = template.type;
-      type = _checkForClass(type);
-      type = _checkForId(type);
-
-      text = template.text || '';
-    } else if (template.paragraph) {
-      type = 'p';
-      text = template.paragraph;
-    } else if (template.span) {
-      type = 'span';
-      text = template.span;
-    } else if (template.link) {
-      type = 'a';
-      text = template.link;
-    }
-
-    // Create element
-    // Use fragment if template doesn't have a parent
-    if (type === 'fragment') {
-      element = document.createDocumentFragment();
-    } else {
-      element = document.createElement(type);
-    }
-
-    // Add classes
-    if (className) {
-      let classes = className.split(' ');
-      element.classList.add(...classes);
-    }
-
-    // Add id
-    if (id) {
-      element.id = id;
-    }
-
-    // Add text
-    if (text) {
-      let textNode = document.createTextNode(text);
-      element.appendChild(textNode);
-    }
-
-    // Add attributes
-    if (template.attr) {
-      let attributes = template.attr;
-      for (let name in attributes) {
-        let value = attributes[name];
-        if (value) {
-          element.setAttribute(name, value);
-        }
-      }
-    }
-
-    // Add style
-    if (template.style) {
-      let { style } = template;
-      for (let property in style) {
-        let value = style[property];
-        if (value) {
-          element.style[property] = value;
-        }
-      }
-    }
-
-    // Add properties
-    if (template.prop) {
-      for (let property in template.prop) {
-        let value = template.prop[property];
-        if (value) {
-          element[property] = value;
-        }
-      }
-    }
-
-    // Add event listeners
-    if (template.listeners) {
-      let { listeners } = template;
-      for (let type in listeners) {
-        element.addEventListener(type, listeners[type]);
-      }
-    }
-
-    // Add children
-    if (template.children) {
-      template.children.forEach((child) => {
-        let el =
-          typeof child === 'string'
-            ? createElementFromString(child)
-            : createElementFromObject(child);
-        element.appendChild(el);
-      });
-    }
-
-    return element;
-  };
+  const dataStore = new Map();
 
   const createElementFromString = (str, handlers = []) => {
     let createdElement = document.createRange().createContextualFragment(str);
@@ -193,15 +25,21 @@ const Component = (() => {
     return createdElement;
   };
 
-  const _generateEventListenerIds = (listeners) => {
+  const render = (template) => {
+    return Component.createElementFromString(...Array.from(template));
+  };
+
+  const _generateID = () => `${Math.random()}`.replace(/0./, '');
+
+  const _generateEventListenerHandlers = (listeners) => {
     let arr = [];
-    let temporaryId = _generateID();
+    let id = _generateID();
 
     for (let type in listeners) {
       arr.push({
         type: 'listener',
         eventName: type.replace('on', '').toLowerCase(),
-        query: `[data-tempid="${temporaryId}"]`,
+        query: `[data-tempid="${id}"]`,
         callback: listeners[type],
         attr: 'data-tempid',
         remove: false,
@@ -210,57 +48,100 @@ const Component = (() => {
 
     arr[arr.length - 1].remove = true;
 
-    return [arr, temporaryId];
+    return [arr, id];
+  };
+
+  const _generatePropHandlers = (props) => {
+    let arr = [];
+    let id = _generateID();
+
+    for (let key in props) {
+      arr.push({
+        type: 'prop',
+        propName: key,
+        query: `[data-propid="${id}"]`,
+        value: props[key],
+        attr: 'data-propid',
+        remove: false,
+      });
+    }
+
+    arr[arr.length - 1].remove = true;
+
+    return [arr, id];
+  };
+
+  const _generateTextHandler = (text) => {
+    let id = _generateID();
+
+    return {
+      type: 'text',
+      value: text,
+      query: `[data-textid="${id}"]`,
+      attr: 'data-textid',
+      remove: true,
+    };
+  };
+
+  const _createTemplate = (arr) => {
+    let arrayLikeObj = {};
+
+    for (let i in arr) {
+      arrayLikeObj[i] = arr[i];
+    }
+
+    arrayLikeObj.length = arr.length;
+    arrayLikeObj._type = 'template';
+
+    Object.defineProperty(arrayLikeObj, '_type', {
+      enumerable: false,
+    });
+
+    return arrayLikeObj;
   };
 
   const _parser = (expr, handlers) => {
-    if (typeof expr === 'object') {
-      // if expr is array, map and parse each item
-      // items must be all strings after parsing
-      if (Array.isArray(expr)) {
-        return expr.map((item) => _parser(item, handlers)).join('');
+    const isObject = (val) => typeof val === 'object';
+    const isArray = (val) => Array.isArray(val);
+    const isTemplateObject = (val) => isObject(val) && val.type;
+    const isTemplate = (val) => val._type && val.type === 'template';
+    const isEventListeners = (val) =>
+      Object.keys(val).every((key) => key.includes('on'));
 
-        // if parsedString or parsedObject
-        // add its handlers to ours
-        // then return the string
-      } else if (
-        expr._type &&
-        (expr._type === 'parsedString' || expr._type === 'parsedObject')
-      ) {
-        handlers.push(...expr[1]);
-        return expr[0];
+    // if expr is array, map and parse each item
+    // items must be all strings after parsing
+    if (isArray(expr)) {
+      return expr.map((item) => _parser(item, handlers)).join('');
 
-        // if Object and that object contains only keys which name is an event
-        // generate a temporary id and replace the object with it
-        // then add the event listeners to our handlers
-      } else if (Object.keys(expr).every((key) => key.includes('on'))) {
-        let temporaryPlaceholder = '';
-        let [eventHandlers, temporaryId] = _generateEventListenerIds(expr);
+      // if template
+      // add its handlers to ours
+      // then return the string
+    } else if (isTemplate(expr)) {
+      handlers.push(...expr[1]);
+      return expr[0];
 
-        temporaryPlaceholder = `data-tempid="${temporaryId}"`;
-        handlers.push(...eventHandlers);
-
-        return temporaryPlaceholder;
-      }
-
-      // If the argument isn't one of the three object kinds above
-      // We assume it's an object with a specific structure
+      // if TemplateObject
       // so parse it with objectToString
+    } else if (isTemplateObject(expr)) {
       return _parser(objectToString(expr), handlers);
 
-      // if string, just return it
-    } else if (typeof expr === 'string') {
-      return expr;
+      // if Object and that object contains only keys which name is an event
+      // generate a temporary id and replace the object with it
+      // then add the event listeners to our handlers
+    } else if (isEventListeners(expr)) {
+      let [eventHandlers, temporaryId] = _generateEventListenerHandlers(expr);
+      handlers.push(...eventHandlers);
 
-      // otherwise we have an error
-      // we only accept objects and string
-    } else {
-      throw new TypeError('Invalid type');
+      return `data-tempid="${temporaryId}"`;
     }
+
+    // if none of our accepted types, assume it is string
+    // then just return it
+    return expr;
   };
 
   const objectToString = (template) => {
-    let {
+    const {
       type,
       className,
       id,
@@ -295,40 +176,22 @@ const Component = (() => {
 
     let eventPlaceholder = '';
     if (listeners) {
-      let [eventHandlers, id] = _generateEventListenerIds(listeners);
+      let [eventHandlers, id] = _generateEventListenerHandlers(listeners);
       handlers.push(...eventHandlers);
       eventPlaceholder = `data-tempid="${id}"`;
     }
 
     let textPlaceholder = '';
     if (text) {
-      let id = _generateID();
-      handlers.push({
-        type: 'text',
-        value: text,
-        query: `[data-textid="${id}"]`,
-        attr: 'data-textid',
-        remove: true,
-      });
-
+      let [textHandler, id] = _generateTextHandler(text);
+      handlers.push(textHandler);
       textPlaceholder = `data-textid="${id}"`;
     }
 
     let propPlaceholder = '';
     if (prop) {
-      let id = _generateID();
-      for (let key in prop) {
-        handlers.push({
-          type: 'prop',
-          propName: key,
-          value: prop[key],
-          query: `[data-propid="${id}"]`,
-          attr: 'data-propid',
-          remove: false,
-        });
-      }
-
-      handlers[handlers.length - 1].remove = true;
+      let [propHandlers, id] = _generatePropHandlers(prop);
+      handlers.push(...propHandlers);
       propPlaceholder = `data-propid="${id}"`;
     }
 
@@ -336,7 +199,7 @@ const Component = (() => {
       ${idStr} ${classStr} ${attrStr} ${styleStr}>
       ${childrenStr}</${type}>`;
 
-    return _createArrayLikeObject([htmlString, handlers], 'parsedObject');
+    return _createTemplate([htmlString, handlers]);
   };
 
   const parseString = (strings, ...exprs) => {
@@ -349,59 +212,13 @@ const Component = (() => {
       strings[0]
     );
 
-    return _createArrayLikeObject([htmlString, handlers], 'parsedString');
-  };
-
-  const render = (arrayLikeObj) => {
-    return Component.createElementFromString(...Array.from(arrayLikeObj));
-  };
-
-  const bind = (data, targetEl) => {
-    let { proxy, revoke } = Proxy.revocable(data.target, {
-      set(target, prop, val, receiver) {
-        // if the prop set is equal to the prop we are watching
-        // update the element bound to its
-        console.log(`Calling proxy for ${targetEl.target}`);
-        if (prop === data.prop) {
-          let targetElement = document.querySelector(targetEl.target);
-
-          // check if the element bound to our data still exists
-          if (targetElement) {
-            let finalValue = data.func ? data.func.call(data.target, val) : val;
-
-            targetElement[targetEl.prop] = targetEl.func
-              ? targetEl.func.call(targetElement, finalValue)
-              : finalValue;
-
-            // if not, we assume that it's removed
-            // then we revoke our proxy
-            // then delete it from our store
-          } else {
-            console.log(`Revoking ${targetEl.target}`);
-            // dataStore[targetEl.target].revoke();
-            // delete dataStore[targetEl.target];
-          }
-        }
-
-        return Reflect.set(target, prop, val, receiver);
-      },
-    });
-
-    // data.target = proxy;
-    // store the revoke associated with our proxy
-    // so we can call it later
-    dataStore[targetEl.target] = {};
-    dataStore[targetEl.target].revoke = revoke;
-
-    return proxy;
+    return _createTemplate([htmlString, handlers]);
   };
 
   return {
-    bind,
     render,
     parseString,
     objectToString,
-    createElementFromObject,
     createElementFromString,
   };
 })();

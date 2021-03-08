@@ -4,21 +4,28 @@ let obj = {
   name: '',
 };
 
-let onChange = (e) => {
+let changeHandler = (e) => {
   obj.name = e.currentTarget.value;
 };
 
+let { parseString: html } = Component;
+
 document.body.prepend(
-  Component.createElementFromString(`
-  <p id="test1">Hello</p>
-  <p id="test4">Howdy<span class="delete">X</span></p>
-  <p id="test3">Yo</p>
-  <input id="test-input" type="text" placeholder="Text"/>
-`)
+  Component.render(html`
+    <p id="test1">Hello</p>
+    <p id="test4">Howdy<span class="delete">X</span></p>
+    <p id="test3">Yo</p>
+    <input
+      id="test-input"
+      type="text"
+      placeholder="Text"
+      ${{ onChange: changeHandler }}
+    />
+  `)
 );
 
 document.body.prepend(
-  Component.render(Component.parseString`
+  Component.render(html`
     <div>
       ${{
         type: 'p',
@@ -32,16 +39,19 @@ document.body.prepend(
               click: () => alert("It's working"),
             },
           },
-          Component.parseString`<button ${{
-            onClick: () => alert('Another alert'),
-          }}>Another button</button>`,
+          html`<button
+            ${{
+              onClick: () => alert('Another alert'),
+            }}
+          >
+            Another button
+          </button>`,
         ],
       }}
     </div>
   `)
 );
 
-document.getElementById('test-input').addEventListener('keydown', onChange);
 // document
 //   .querySelector('.delete')
 //   .addEventListener('click', (e) => e.target.parentElement.remove());
@@ -84,3 +94,6 @@ obj = Component.bind(
     prop: 'textContent',
   }
 );
+
+// create state
+//
