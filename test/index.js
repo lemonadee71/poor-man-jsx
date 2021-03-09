@@ -33,11 +33,15 @@ const state = Component.createState({
   length: '1px',
 });
 const anotherState = Component.createState('test3');
+const arrayState = Component.createState(['1', '2', '3']);
+arrayState.value = arrayState.value.map((num) => +num);
 
 const changeHandler = (e) => {
   state.value.name = e.currentTarget.value;
   state.value.length = e.currentTarget.value.split('').length + 'px';
   anotherState.value = `<h1>${e.currentTarget.value}</h1>`;
+  arrayState.value = [...arrayState.value];
+  arrayState.value.push(1);
 };
 
 document.body.prepend(
@@ -49,8 +53,8 @@ document.body.prepend(
         ),
       }}
     ></p>
-    <p ${{ '$style:font-size': state.bind('length') }}>Hello</p>
-    <p ${{ $id: anotherState.bind() }}></p>
+    <p ${{ '$style:fontSize': state.bind('length') }}>Hello</p>
+    <p ${{ $id: anotherState.bind() }}>Test</p>
     <div
       ${{
         $content: state.bind('name', (val) =>
@@ -58,6 +62,15 @@ document.body.prepend(
         ),
       }}
     ></div>
+    <ol
+      ${{
+        $content: arrayState.bind('value', (val) => {
+          return html`${val.map((num) => {
+            return html`<li>${num}</li>`;
+          })}`;
+        }),
+      }}
+    ></ol>
     <input type="text" placeholder="Text" ${{ onInput: changeHandler }} />
   `)
 );

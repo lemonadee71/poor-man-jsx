@@ -34,8 +34,9 @@ const Component = (() => {
   const isTemplateObject = (val) => isObject(val) && val.type;
   const isTemplate = (val) => val._type && val._type === 'template';
   const isEventListeners = (val) =>
-    Object.keys(val).every((key) => key.startsWith('on'));
-  const isState = (val) => Object.keys(val).every((key) => key.startsWith('$'));
+    isObject(val) && Object.keys(val).every((key) => key.startsWith('on'));
+  const isState = (val) =>
+    isObject(val) && Object.keys(val).every((key) => key.startsWith('$'));
 
   const _generateID = () => `${Math.random()}`.replace(/0./, '');
 
@@ -151,7 +152,7 @@ const Component = (() => {
 
     // if none of our accepted types, assume it is string
     // then just return it
-    return expr;
+    return expr.toString();
   };
 
   const parseString = (strings, ...exprs) => {
@@ -230,9 +231,9 @@ const Component = (() => {
   };
 
   const _bindState = (state) => {
-    const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
-
     const isStyleAttr = (str) => str.startsWith('$style:');
+
+    const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
 
     const id = _generateID();
     const proxyId = `data-proxyid="${id}"`;
@@ -274,7 +275,7 @@ const Component = (() => {
       ]);
 
       if (type === 'prop') {
-        props[prop.replace('$', '')] = handler.value;
+        props[targetProp] = handler.value;
       } else if (type === 'attr') {
         attrStr += `${targetProp}="${handler.value}" `;
       } else if (type === 'style') {
@@ -326,6 +327,8 @@ const Component = (() => {
 
                   finalValue = isTemplate(finalValue)
                     ? render(finalValue)
+                    : isTemplateObject(finalValue)
+                    ? render(objectToString(finalValue))
                     : finalValue;
                   el.appendChild(finalValue);
                 }
