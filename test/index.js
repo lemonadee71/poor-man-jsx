@@ -1,69 +1,68 @@
 import Component from '../component.js';
+const { parseString: html } = Component;
 
-let obj = {
-  name: '',
-};
+let example = html`
+  <div>
+    ${{
+      type: 'p',
+      id: 'test2',
+      text: '<h1>Testing this shit</h1>',
+      children: [
+        {
+          type: 'button',
+          text: 'alert me',
+          listeners: {
+            click: () => alert("It's working"),
+          },
+        },
+        html`<button
+          ${{
+            onClick: () => alert('Another alert'),
+          }}
+        >
+          Another button
+        </button>`,
+      ],
+    }}
+  </div>
+`;
 
-let state = Component.createState(obj);
+const state = Component.createState({
+  name: 'red',
+  text: 'test2',
+  length: '1px',
+});
+const anotherState = Component.createState('test3');
 
 const changeHandler = (e) => {
   state.value.name = e.currentTarget.value;
-  console.log(state.value);
+  state.value.length = e.currentTarget.value.split('').length + 'px';
+  anotherState.value = `<h1>${e.currentTarget.value}</h1>`;
 };
 
-let { parseString: html } = Component;
-
 document.body.prepend(
   Component.render(html`
     <p
-      id="test1"
-      ${{ $innerHTML: state.bind('name', (val) => `<strong>${val}</strong>`) }}
-    >
-      Hello
-    </p>
-    <p
-      id="test4"
-      ${{ $textContent: state.bind('name', (val) => `${Math.random()}`) }}
-    >
-      Howdy
-    </p>
-    <p id="test3" ${{ $textContent: state.bind('name') }}>Yo</p>
-    <input
-      id="test-input"
-      type="text"
-      placeholder="Text"
-      ${{ onkeydown: changeHandler }}
-    />
-  `)
-);
-
-document.body.prepend(
-  Component.render(html`
-    <div>
       ${{
-        type: 'p',
-        id: 'test2',
-        text: '<h1>Testing this shit</h1>',
-        children: [
-          {
-            type: 'button',
-            text: 'alert me',
-            listeners: {
-              click: () => alert("It's working"),
-            },
-          },
-          html`<button
-            ${{
-              onClick: () => alert('Another alert'),
-            }}
-          >
-            Another button
-          </button>`,
-        ],
+        $innerHTML: state.bind('name', (val) =>
+          val ? `<strong>${val}</strong>` : 'Hello'
+        ),
       }}
-    </div>
+    ></p>
+    <p ${{ '$style:font-size': state.bind('length') }}>Hello</p>
+    <p ${{ $id: anotherState.bind() }}></p>
+    <div
+      ${{
+        $content: state.bind('name', (val) =>
+          val.split('').length % 2 === 0 ? example : html`<h1>Hello</h1>`
+        ),
+      }}
+    ></div>
+    <input type="text" placeholder="Text" ${{ onInput: changeHandler }} />
   `)
 );
+
+document.body.prepend(Component.render(example));
 
 // document
 //   .querySelector('.delete')

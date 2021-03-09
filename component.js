@@ -29,6 +29,14 @@ const Component = (() => {
     return Component.createElementFromString(...Array.from(template));
   };
 
+  const isObject = (val) => typeof val === 'object';
+  const isArray = (val) => Array.isArray(val);
+  const isTemplateObject = (val) => isObject(val) && val.type;
+  const isTemplate = (val) => val._type && val._type === 'template';
+  const isEventListeners = (val) =>
+    Object.keys(val).every((key) => key.startsWith('on'));
+  const isState = (val) => Object.keys(val).every((key) => key.startsWith('$'));
+
   const _generateID = () => `${Math.random()}`.replace(/0./, '');
 
   const _generateEventListenerHandlers = (listeners) => {
@@ -110,15 +118,6 @@ const Component = (() => {
   };
 
   const _parser = (expr, handlers) => {
-    const isObject = (val) => typeof val === 'object';
-    const isArray = (val) => Array.isArray(val);
-    const isTemplateObject = (val) => isObject(val) && val.type;
-    const isTemplate = (val) => val._type && val._type === 'template';
-    const isEventListeners = (val) =>
-      Object.keys(val).every((key) => key.startsWith('on'));
-    const isState = (val) =>
-      Object.keys(val).every((key) => key.startsWith('$'));
-
     // if expr is array, map and parse each item
     // items must be all strings after parsing
     if (isArray(expr)) {
@@ -144,8 +143,8 @@ const Component = (() => {
 
       return temporaryId;
     } else if (isState(expr)) {
-      let [handlers, id] = bindState(expr);
-      handlers.push(...handlers);
+      let [propHandlers, id] = _bindState(expr);
+      handlers.push(...propHandlers);
 
       return id;
     }
@@ -153,6 +152,19 @@ const Component = (() => {
     // if none of our accepted types, assume it is string
     // then just return it
     return expr;
+  };
+
+  const parseString = (strings, ...exprs) => {
+    let handlers = [];
+
+    let evaluatedExprs = exprs.map((expr) => _parser(expr, handlers));
+
+    let htmlString = evaluatedExprs.reduce(
+      (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
+      strings[0]
+    );
+
+    return _createTemplate([htmlString, handlers]);
   };
 
   const objectToString = (template) => {
@@ -217,78 +229,106 @@ const Component = (() => {
     return _createTemplate([htmlString, handlers]);
   };
 
-  const parseString = (strings, ...exprs) => {
-    let handlers = [];
+  const _bindState = (state) => {
+    const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
 
-    let evaluatedExprs = exprs.map((expr) => _parser(expr, handlers));
+    const isStyleAttr = (str) => str.startsWith('$style:');
 
-    let htmlString = evaluatedExprs.reduce(
-      (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
-      strings[0]
-    );
+    const id = _generateID();
+    const proxyId = `data-proxyid="${id}"`;
+    const props = {};
 
-    return _createTemplate([htmlString, handlers]);
-  };
-
-  const bindState = (state) => {
-    let id = _generateID();
-    let proxyId = `data-proxyid="${id}"`;
-    let props = {};
+    let attrStr = '';
+    let styleStr = '';
+    let propId = '';
+    let propHandlers = [];
 
     for (let prop in state) {
-      let handler = state[prop];
+      const handler = state[prop];
       const bindedElements = dataStore.get(handler._id);
       const existingHandlers = bindedElements.get(id) || [];
+
+      let targetProp = isStyleAttr(prop)
+        ? prop.replace('$style:', '')
+        : prop.replace('$', '');
+      let type = '';
+
+      if (defaultProps.includes(targetProp)) {
+        type = 'prop';
+      } else if (isStyleAttr(prop)) {
+        type = 'style';
+      } else if (targetProp === 'content') {
+        type = 'content';
+      } else {
+        type = 'attr';
+      }
 
       bindedElements.set(id, [
         ...existingHandlers,
         {
-          targetProp: prop.replace('$', ''),
+          type,
+          targetProp,
           propName: handler.propName,
           trap: handler.trap,
         },
       ]);
 
-      props[prop.replace('$')] = handler.value;
+      if (type === 'prop') {
+        props[prop.replace('$', '')] = handler.value;
+      } else if (type === 'attr') {
+        attrStr += `${targetProp}="${handler.value}" `;
+      } else if (type === 'style') {
+        styleStr += `${targetProp}: ${handler.value}; `;
+      }
     }
 
-    let [propHandlers, propId] = _generatePropHandlers(props);
+    if (Object.keys(props).length) {
+      [propHandlers, propId] = _generatePropHandlers(props);
+    }
 
-    return [propHandlers, `${proxyId} ${propId}`];
+    if (styleStr) {
+      styleStr = `style="${styleStr}" `;
+    }
+
+    return [propHandlers, `${attrStr}${styleStr}${proxyId} ${propId}`];
   };
 
   const createState = (initValue = null) => {
     const _id = _generateID();
-    const isObject = (value) => typeof value === 'object';
     // Map contains id keys
     // id keys are proxy ids of elements binded to the state
     dataStore.set(_id, new Map());
 
-    let state = {
-      bind: (propName = 'value', trap = null) => {
-        return {
-          propName,
-          trap,
-          _id,
-          value: propName === 'value' ? state.value : state.value[propName],
-        };
-      },
-    };
-
     const setHandler = {
       set: (target, prop, value, receiver) => {
-        let bindedElements = dataStore.get(_id);
-        console.log(bindedElements);
+        const bindedElements = dataStore.get(_id);
+        console.log({ target, prop, value });
+
         for (let [id, handlers] of bindedElements) {
-          let el = document.querySelector(`[data-proxyid="${id}"]`);
+          const el = document.querySelector(`[data-proxyid="${id}"]`);
 
           if (el) {
             handlers.forEach((handler) => {
               // handler.propName === 'value' for primitive states
               if (prop === handler.propName) {
-                el[handler.targetProp] = handler.trap
+                let finalValue = handler.trap
                   ? handler.trap.call(null, value)
                   : value;
+
+                if (handler.type === 'prop') {
+                  el[handler.targetProp] = finalValue;
+                } else if (handler.type === 'attr') {
+                  el.setAttribute(handler.targetProp, finalValue);
+                } else if (handler.type === 'style') {
+                  el.style[handler.targetProp] = finalValue;
+                } else if (handler.type === 'content') {
+                  [...el.children].map((child) => child.remove());
+
+                  finalValue = isTemplate(finalValue)
+                    ? render(finalValue)
+                    : finalValue;
+                  el.appendChild(finalValue);
+                }
               }
             });
           } else {
@@ -301,21 +341,27 @@ const Component = (() => {
       },
     };
 
+    let state = {
+      bind: (propName = 'value', trap = null) => {
+        return {
+          propName,
+          trap,
+          _id,
+          value: propName === 'value' ? state.value : state.value[propName],
+        };
+      },
+    };
+
     if (isObject(initValue)) {
       state.value = new Proxy(initValue, setHandler);
     } else {
       state.value = initValue;
-      state = new Proxy(state, setHandler);
     }
+
+    state = new Proxy(state, setHandler);
 
     return state;
   };
-
-  // let example = {
-  //   target: 'selector',
-  //   propName: 'string',
-  //   trap: 'function'
-  // }
 
   return {
     render,
