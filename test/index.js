@@ -65,9 +65,7 @@ document.body.prepend(
     <ol
       ${{
         $content: arrayState.bind('value', (val) => {
-          return html`${val.map((num) => {
-            return html`<li>${num}</li>`;
-          })}`;
+          return html`${val.map((num) => html`<li>${num}</li>`)}`;
         }),
       }}
     ></ol>
