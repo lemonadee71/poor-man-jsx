@@ -1,407 +1,435 @@
-const Component = (() => {
-  const dataStore = new Map();
-  const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
-  const booleanAttributes = [
-    'checked',
-    'selected',
-    'disabled',
-    'readonly',
-    'multiple',
-    'ismap',
-    'noresize',
-    'reversed',
-    'autocomplete',
-  ];
+const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
 
-  const createElementFromString = (str, handlers = []) => {
-    let createdElement = document.createRange().createContextualFragment(str);
+const stateStore = new Map();
+const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
+const booleanAttributes = [
+  'checked',
+  'selected',
+  'disabled',
+  'readonly',
+  'multiple',
+  'ismap',
+  'noresize',
+  'reversed',
+  'autocomplete',
+];
 
-    handlers.forEach((handler) => {
-      let el = createdElement.querySelector(handler.query);
+const isObject = (val) => typeof val === 'object';
+const isArray = (val) => Array.isArray(val);
+const isTemplateObject = (val) => isObject(val) && val.type;
+const isTemplate = (val) => val._type && val._type === 'template';
+const isEventListeners = (val) =>
+  isObject(val) && Object.keys(val).every((key) => key.startsWith('on'));
+const isState = (val) =>
+  isObject(val) && Object.keys(val).every((key) => key.startsWith('$'));
+const isBooleanAttribute = (val) => booleanAttributes.includes(val);
+const isStyleAttribute = (str) => str.startsWith('$style:');
 
-      if (handler.type === 'prop') {
-        el[handler.propName] = handler.value;
-      } else if (handler.type === 'attribute') {
-        el.setAttribute(handler.attrName, handler.value);
-      } else if (handler.type === 'listener') {
-        el.addEventListener(handler.eventName, handler.callback);
-      } else if (handler.type === 'text') {
-        el.prepend(document.createTextNode(handler.value));
-      }
+const _handlerTypeReducer = (str) => {
+  let type;
+  if (defaultProps.includes(str.replace('$', ''))) {
+    type = 'prop';
+  } else if (isStyleAttribute(str)) {
+    type = 'style';
+  } else if (str.replace('$', '') === 'content') {
+    type = 'content';
+  } else {
+    type = 'attr';
+  }
 
-      if (handler.remove) {
-        el.removeAttribute(handler.attr);
-      }
+  return type;
+};
+
+const _handlerValueReducer = (type, obj) => {
+  switch (type) {
+    case 'listener':
+      return {
+        name: obj[0].replace('on', '').toLowerCase(),
+        value: obj[1],
+      };
+    case 'prop':
+      return {
+        name: obj[0].replace('$', ''),
+        value: obj[1],
+      };
+    case 'attr':
+      return {
+        name: obj[0].replace('$', ''),
+        value: obj[1],
+      };
+    case 'style':
+      return {
+        name: obj[0],
+        value: obj[1],
+      };
+    case 'text':
+      return {
+        value: obj[1],
+      };
+    case 'content':
+      return {
+        value: obj[1],
+      };
+    default:
+      throw new Error('Invalid handler type.');
+  }
+};
+
+const _generateHandler = (type, obj) => {
+  const arr = [];
+  const id = uuid();
+  const attrName = `data-${type}-id`;
+  const dataAttr = `${attrName}="${id}"`;
+
+  Object.entries(obj).forEach((item) => {
+    arr.push({
+      type,
+      query: `[${dataAttr}]`,
+      data: _handlerValueReducer(type, item),
+      attr: attrName,
+      remove: false,
     });
+  });
 
-    return createdElement;
-  };
+  arr[arr.length - 1].remove = true;
 
-  const render = (template) => {
-    return Component.createElementFromString(...Array.from(template));
-  };
+  return [arr, dataAttr];
+};
 
-  const isObject = (val) => typeof val === 'object';
-  const isArray = (val) => Array.isArray(val);
-  const isTemplateObject = (val) => isObject(val) && val.type;
-  const isTemplate = (val) => val._type && val._type === 'template';
-  const isEventListeners = (val) =>
-    isObject(val) && Object.keys(val).every((key) => key.startsWith('on'));
-  const isState = (val) =>
-    isObject(val) && Object.keys(val).every((key) => key.startsWith('$'));
+const _bindState = (state) => {
+  const id = uuid();
+  const proxyId = `data-proxy-id="${id}"`;
+  const handlers = {};
 
-  const isBooleanAttribute = (val) => booleanAttributes.includes(val);
+  Object.entries(state).forEach(([key, handler]) => {
+    const bindedElements = stateStore.get(handler._id);
+    const existingHandlers = bindedElements.get(id) || [];
 
-  const _generateID = () => `${Math.random()}`.replace(/0./, '');
+    const finalValue = handler.trap
+      ? handler.trap.call(null, handler.value)
+      : handler.value;
+    const target = key.replace('$style:', '').replace('$', '');
+    const type = _handlerTypeReducer(key);
 
-  const _generateEventListenerHandlers = (listeners) => {
-    let arr = [];
-    let id = _generateID();
-    let dataAttrName = 'data-tempid';
-    let dataId = `${dataAttrName}="${id}"`;
-
-    for (let type in listeners) {
-      arr.push({
-        type: 'listener',
-        eventName: type.replace('on', '').toLowerCase(),
-        query: `[${dataId}]`,
-        callback: listeners[type],
-        attr: dataAttrName,
-        remove: false,
-      });
-    }
-
-    arr[arr.length - 1].remove = true;
-
-    return [arr, dataId];
-  };
-
-  const _generatePropHandlers = (props) => {
-    let arr = [];
-    let id = _generateID();
-    let dataAttrName = 'data-propid';
-    let dataId = `${dataAttrName}="${id}"`;
-
-    for (let key in props) {
-      arr.push({
-        type: 'prop',
-        propName: key.replace('$', ''),
-        query: `[${dataId}]`,
-        value: props[key],
-        attr: dataAttrName,
-        remove: false,
-      });
-    }
-
-    arr[arr.length - 1].remove = true;
-
-    return [arr, dataId];
-  };
-
-  const _generateTextHandler = (text) => {
-    let id = _generateID();
-    let dataAttrName = 'data-textid';
-    let dataId = `${dataAttrName}="${id}"`;
-
-    return [
+    // Store the new handlers
+    bindedElements.set(id, [
+      ...existingHandlers,
       {
-        type: 'text',
-        value: text,
-        query: `[${dataId}]`,
-        attr: dataAttrName,
-        remove: true,
+        type,
+        target,
+        propName: handler.propName,
+        trap: handler.trap,
       },
-      dataId,
-    ];
-  };
+    ]);
 
-  const _createTemplate = (arr) => {
-    let arrayLikeObj = {};
-
-    for (let i in arr) {
-      arrayLikeObj[i] = arr[i];
+    if (!handlers[type]) {
+      handlers[type] = {};
     }
 
-    arrayLikeObj.length = arr.length;
-    arrayLikeObj._type = 'template';
+    handlers[type][target] = finalValue;
+  });
 
-    Object.defineProperty(arrayLikeObj, '_type', {
-      enumerable: false,
-    });
-
-    return arrayLikeObj;
-  };
-
-  const _parser = (expr, handlers) => {
-    // if expr is array, map and parse each item
-    // items must be all strings after parsing
-    if (isArray(expr)) {
-      return expr.map((item) => _parser(item, handlers)).join('');
-
-      // if template
-      // add its handlers to ours
-      // then return the string
-    } else if (isTemplate(expr)) {
-      handlers.push(...expr[1]);
-      return expr[0];
-
-      // if TemplateObject parse it with objectToString
-    } else if (isTemplateObject(expr)) {
-      return _parser(objectToString(expr), handlers);
-
-      // if Object and that object contains only keys which name is an event
-      // generate a temporary id and replace the object with it
-      // then add the event listeners to our handlers
-    } else if (isEventListeners(expr)) {
-      let [eventHandlers, temporaryId] = _generateEventListenerHandlers(expr);
-      handlers.push(...eventHandlers);
-
-      return temporaryId;
-    } else if (isState(expr)) {
-      let [propHandlers, id] = _bindState(expr);
-      handlers.push(...propHandlers);
-
-      return id;
-    }
-
-    // if none of our accepted types, assume it is string
-    // then just return it
-    return `${expr}`;
-  };
-
-  const html = (strings, ...exprs) => {
-    return parseString(strings, ...exprs);
-  };
-
-  const parseString = (strings, ...exprs) => {
-    let handlers = [];
-
-    let evaluatedExprs = exprs.map((expr) => _parser(expr, handlers));
-
-    let htmlString = evaluatedExprs.reduce(
-      (fullString, expr, i) => (fullString += `${expr}${strings[i + 1]}`),
-      strings[0]
+  const [allHandlers, str] = Object.entries(handlers)
+    .map(([type, obj]) => _generateHandler(type, obj))
+    .reduce(
+      (prev, current) => [
+        [...prev[0], ...current[0]],
+        [...prev[1], current[1]],
+      ],
+      [[], []]
     );
 
-    return _createTemplate([htmlString, handlers]);
-  };
+  return [allHandlers, `${proxyId} ${str.join(' ')}`];
+};
 
-  const objectToString = (template) => {
-    const {
-      type,
-      className,
-      id,
-      text,
-      attr,
-      prop,
-      style,
-      children,
-      listeners,
-    } = template;
+// return value is [str, array]
+const _parser = (expr, handlers = []) => {
+  // if expr is array, map and parse each item
+  // items must be all strings after parsing
+  if (isArray(expr)) {
+    const [strArray, handlersArray] = expr
+      .map((item) => _parser(item, handlers))
+      .reduce(
+        (prev, current) => [
+          [...prev[0], current[0]],
+          [...prev[1], ...current[1]],
+        ],
+        [[], []]
+      );
 
-    let handlers = [];
+    return [strArray.join(''), handlersArray];
+  }
 
-    let idStr = id ? ` id="${id}" ` : '';
-    let classStr = className ? ` class="${className}"` : '';
+  // if template
+  // add its handlers to ours
+  // then return the string
+  if (isTemplate(expr)) {
+    return [expr[0], [...handlers, ...expr[1]]];
+  }
 
-    let styleStr = style
-      ? ` style="${Object.keys(style)
-          .map((type) => (style[type] ? `${type}: ${style[type]};` : ''))
-          .join(' ')}"`
-      : '';
+  // if TemplateObject parse it with objectToString
+  // if (isTemplateObject(expr)) {
+  //   return _parser(objectToString(expr), handlers);
+  // }
 
-    let attrStr = attr
-      ? Object.keys(attr)
-          .map((type) => (attr[type] ? `${type}="${attr[type]}"` : ''))
-          .join(' ')
-      : '';
+  // if Object and that object contains only keys which name is an event
+  // generate a temporary id and replace the object with it
+  // then add the event listeners to our handlers
+  if (isEventListeners(expr)) {
+    const [eventHandlers, id] = _generateHandler('listener', expr);
 
-    let childrenStr = Array.isArray(children)
-      ? _parser(children, handlers)
-      : '';
+    return [id, [...handlers, ...eventHandlers]];
+  }
 
-    let eventPlaceholder = '';
-    if (listeners) {
-      let [eventHandlers, id] = _generateEventListenerHandlers(listeners);
-      handlers.push(...eventHandlers);
-      eventPlaceholder = id;
-    }
+  if (isState(expr)) {
+    const [propHandlers, id] = _bindState(expr);
+    return [id, [...handlers, ...propHandlers]];
+  }
 
-    let textPlaceholder = '';
-    if (text) {
-      let [textHandler, id] = _generateTextHandler(text);
-      handlers.push(textHandler);
-      textPlaceholder = id;
-    }
+  // if none of our accepted types, assume it is string
+  // then just return it
+  return [`${expr}`, []];
+};
 
-    let propPlaceholder = '';
-    if (prop) {
-      let [propHandlers, id] = _generatePropHandlers(prop);
-      handlers.push(...propHandlers);
-      propPlaceholder = id;
-    }
+const _createTemplate = (arr) => {
+  const arrayLikeObj = {};
 
-    let htmlString = `<${type} ${textPlaceholder} ${propPlaceholder} ${eventPlaceholder} 
-      ${idStr} ${classStr} ${attrStr} ${styleStr}>
-      ${childrenStr}</${type}>`;
+  arr.forEach((i, idx) => {
+    arrayLikeObj[idx] = arr[idx];
+  });
 
-    return _createTemplate([htmlString, handlers]);
-  };
+  arrayLikeObj.length = arr.length;
+  arrayLikeObj._type = 'template';
 
-  const _bindState = (state) => {
-    const isStyleAttr = (str) => str.startsWith('$style:');
+  Object.defineProperty(arrayLikeObj, '_type', {
+    enumerable: false,
+  });
 
-    const id = _generateID();
-    const proxyId = `data-proxyid="${id}"`;
-    const props = {};
+  return arrayLikeObj;
+};
 
-    let attrStr = '';
-    let styleStr = '';
-    let propId = '';
-    let propHandlers = [];
+const _replacePlaceholders = (str) => {
+  let newString = str;
+  let match = newString.match(/{%\s*(.*)\s*%}/);
+  const handlers = [];
 
-    for (let prop in state) {
-      const handler = state[prop];
-      const bindedElements = dataStore.get(handler._id);
-      const existingHandlers = bindedElements.get(id) || [];
+  while (match) {
+    const [textHandlers, id] = _generateHandler('text', {
+      text: match[1].trim(),
+    });
 
-      let finalValue = handler.trap
-        ? handler.trap.call(null, handler.value)
-        : handler.value;
-      let targetProp = isStyleAttr(prop)
-        ? prop.replace('$style:', '')
-        : prop.replace('$', '');
-      let type = '';
+    handlers.push(...textHandlers);
 
-      if (defaultProps.includes(targetProp)) {
-        type = 'prop';
-      } else if (isStyleAttr(prop)) {
-        type = 'style';
-      } else if (targetProp === 'content') {
-        type = 'content';
-      } else {
-        type = 'attr';
-      }
+    newString = newString.replace(match[0], `<a ${id}></a>`);
 
-      bindedElements.set(id, [
-        ...existingHandlers,
-        {
-          type,
-          targetProp,
-          propName: handler.propName,
-          trap: handler.trap,
-        },
-      ]);
+    match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
+  }
 
-      // no handler for type === 'content'
-      // so no content is rendered
-      if (type === 'prop') {
-        props[targetProp] = finalValue;
-      } else if (type === 'attr') {
-        attrStr += `${targetProp}="${finalValue}" `;
-      } else if (type === 'style') {
-        styleStr += `${targetProp}: ${finalValue}; `;
-      }
-    }
+  return [newString, handlers];
+};
 
-    if (Object.keys(props).length) {
-      [propHandlers, propId] = _generatePropHandlers(props);
-    }
+const parseString = (strings, ...exprs) => {
+  const [evaluatedExprs, handlers] = exprs
+    .map((expr) => _parser(expr))
+    .reduce(
+      (prev, current) => [
+        [...prev[0], current[0]],
+        [...prev[1], ...current[1]],
+      ],
+      [[], []]
+    );
 
-    if (styleStr) {
-      styleStr = `style="${styleStr}" `;
-    }
+  const htmlString = evaluatedExprs.reduce(
+    (fullString, expr, i) => `${fullString}${expr}${strings[i + 1]}`,
+    strings[0]
+  );
 
-    return [propHandlers, `${attrStr}${styleStr}${proxyId} ${propId}`];
-  };
+  const [sanitizedString, textHandlers] = _replacePlaceholders(htmlString);
+  handlers.push(...textHandlers);
 
-  const createState = (initValue = null) => {
-    const _id = _generateID();
-    // Map contains id keys
-    // id keys are proxy ids of elements binded to the state
-    dataStore.set(_id, new Map());
+  return _createTemplate([sanitizedString, handlers]);
+};
 
-    const setHandler = {
-      set: (target, prop, value, receiver) => {
-        const bindedElements = dataStore.get(_id);
+const html = (strings, ...exprs) => parseString(strings, ...exprs);
 
-        for (let [id, handlers] of bindedElements) {
-          const el = document.querySelector(`[data-proxyid="${id}"]`);
+const _modifyElement = ({ element, type, data, context = document }) => {
+  const el = context.querySelector(element);
 
-          if (el) {
-            handlers.forEach((handler) => {
-              // handler.propName === 'value' for primitive states
-              if (prop === handler.propName) {
-                let finalValue = handler.trap
-                  ? handler.trap.call(null, value)
-                  : value;
-
-                if (handler.type === 'prop') {
-                  el[handler.targetProp] = finalValue;
-                } else if (handler.type === 'attr') {
-                  if (isBooleanAttribute(handler.targetProp)) {
-                    if (finalValue) {
-                      el.setAttribute(handler.targetProp, '');
-                    } else {
-                      el.removeAttribute(handler.targetProp);
-                    }
-                  } else {
-                    el.setAttribute(handler.targetProp, finalValue);
-                  }
-                } else if (handler.type === 'style') {
-                  el.style[handler.targetProp] = finalValue;
-                } else if (handler.type === 'content') {
-                  [...el.children].map((child) => child.remove());
-
-                  finalValue = isTemplate(finalValue)
-                    ? render(finalValue)
-                    : isTemplateObject(finalValue)
-                    ? render(objectToString(finalValue))
-                    : finalValue;
-                  el.appendChild(finalValue);
-                }
-              }
-            });
-          } else {
-            // delete handler when the target is unreachable (most likely deleted)
-            bindedElements.delete(id);
-          }
+  switch (type) {
+    case 'prop':
+      el[data.name] = data.value;
+      break;
+    case 'attr':
+      if (isBooleanAttribute(data.name)) {
+        if (data.value) {
+          el.setAttribute(data.name, '');
+        } else {
+          el.removeAttribute(data.name);
         }
+      } else {
+        el.setAttribute(data.name, data.value);
+      }
 
-        return Reflect.set(target, prop, value, receiver);
-      },
-    };
+      break;
+    case 'listener':
+      el.addEventListener(data.name, data.value);
+      break;
+    case 'text':
+      el.replaceWith(document.createTextNode(data.value));
+      break;
+    case 'style':
+      el.style[data.name] = data.value;
+      break;
+    case 'content':
+      [...el.children].map((child) => child.remove());
 
-    let state = {
-      bind: (propName = 'value', trap = null) => {
-        return {
-          propName,
-          trap,
-          _id,
-          value: propName === 'value' ? state.value : state.value[propName],
-        };
-      },
-    };
+      el.appendChild(
+        data.value instanceof HTMLElement
+          ? data.value
+          : render(html`${data.value}`)
+      );
 
-    if (isObject(initValue)) {
-      state.value = new Proxy(initValue, setHandler);
-    } else {
-      state.value = initValue;
+      break;
+    default:
+      throw new Error('Invalid type.');
+  }
+};
+
+const createElementFromString = (str, handlers = []) => {
+  const createdElement = document.createRange().createContextualFragment(str);
+
+  handlers.forEach((handler) => {
+    const el = createdElement.querySelector(handler.query);
+
+    _modifyElement({
+      element: handler.query,
+      type: handler.type,
+      data: handler.data,
+      context: createdElement,
+    });
+
+    if (handler.remove && el) {
+      el.removeAttribute(handler.attr);
     }
+  });
 
-    state = new Proxy(state, setHandler);
+  return createdElement;
+};
 
-    return state;
+const render = (template) => createElementFromString(...Array.from(template));
+
+const _setHandler = (stateId) => ({
+  set: (target, prop, value, receiver) => {
+    const bindedElements = stateStore.get(stateId);
+
+    bindedElements.forEach((handlers, id) => {
+      const query = `[data-proxy-id="${id}"]`;
+      const el = document.querySelector(query);
+
+      if (el) {
+        handlers.forEach((handler) => {
+          if (prop !== handler.propName) return;
+
+          const finalValue = handler.trap
+            ? handler.trap.call(null, value)
+            : value;
+
+          _modifyElement({
+            element: query,
+            type: handler.type,
+            data: { name: handler.target, value: finalValue },
+          });
+        });
+      } else {
+        // delete handler when the target is unreachable (most likely deleted)
+        bindedElements.delete(id);
+      }
+    });
+
+    return Reflect.set(target, prop, value, receiver);
+  },
+});
+
+const createState = (initValue = null) => {
+  const _id = uuid();
+  // Map contains id keys
+  // id keys are proxy ids of elements binded to the state
+  stateStore.set(_id, new Map());
+
+  const state = {
+    bindValue: (trap = null) => ({
+      propName: 'value',
+      trap,
+      _id,
+      value: state.value,
+    }),
+    bind: (propName = 'value', trap = null) => ({
+      propName,
+      trap,
+      _id,
+      value: propName === 'value' ? state.value : state.value[propName],
+    }),
   };
 
-  return {
-    html,
-    render,
-    parseString,
-    objectToString,
-    createElementFromString,
-    createState,
-  };
-})();
+  if (isObject(initValue)) {
+    state.value = new Proxy(initValue, _setHandler(_id));
+  } else {
+    state.value = initValue;
+  }
 
-export default Component;
+  return new Proxy(state, _setHandler(_id));
+};
+
+// const objectToString = (template) => {
+//   const { type, id, className, attr, children, text, prop, listeners, style } =
+//     template;
+//   const handlers = [];
+
+//   const idStr = id ? ` id="${id}" ` : '';
+//   const classStr = className ? ` class="${className}"` : '';
+
+//   const styleStr = style
+//     ? ` style="${Object.keys(style)
+//         .map((type) => (style[type] ? `${type}: ${style[type]};` : ''))
+//         .join(' ')}"`
+//     : '';
+
+//   const attrStr = attr
+//     ? Object.keys(attr)
+//         .map((type) => (attr[type] ? `${type}="${attr[type]}"` : ''))
+//         .join(' ')
+//     : '';
+
+//   const childrenStr = Array.isArray(children)
+//     ? _parser(children, handlers)
+//     : '';
+
+//   let eventPlaceholder = '';
+//   if (listeners) {
+//     const [eventHandlers, id] = _generateHandler('listener', listeners);
+//     handlers.push(...eventHandlers);
+//     eventPlaceholder = id;
+//   }
+
+//   let textPlaceholder = '';
+//   if (text) {
+//     const [textHandler, id] = _generateHandler('text', text);
+//     handlers.push(textHandler);
+//     textPlaceholder = id;
+//   }
+
+//   let propPlaceholder = '';
+//   if (prop) {
+//     let [propHandlers, id] = _generateHandler('prop', prop);
+//     handlers.push(...propHandlers);
+//     propPlaceholder = id;
+//   }
+
+//   const htmlString = `<${type} ${textPlaceholder} ${propPlaceholder} ${eventPlaceholder}
+//     ${idStr} ${classStr} ${attrStr} ${styleStr}>
+//     ${childrenStr}</${type}>`;
+
+//   return _createTemplate([htmlString, handlers]);
+// };
+
+export { html, render, createElementFromString, createState };

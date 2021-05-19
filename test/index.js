@@ -1,5 +1,4 @@
-import Component from '../component.js';
-const { parseString: html } = Component;
+import { html, render, createState } from '../component.js';
 
 let example = html`
   <div>
@@ -27,25 +26,52 @@ let example = html`
   </div>
 `;
 
-const state = Component.createState({
+const state = createState({
   name: 'red',
   text: 'test2',
   length: '1px',
 });
-const anotherState = Component.createState('test3');
-const arrayState = Component.createState(['1', '2', '3']);
+const anotherState = createState('test3');
+const arrayState = createState(['1', '2', '3']);
 arrayState.value = arrayState.value.map((num) => +num);
 
 const changeHandler = (e) => {
+  console.log('fafafa');
   state.value.name = e.currentTarget.value;
   state.value.length = e.currentTarget.value.split('').length + 'px';
-  anotherState.value = `<h1>${e.currentTarget.value}</h1>`;
+  anotherState.value = e.currentTarget.value;
+
   arrayState.value = [...arrayState.value];
   arrayState.value.push(1);
 };
 
 document.body.prepend(
-  Component.render(html`
+  render(html`
+    <input type="text" placeholder="Text" ${{ onInput: changeHandler }} />
+    <li>${html`<h1>TEST ${'test'}</h1>`}</li>
+    <p ${{ '$style:fontSize': state.bind('length') }}>Hello</p>
+    <div>
+      {%
+      <h1>SHIT IS REAL</h1>
+      %}
+    </div>
+    <ol
+      ${{
+        $content: arrayState.bindValue((val) => {
+          return html`${val.map((num) => html`<li>${num}</li>`)}`;
+        }),
+      }}
+    ></ol>
+    <p ${{ $id: anotherState.bindValue() }}>Test</p>
+    <div
+      ${{
+        $content: state.bind('name', (val) =>
+          val.split('').length % 2 === 0
+            ? html`<h1>TEST</h1>`
+            : html`<h1>Hello</h1>`
+        ),
+      }}
+    ></div>
     <p
       ${{
         $innerHTML: state.bind('name', (val) =>
@@ -53,70 +79,6 @@ document.body.prepend(
         ),
       }}
     ></p>
-    <p ${{ '$style:fontSize': state.bind('length') }}>Hello</p>
-    <p ${{ $id: anotherState.bind() }}>Test</p>
-    <div
-      ${{
-        $content: state.bind('name', (val) =>
-          val.split('').length % 2 === 0 ? example : html`<h1>Hello</h1>`
-        ),
-      }}
-    ></div>
-    <ol
-      ${{
-        $content: arrayState.bind('value', (val) => {
-          return html`${val.map((num) => html`<li>${num}</li>`)}`;
-        }),
-      }}
-    ></ol>
-    <input type="text" placeholder="Text" ${{ onInput: changeHandler }} />
+    ${example} {% ${'<h3>TSET</h3>'} %}
   `)
 );
-
-document.body.prepend(Component.render(example));
-
-// document
-//   .querySelector('.delete')
-//   .addEventListener('click', (e) => e.target.parentElement.remove());
-
-// obj = Component.bind(
-//   {
-//     target: obj,
-//     prop: 'name',
-//   },
-//   {
-//     target: '#test1',
-//     prop: 'textContent',
-//   }
-// );
-
-// obj = Component.bind(
-//   {
-//     target: obj,
-//     prop: 'name',
-//   },
-//   {
-//     target: '#test2',
-//     prop: 'innerHTML',
-//     func(val) {
-//       return `<strong>Testing this ${val}</strong>`;
-//     },
-//   }
-// );
-
-// obj = Component.bind(
-//   {
-//     target: obj,
-//     prop: 'name',
-//     func(val) {
-//       return `${Math.random()} + ${val}`;
-//     },
-//   },
-//   {
-//     target: '#test3',
-//     prop: 'textContent',
-//   }
-// );
-
-// create state
-//
