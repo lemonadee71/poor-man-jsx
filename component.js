@@ -1,7 +1,7 @@
 const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
 
 const stateStore = new Map();
-const defaultProps = ['textContent', 'innerHTML', 'outerHTML'];
+const defaultProps = ['textContent', 'innerHTML', 'outerHTML', 'innerText'];
 const booleanAttributes = [
   'checked',
   'selected',
@@ -16,7 +16,7 @@ const booleanAttributes = [
 
 const isObject = (val) => typeof val === 'object';
 const isArray = (val) => Array.isArray(val);
-const isTemplateObject = (val) => isObject(val) && val.type;
+// const isTemplateObject = (val) => isObject(val) && val.type;
 const isTemplate = (val) => val._type && val._type === 'template';
 const isEventListeners = (val) =>
   isObject(val) && Object.keys(val).every((key) => key.startsWith('on'));
@@ -24,6 +24,8 @@ const isState = (val) =>
   isObject(val) && Object.keys(val).every((key) => key.startsWith('$'));
 const isBooleanAttribute = (val) => booleanAttributes.includes(val);
 const isStyleAttribute = (str) => str.startsWith('$style:');
+const isDefaultProps = (val) =>
+  isObject(val) && Object.keys(val).every((key) => defaultProps.includes(key));
 
 const _handlerTypeReducer = (str) => {
   let type;
@@ -167,11 +169,6 @@ const _parser = (expr, handlers = []) => {
     return [expr[0], [...handlers, ...expr[1]]];
   }
 
-  // if TemplateObject parse it with objectToString
-  // if (isTemplateObject(expr)) {
-  //   return _parser(objectToString(expr), handlers);
-  // }
-
   // if Object and that object contains only keys which name is an event
   // generate a temporary id and replace the object with it
   // then add the event listeners to our handlers
@@ -184,6 +181,11 @@ const _parser = (expr, handlers = []) => {
   if (isState(expr)) {
     const [propHandlers, id] = _bindState(expr);
     return [id, [...handlers, ...propHandlers]];
+  }
+
+  if (isDefaultProps(expr)) {
+    const [defaultPropHandlers, id] = _generateHandler('prop', expr);
+    return [id, [...handlers, ...defaultPropHandlers]];
   }
 
   // if none of our accepted types, assume it is string
@@ -220,7 +222,7 @@ const _replacePlaceholders = (str) => {
 
     handlers.push(...textHandlers);
 
-    newString = newString.replace(match[0], `<a ${id}></a>`);
+    newString = newString.replace(match[0], `<i ${id}></i>`);
 
     match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
   }
@@ -254,6 +256,12 @@ const html = (strings, ...exprs) => parseString(strings, ...exprs);
 
 const _modifyElement = ({ element, type, data, context = document }) => {
   const el = context.querySelector(element);
+
+  if (!el) {
+    console.log(type, data);
+    console.log(element);
+    return;
+  }
 
   switch (type) {
     case 'prop':
@@ -300,6 +308,7 @@ const createElementFromString = (str, handlers = []) => {
 
   handlers.forEach((handler) => {
     const el = createdElement.querySelector(handler.query);
+    console.log(handler.query);
 
     _modifyElement({
       element: handler.query,
@@ -308,7 +317,7 @@ const createElementFromString = (str, handlers = []) => {
       context: createdElement,
     });
 
-    if (handler.remove && el) {
+    if (handler.remove) {
       el.removeAttribute(handler.attr);
     }
   });
@@ -379,57 +388,5 @@ const createState = (initValue = null) => {
 
   return new Proxy(state, _setHandler(_id));
 };
-
-// const objectToString = (template) => {
-//   const { type, id, className, attr, children, text, prop, listeners, style } =
-//     template;
-//   const handlers = [];
-
-//   const idStr = id ? ` id="${id}" ` : '';
-//   const classStr = className ? ` class="${className}"` : '';
-
-//   const styleStr = style
-//     ? ` style="${Object.keys(style)
-//         .map((type) => (style[type] ? `${type}: ${style[type]};` : ''))
-//         .join(' ')}"`
-//     : '';
-
-//   const attrStr = attr
-//     ? Object.keys(attr)
-//         .map((type) => (attr[type] ? `${type}="${attr[type]}"` : ''))
-//         .join(' ')
-//     : '';
-
-//   const childrenStr = Array.isArray(children)
-//     ? _parser(children, handlers)
-//     : '';
-
-//   let eventPlaceholder = '';
-//   if (listeners) {
-//     const [eventHandlers, id] = _generateHandler('listener', listeners);
-//     handlers.push(...eventHandlers);
-//     eventPlaceholder = id;
-//   }
-
-//   let textPlaceholder = '';
-//   if (text) {
-//     const [textHandler, id] = _generateHandler('text', text);
-//     handlers.push(textHandler);
-//     textPlaceholder = id;
-//   }
-
-//   let propPlaceholder = '';
-//   if (prop) {
-//     let [propHandlers, id] = _generateHandler('prop', prop);
-//     handlers.push(...propHandlers);
-//     propPlaceholder = id;
-//   }
-
-//   const htmlString = `<${type} ${textPlaceholder} ${propPlaceholder} ${eventPlaceholder}
-//     ${idStr} ${classStr} ${attrStr} ${styleStr}>
-//     ${childrenStr}</${type}>`;
-
-//   return _createTemplate([htmlString, handlers]);
-// };
 
 export { html, render, createElementFromString, createState };

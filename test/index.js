@@ -79,6 +79,10 @@ document.body.prepend(
         ),
       }}
     ></p>
+    <div ${{ innerHTML: '<h3>TSET</h3>' }}></div>
     ${example} {% ${'<h3>TSET</h3>'} %}
   `)
 );
+
+state.$value;
+state.$name((val) => (val ? `<strong>${val}</strong>` : 'Hello'));

@@ -1,0 +1,22 @@
+{
+  "name": "component",
+  "version": "1.0.0",
+  "description": "",
+  "main": "\"\"",
+  "scripts": {
+    "test": "jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lemonadee71/component.js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lemonadee71/component.js/issues"
+  },
+  "homepage": "https://github.com/lemonadee71/component.js#readme",
+  "devDependencies": {
+    "jest": "^27.0.6"
+  }
+}
