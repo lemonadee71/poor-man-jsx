@@ -1,2 +1,3 @@
-./test
+/legacy
 node_modules
+notes.js

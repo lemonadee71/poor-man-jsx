@@ -1,88 +1,66 @@
-import { html, render, createState } from '../component.js';
+import { html, render } from '../index.js';
 
-let example = html`
-  <div>
-    ${{
-      type: 'p',
-      id: 'test2',
-      text: '<h1>Testing this shit</h1>',
-      children: [
-        {
-          type: 'button',
-          text: 'alert me',
-          listeners: {
-            click: () => alert("It's working"),
-          },
-        },
-        html`<button
-          ${{
-            onClick: () => alert('Another alert'),
-          }}
-        >
-          Another button
-        </button>`,
-      ],
-    }}
-  </div>
+const root = document.createElement('div');
+document.body.append(root);
+
+// Should render element with an event listener
+const test1 = html`
+  <button ${{ onClick: () => alert('Hello') }}>This is my button</button>
 `;
+root.append(render(test1));
 
-const state = createState({
-  name: 'red',
-  text: 'test2',
-  length: '1px',
-});
-const anotherState = createState('test3');
-const arrayState = createState(['1', '2', '3']);
-arrayState.value = arrayState.value.map((num) => +num);
-
-const changeHandler = (e) => {
-  console.log('fafafa');
-  state.value.name = e.currentTarget.value;
-  state.value.length = e.currentTarget.value.split('').length + 'px';
-  anotherState.value = e.currentTarget.value;
-
-  arrayState.value = [...arrayState.value];
-  arrayState.value.push(1);
+// Should be rendered with all the props and attr
+const obj = {
+  class: 'myclass',
+  id: 'test',
+  height: '20x',
+  width: '300px',
+  border: '1px solid black',
+  innerHTML: '<h1>This is my div</h1>',
+  onClick: () => {
+    console.log('I am clicked');
+  },
 };
+const test2 = html`<div ${obj}></div>`;
+root.append(render(test2));
 
-document.body.prepend(
-  render(html`
-    <input type="text" placeholder="Text" ${{ onInput: changeHandler }} />
-    <li>${html`<h1>TEST ${'test'}</h1>`}</li>
-    <p ${{ '$style:fontSize': state.bind('length') }}>Hello</p>
-    <div>
-      {%
-      <h1>SHIT IS REAL</h1>
-      %}
-    </div>
-    <ol
-      ${{
-        $content: arrayState.bindValue((val) => {
-          return html`${val.map((num) => html`<li>${num}</li>`)}`;
-        }),
-      }}
-    ></ol>
-    <p ${{ $id: anotherState.bindValue() }}>Test</p>
-    <div
-      ${{
-        $content: state.bind('name', (val) =>
-          val.split('').length % 2 === 0
-            ? html`<h1>TEST</h1>`
-            : html`<h1>Hello</h1>`
-        ),
-      }}
-    ></div>
-    <p
-      ${{
-        $innerHTML: state.bind('name', (val) =>
-          val ? `<strong>${val}</strong>` : 'Hello'
-        ),
-      }}
-    ></p>
-    <div ${{ innerHTML: '<h3>TSET</h3>' }}></div>
-    ${example} {% ${'<h3>TSET</h3>'} %}
-  `)
-);
+// Special tag children should work
+const test3 = html`<div ${{ children: test2 }}></div>`;
+root.append(render(test3));
 
-state.$value;
-state.$name((val) => (val ? `<strong>${val}</strong>` : 'Hello'));
+// Arrays should work
+const test4 = html`<ul>
+  ${new Array(3).fill('test').map((str) => `<li>${str}</li>`)}
+</ul>`;
+root.append(render(test4));
+
+// Arrays with template should work
+const test5 = html`<div
+  style="height: 300px; width: 500px; border: 1px solid red"
+>
+  ${[test1, test2, test3, test4]}
+</div>`;
+root.append(render(test5));
+
+// Arrays of objects should work
+const arr = [
+  {
+    onClick: () => alert('Test'),
+  },
+  {
+    textContent: 'Click me',
+  },
+];
+const test6 = html`<button ${arr}></button>`;
+root.append(render(test6));
+
+// Multiple objects should work
+const test7 = html`<button
+  ${{
+    onClick: () => alert('Test again'),
+  }}
+  ${{
+    textContent: 'Click me again',
+  }}
+></button>`;
+root.append(render(test7));

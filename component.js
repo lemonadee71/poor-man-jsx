@@ -197,7 +197,7 @@ const _createTemplate = (arr) => {
   const arrayLikeObj = {};
 
   arr.forEach((i, idx) => {
-    arrayLikeObj[idx] = arr[idx];
+    arrayLikeObj[idx] = i;
   });
 
   arrayLikeObj.length = arr.length;
