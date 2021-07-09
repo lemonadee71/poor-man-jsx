@@ -3,6 +3,8 @@ import { html, render } from '../index.js';
 const root = document.createElement('div');
 document.body.append(root);
 
+const htmlString = '<h1>This is my div</h1>';
+
 // Should render element with an event listener
 const test1 = html`
   <button ${{ onClick: () => alert('Hello') }}>This is my button</button>
@@ -16,7 +18,7 @@ const obj = {
   height: '20x',
   width: '300px',
   border: '1px solid black',
-  innerHTML: '<h1>This is my div</h1>',
+  innerHTML: htmlString,
   onClick: () => {
     console.log('I am clicked');
   },
@@ -64,3 +66,13 @@ const test7 = html`<button
   }}
 ></button>`;
 root.append(render(test7));
+
+// Should not render html strings if enclosed with {% %}
+// And retain actual comments
+const test8 = html`
+  <div id="test8">
+    <!-- I Should not be rendered -->
+    {% ${htmlString} %}
+  </div>
+`;
+root.append(render(test8));

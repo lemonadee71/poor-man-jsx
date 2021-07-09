@@ -131,15 +131,34 @@ const parse = (val, handlers = []) => {
   };
 };
 
+const replacePlaceholders = (str) => {
+  let newString = str;
+  let match = newString.match(/{%\s*(.*)\s*%}/);
+
+  while (match) {
+    const id = uuid();
+    newString = newString.replace(
+      match[0],
+      `<!-- ${id}-${match[1].trim()} -->`
+    );
+
+    match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
+  }
+
+  return newString;
+};
+
 const parseString = (fragments, ...values) => {
   const result = reduce(values.map((value) => parse(value)));
 
   const htmlString = result.str.reduce(
-    (fullString, str, i) => `${fullString}${str}${fragments[i + 1]}`,
+    (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
     fragments[0]
   );
 
-  return new Template(htmlString, result.handlers.flat());
+  const finalHTMLString = replacePlaceholders(htmlString);
+
+  return new Template(finalHTMLString, result.handlers.flat());
 };
 
 const modifyElement = ({ query, type, data, context = document }) => {
@@ -187,6 +206,29 @@ const modifyElement = ({ query, type, data, context = document }) => {
   }
 };
 
+// Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
+const replaceComments = (root) => {
+  // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
+  const iterator = document.createNodeIterator(
+    root,
+    NodeFilter.SHOW_COMMENT,
+    () => NodeFilter.FILTER_ACCEPT,
+    false
+  );
+  const idRegex = /^\w+-/;
+
+  let current;
+  while ((current = iterator.nextNode())) {
+    const isPlaceholder = idRegex.test(current.nodeValue.trim());
+
+    if (isPlaceholder) {
+      current.replaceWith(
+        document.createTextNode(current.nodeValue.trim().replace(idRegex, ''))
+      );
+    }
+  }
+};
+
 const createElementFromString = (str, handlers = []) => {
   const createdElement = document.createRange().createContextualFragment(str);
 
@@ -204,6 +246,9 @@ const createElementFromString = (str, handlers = []) => {
       el.removeAttribute(handler.attr);
     }
   });
+
+  // Replace all placeholder comments
+  [...createdElement.children].forEach((child) => replaceComments(child));
 
   return createdElement;
 };
