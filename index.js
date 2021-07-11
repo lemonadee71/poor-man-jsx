@@ -46,11 +46,26 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 // utils
 const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
 
-const _reduce = (arr) =>
+const _reduceValue = (value, trap = null) =>
+  trap ? trap.call(null, value) : value;
+
+const _reduceArray = (arr) =>
   arr.reduce(
     (acc, item) => {
       acc.str.push(item.str);
       acc.handlers.push(item.handlers);
+
+      return acc;
+    },
+    { str: [], handlers: [] }
+  );
+
+const _reduceObject = (obj) =>
+  Object.entries(obj).reduce(
+    (acc, [type, obj]) => {
+      const result = generateHandler(type, obj);
+      acc.str.push(result.str);
+      acc.handlers.push(result.handlers);
 
       return acc;
     },
@@ -81,8 +96,8 @@ const determineType = (key) => {
   return [k.replace(/^(\$|on)/gi, ''), type];
 };
 
-const batchSameTypes = (obj) =>
-  Object.entries(obj).reduce((batchedObj, [dirtyKey, value]) => {
+const batchSameTypes = (obj) => {
+  const newObj = Object.entries(obj).reduce((batchedObj, [dirtyKey, value]) => {
     const [key, type] = determineType(dirtyKey);
 
     if (!batchedObj[type]) {
@@ -94,19 +109,26 @@ const batchSameTypes = (obj) =>
     return batchedObj;
   }, {});
 
-const generateHandler = (type, obj) => {
+  if (newObj.state) {
+    newObj.state = batchSameTypes(newObj.state);
+  }
+
+  return newObj;
+};
+
+function generateHandler(type, obj) {
   const id = uuid();
   const seed = uuid(4);
   const attrName = `data-${type}-${seed}`;
   const dataAttr = `${attrName}="${id}"`;
   const arr = [];
 
-  Object.entries(obj).forEach(([key, value]) => {
+  Object.entries(obj).forEach(([name, value]) => {
     arr.push({
       type,
       query: `[${dataAttr}]`,
       attr: attrName,
-      data: { name: key, value },
+      data: { name, value },
       remove: false,
     });
   });
@@ -114,13 +136,13 @@ const generateHandler = (type, obj) => {
   arr[arr.length - 1].remove = true;
 
   return { str: dataAttr, handlers: arr };
-};
+}
 
 const parse = (val, handlers = []) => {
   // isArray
   if (isArray(val)) {
     // Will be parsed as an array of object { str, handlers }
-    const final = _reduce(val.map((item) => parse(item, handlers)));
+    const final = _reduceArray(val.map((item) => parse(item, handlers)));
 
     return {
       str: final.str.join(' '),
@@ -138,24 +160,16 @@ const parse = (val, handlers = []) => {
 
   // isObject --> batchSameTypes
   if (isObject(val)) {
-    const batchedObj = batchSameTypes(val);
+    const { state, ...batchedObj } = batchSameTypes(val);
 
     // This will be an array of arrays
     // Where each item is [str, handlers]
-    const final = Object.entries(batchedObj).reduce(
-      (acc, [type, obj]) => {
-        const result = generateHandler(type, obj);
-        acc.str.push(result.str);
-        acc.handlers.push(result.handlers);
-
-        return acc;
-      },
-      { str: [], handlers: [] }
-    );
+    const a = _reduceObject(batchedObj);
+    const b = state ? generateStateHandler(state) : { str: '', handlers: [] };
 
     return {
-      str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers.flat()],
+      str: [a.str.join(' '), b.str].join(' '),
+      handlers: [...handlers, ...a.handlers.flat(), ...b.handlers.flat()],
     };
   }
 
@@ -182,7 +196,7 @@ const addPlaceholders = (str) => {
 };
 
 const parseString = (fragments, ...values) => {
-  const result = _reduce(values.map((value) => parse(value)));
+  const result = _reduceArray(values.map((value) => parse(value)));
 
   const htmlString = result.str.reduce(
     (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
@@ -260,7 +274,7 @@ const replacePlaceholderComments = (root) => {
   }
 };
 
-const createElementFromString = (str, handlers = []) => {
+function createElementFromString(str, handlers = []) {
   const createdElement = document.createRange().createContextualFragment(str);
 
   handlers.forEach((handler) => {
@@ -282,9 +296,115 @@ const createElementFromString = (str, handlers = []) => {
   [...createdElement.children].forEach(replacePlaceholderComments);
 
   return createdElement;
+}
+
+function render(template) {
+  return createElementFromString(...Object.values(template));
+}
+
+// State
+const StateStore = new Map();
+
+function generateStateHandler(state = {}) {
+  const id = uuid();
+  const proxyId = `data-proxy-id="${id}"`;
+  const batchedObj = {};
+
+  Object.entries(state).forEach(([type, batch]) => {
+    Object.entries(batch).forEach(([key, { id: _id, data }]) => {
+      const bindedElements = StateStore.get(_id);
+      const existingHandlers = bindedElements.get(id) || [];
+
+      const finalValue = _reduceValue(data.value, data.trap);
+
+      if (!batchedObj[type]) {
+        batchedObj[type] = {};
+      }
+
+      batchedObj[type][key] = finalValue;
+
+      bindedElements.set(id, [
+        ...existingHandlers,
+        {
+          type,
+          target: key,
+          prop: data.prop,
+          trap: data.trap,
+        },
+      ]);
+    });
+  });
+
+  const { str, handlers } = _reduceObject(batchedObj);
+
+  return { handlers, str: `${str} ${proxyId}` };
+}
+
+const _setter = (_id) => (target, prop, value, receiver) => {
+  const bindedElements = StateStore.get(_id);
+
+  bindedElements.forEach((handlers, id) => {
+    const query = `[data-proxy-id="${id}"]`;
+    const el = document.querySelector(query);
+
+    if (el) {
+      handlers.forEach((handler) => {
+        if (prop !== handler.prop) return;
+
+        const finalValue = _reduceValue(value, handler.trap);
+
+        modifyElement({
+          query,
+          type: handler.type,
+          data: { name: handler.target, value: finalValue },
+        });
+      });
+    } else {
+      // delete handler when the target is unreachable (most likely deleted)
+      bindedElements.delete(id);
+    }
+  });
+
+  return Reflect.set(target, prop, value, receiver);
 };
 
-const render = (template) =>
-  createElementFromString(...Object.values(template));
+const _bind =
+  (id, prop, value) =>
+  (trap = null) => ({
+    id,
+    data: {
+      prop,
+      trap,
+      value,
+    },
+  });
 
-export { parseString as html, render };
+const _getter = (_id) => (target, rawProp, receiver) => {
+  const [prop, type] = determineType(rawProp);
+
+  if (type === 'state' && prop in target) {
+    return Object.assign(
+      _bind(_id, prop, target[prop]),
+      _bind(_id, prop, target[prop])()
+    );
+  }
+
+  return Reflect.get(target, prop, receiver);
+};
+
+const createState = (obj) => {
+  const _id = uuid();
+  StateStore.set(_id, new Map());
+
+  const { proxy, revoke } = Proxy.revocable(obj, {
+    get: _getter(_id),
+    set: _setter(_id),
+  });
+
+  return [proxy, revoke];
+};
+
+const createPrimitiveState = (value) => createState({ value });
+const createObjectState = createState; // alias
+
+export { parseString as html, render, createPrimitiveState, createObjectState };
