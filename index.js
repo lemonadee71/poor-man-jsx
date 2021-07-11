@@ -60,18 +60,6 @@ const _reduceArray = (arr) =>
     { str: [], handlers: [] }
   );
 
-const _reduceObject = (obj) =>
-  Object.entries(obj).reduce(
-    (acc, [type, obj]) => {
-      const result = generateHandler(type, obj);
-      acc.str.push(result.str);
-      acc.handlers.push(result.handlers);
-
-      return acc;
-    },
-    { str: [], handlers: [] }
-  );
-
 const determineType = (key) => {
   // Any unrecognizable key will be treated as attr
   let type = 'attr';
@@ -138,6 +126,18 @@ function generateHandler(type, obj) {
   return { str: dataAttr, handlers: arr };
 }
 
+const generateHandlerAll = (obj) =>
+  Object.entries(obj).reduce(
+    (acc, [type, obj]) => {
+      const result = generateHandler(type, obj);
+      acc.str.push(result.str);
+      acc.handlers.push(result.handlers);
+
+      return acc;
+    },
+    { str: [], handlers: [] }
+  );
+
 const parse = (val, handlers = []) => {
   // isArray
   if (isArray(val)) {
@@ -146,7 +146,7 @@ const parse = (val, handlers = []) => {
 
     return {
       str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers.flat()],
+      handlers: [...handlers, ...final.handlers].flat(),
     };
   }
 
@@ -164,12 +164,12 @@ const parse = (val, handlers = []) => {
 
     // This will be an array of arrays
     // Where each item is [str, handlers]
-    const a = _reduceObject(batchedObj);
-    const b = state ? generateStateHandler(state) : { str: '', handlers: [] };
+    const a = generateHandlerAll(batchedObj);
+    const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
 
     return {
-      str: [a.str.join(' '), b.str].join(' '),
-      handlers: [...handlers, ...a.handlers.flat(), ...b.handlers.flat()],
+      str: [...a.str, ...b.str].join(' '),
+      handlers: [...handlers, ...a.handlers, ...b.handlers].flat(),
     };
   }
 
@@ -335,9 +335,9 @@ function generateStateHandler(state = {}) {
     });
   });
 
-  const { str, handlers } = _reduceObject(batchedObj);
+  const { str, handlers } = generateHandlerAll(batchedObj);
 
-  return { handlers, str: `${str} ${proxyId}` };
+  return { handlers, str: [...str, proxyId] };
 }
 
 const _setter = (_id) => (target, prop, value, receiver) => {
