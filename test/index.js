@@ -60,8 +60,11 @@ root.append(render(test6));
 const test7 = html`<button
   ${{
     onClick: () => alert('Test again'),
+    height: '30px',
+    borderRadius: '15px',
   }}
   ${{
+    border: '1px solid red',
     textContent: 'Click me again',
   }}
 ></button>`;
@@ -70,9 +73,11 @@ root.append(render(test7));
 // Should not render html strings if enclosed with {% %}
 // And retain actual comments
 const test8 = html`
-  <div id="test8">
-    <!-- I Should not be rendered -->
-    {% ${htmlString} %}
-  </div>
+  <select name="test" id="test8">
+    <option value="test8">
+      <!-- I Should not be rendered -->
+      {% ${htmlString} %}
+    </option>
+  </select>
 `;
 root.append(render(test8));

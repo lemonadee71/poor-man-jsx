@@ -1,18 +1,52 @@
-import {
-  isArray,
-  isBooleanAttribute,
-  isDefaultProp,
-  isEventListener,
-  isObject,
-  isState,
-  isStyleAttribute,
-  isTemplate,
-} from './is.js';
-import Template from './Template.js';
+// Classes
+class Template {
+  constructor(str, handlers) {
+    this.str = str;
+    this.handlers = handlers;
+  }
+}
 
+const el = document.createElement('div');
+const defaultProps = [
+  'textContent',
+  'innerHTML',
+  'outerHTML',
+  'innerText',
+  'style',
+];
+const booleanAttributes = [
+  'checked',
+  'selected',
+  'disabled',
+  'readonly',
+  'multiple',
+  'ismap',
+  'noresize',
+  'reversed',
+  'autocomplete',
+];
+
+// is functions
+const isObject = (val) => typeof val === 'object';
+
+const isArray = (val) => Array.isArray(val);
+
+const isTemplate = (val) => val instanceof Template;
+
+const isState = (key) => key.startsWith('$');
+
+const isEventListener = (key) => key.toLowerCase().startsWith('on');
+
+const isDefaultProp = (key) => defaultProps.includes(key);
+
+const isStyleAttribute = (key) => key in el.style;
+
+const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
+
+// utils
 const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
 
-const reduce = (arr) =>
+const _reduce = (arr) =>
   arr.reduce(
     (acc, item) => {
       acc.str.push(item.str);
@@ -86,7 +120,7 @@ const parse = (val, handlers = []) => {
   // isArray
   if (isArray(val)) {
     // Will be parsed as an array of object { str, handlers }
-    const final = reduce(val.map((item) => parse(item, handlers)));
+    const final = _reduce(val.map((item) => parse(item, handlers)));
 
     return {
       str: final.str.join(' '),
@@ -131,15 +165,14 @@ const parse = (val, handlers = []) => {
   };
 };
 
-const replacePlaceholders = (str) => {
+const addPlaceholders = (str) => {
   let newString = str;
   let match = newString.match(/{%\s*(.*)\s*%}/);
 
   while (match) {
-    const id = uuid();
     newString = newString.replace(
       match[0],
-      `<!-- ${id}-${match[1].trim()} -->`
+      `<!-- placeholder-${match[1].trim()} -->`
     );
 
     match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
@@ -149,14 +182,14 @@ const replacePlaceholders = (str) => {
 };
 
 const parseString = (fragments, ...values) => {
-  const result = reduce(values.map((value) => parse(value)));
+  const result = _reduce(values.map((value) => parse(value)));
 
   const htmlString = result.str.reduce(
     (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
     fragments[0]
   );
 
-  const finalHTMLString = replacePlaceholders(htmlString);
+  const finalHTMLString = addPlaceholders(htmlString);
 
   return new Template(finalHTMLString, result.handlers.flat());
 };
@@ -185,9 +218,6 @@ const modifyElement = ({ query, type, data, context = document }) => {
     case 'listener':
       node.addEventListener(data.name, data.value);
       break;
-    case 'text':
-      node.replaceWith(document.createTextNode(data.value));
-      break;
     case 'style':
       node.style[data.name] = data.value;
       break;
@@ -207,7 +237,7 @@ const modifyElement = ({ query, type, data, context = document }) => {
 };
 
 // Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
-const replaceComments = (root) => {
+const replacePlaceholderComments = (root) => {
   // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
   const iterator = document.createNodeIterator(
     root,
@@ -215,15 +245,16 @@ const replaceComments = (root) => {
     () => NodeFilter.FILTER_ACCEPT,
     false
   );
-  const idRegex = /^\w+-/;
 
   let current;
   while ((current = iterator.nextNode())) {
-    const isPlaceholder = idRegex.test(current.nodeValue.trim());
+    const isPlaceholder = current.nodeValue.trim().startsWith('placeholder-');
 
     if (isPlaceholder) {
       current.replaceWith(
-        document.createTextNode(current.nodeValue.trim().replace(idRegex, ''))
+        document.createTextNode(
+          current.nodeValue.trim().replace('placeholder-', '')
+        )
       );
     }
   }
@@ -248,7 +279,7 @@ const createElementFromString = (str, handlers = []) => {
   });
 
   // Replace all placeholder comments
-  [...createdElement.children].forEach((child) => replaceComments(child));
+  [...createdElement.children].forEach(replacePlaceholderComments);
 
   return createdElement;
 };
