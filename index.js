@@ -6,7 +6,7 @@ class Template {
   }
 }
 
-const el = document.createElement('div');
+const mockEl = document.createElement('div');
 const defaultProps = [
   'textContent',
   'innerHTML',
@@ -39,7 +39,7 @@ const isEventListener = (key) => key.toLowerCase().startsWith('on');
 
 const isDefaultProp = (key) => defaultProps.includes(key);
 
-const isStyleAttribute = (key) => key in el.style;
+const isStyleAttribute = (key) => key in mockEl.style;
 
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
@@ -128,8 +128,8 @@ function generateHandler(type, obj) {
 
 const generateHandlerAll = (obj) =>
   Object.entries(obj).reduce(
-    (acc, [type, obj]) => {
-      const result = generateHandler(type, obj);
+    (acc, [type, item]) => {
+      const result = generateHandler(type, item);
       acc.str.push(result.str);
       acc.handlers.push(result.handlers);
 
@@ -260,8 +260,8 @@ const replacePlaceholderComments = (root) => {
     false
   );
 
-  let current;
-  while ((current = iterator.nextNode())) {
+  let current = iterator.nextNode();
+  while (current) {
     const isPlaceholder = current.nodeValue.trim().startsWith('placeholder-');
 
     if (isPlaceholder) {
@@ -271,6 +271,8 @@ const replacePlaceholderComments = (root) => {
         )
       );
     }
+
+    current = iterator.nextNode();
   }
 };
 
@@ -311,8 +313,8 @@ function generateStateHandler(state = {}) {
   const batchedObj = {};
 
   Object.entries(state).forEach(([type, batch]) => {
-    Object.entries(batch).forEach(([key, { id: _id, data }]) => {
-      const bindedElements = StateStore.get(_id);
+    Object.entries(batch).forEach(([key, { id: stateId, data }]) => {
+      const bindedElements = StateStore.get(stateId);
       const existingHandlers = bindedElements.get(id) || [];
 
       const finalValue = _reduceValue(data.value, data.trap);

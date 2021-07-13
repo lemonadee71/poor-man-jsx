@@ -1,0 +1,40 @@
+{
+  "extends": ["airbnb", "prettier"],
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": ["warn", { "singleQuote": true, "parser": "flow" }],
+    "no-unused-vars": "warn",
+    "arrow-body-style": "warn",
+    "no-console": "off",
+    "func-names": "off",
+    "object-shorthand": "off",
+    "class-methods-use-this": "off",
+    "no-plusplus": "off",
+    "no-underscore-dangle": "off",
+    "no-param-reassign": "off",
+    "no-alert": "off",
+    "no-use-before-define": "off",
+    "no-continue": "warn",
+    "prefer-destructuring": [
+      "error",
+      { "AssignmentExpression": { "array": false } }
+    ],
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": ["**/webpack.*.js"]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js", "**/*.test.jsx"],
+      "env": {
+        "jest": true
+      }
+    }
+  ],
+  "env": {
+    "browser": true
+  }
+}

@@ -3,7 +3,7 @@ import {
   createPrimitiveState,
   html,
   render,
-} from '../index.js';
+} from '../index';
 
 const root = document.createElement('div');
 document.body.append(root);
