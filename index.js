@@ -26,6 +26,11 @@ const booleanAttributes = [
   'autocomplete',
 ];
 
+const settings = {
+  addDefaultProp: (prop) => defaultProps.push(prop),
+  addBooleanAttr: (attr) => booleanAttributes.push(attr),
+};
+
 // is functions
 const isObject = (val) => typeof val === 'object';
 
@@ -305,16 +310,16 @@ function render(template) {
 }
 
 // State
-const StateStore = new Map();
+const StateStore = new WeakMap();
 
 function generateStateHandler(state = {}) {
   const id = uuid();
-  const proxyId = `data-proxy-id="${id}"`;
+  const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
 
   Object.entries(state).forEach(([type, batch]) => {
-    Object.entries(batch).forEach(([key, { id: stateId, data }]) => {
-      const bindedElements = StateStore.get(stateId);
+    Object.entries(batch).forEach(([key, { ref, data }]) => {
+      const bindedElements = StateStore.get(ref);
       const existingHandlers = bindedElements.get(id) || [];
 
       const finalValue = _reduceValue(data.value, data.trap);
@@ -342,11 +347,11 @@ function generateStateHandler(state = {}) {
   return { handlers, str: [...str, proxyId] };
 }
 
-const _setter = (_id) => (target, prop, value, receiver) => {
-  const bindedElements = StateStore.get(_id);
+const _setter = (ref) => (target, prop, value, receiver) => {
+  const bindedElements = StateStore.get(ref);
 
   bindedElements.forEach((handlers, id) => {
-    const query = `[data-proxy-id="${id}"]`;
+    const query = `[data-proxyid="${id}"]`;
     const el = document.querySelector(query);
 
     if (el) {
@@ -371,9 +376,9 @@ const _setter = (_id) => (target, prop, value, receiver) => {
 };
 
 const _bind =
-  (id, prop, value) =>
+  (ref, prop, value) =>
   (trap = null) => ({
-    id,
+    ref,
     data: {
       prop,
       trap,
@@ -381,32 +386,44 @@ const _bind =
     },
   });
 
-const _getter = (_id) => (target, rawProp, receiver) => {
+const _getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
 
   if (type === 'state' && prop in target) {
     return Object.assign(
-      _bind(_id, prop, target[prop]),
-      _bind(_id, prop, target[prop])()
+      _bind(ref, prop, target[prop]),
+      _bind(ref, prop, target[prop])()
     );
   }
 
   return Reflect.get(target, prop, receiver);
 };
 
-const createState = (obj) => {
-  const _id = uuid();
-  StateStore.set(_id, new Map());
+const createState = (obj, seal = true) => {
+  StateStore.set(obj, new Map());
 
-  const { proxy, revoke } = Proxy.revocable(obj, {
-    get: _getter(_id),
-    set: _setter(_id),
+  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
+    get: _getter(obj),
+    set: _setter(obj),
   });
 
-  return [proxy, revoke];
+  const _deleteState = () => {
+    revoke();
+    StateStore.delete(obj);
+
+    return obj;
+  };
+
+  return [proxy, _deleteState];
 };
 
 const createPrimitiveState = (value) => createState({ value });
 const createObjectState = createState; // alias
 
-export { parseString as html, render, createPrimitiveState, createObjectState };
+export {
+  settings,
+  parseString as html,
+  render,
+  createPrimitiveState,
+  createObjectState,
+};

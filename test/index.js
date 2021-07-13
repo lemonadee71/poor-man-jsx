@@ -3,7 +3,7 @@ import {
   createPrimitiveState,
   html,
   render,
-} from '../index';
+} from '../index.js';
 
 const root = document.createElement('div');
 document.body.append(root);
@@ -109,8 +109,9 @@ const test9 = html`
 `;
 root.append(render(test9));
 
+let rawObj = { name: 'test', age: 1 };
 // Object state should work
-const [testState2, revoke] = createObjectState({ name: 'test', age: 1 });
+const [testState2, revoke] = createObjectState(rawObj);
 const test10 = html`
   <input
     type="text"
@@ -132,6 +133,16 @@ const test10 = html`
   <pre
     ${{ $textContent: testState2.$age(() => JSON.stringify(testState2)) }}
   ></pre>
+  <button
+    ${{
+      onClick: () => {
+        rawObj = revoke();
+        console.log(rawObj);
+      },
+    }}
+  >
+    Revoke me
+  </button>
 `;
 
 root.append(render(test10));
