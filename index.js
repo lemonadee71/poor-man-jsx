@@ -54,10 +54,9 @@ const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
 
-const _reduceValue = (value, trap = null) =>
-  trap ? trap.call(null, value) : value;
+const reduceValue = (value, fn = null) => (fn ? fn.call(null, value) : value);
 
-const _reduceArray = (arr) =>
+const reduceHandlerArray = (arr) =>
   arr.reduce(
     (acc, item) => {
       acc.str.push(item.str);
@@ -93,23 +92,23 @@ const determineType = (key) => {
 };
 
 const batchSameTypes = (obj) => {
-  const newObj = Object.entries(obj).reduce((batchedObj, [dirtyKey, value]) => {
-    const [key, type] = determineType(dirtyKey);
+  const batched = Object.entries(obj).reduce((acc, [rawKey, value]) => {
+    const [key, type] = determineType(rawKey);
 
-    if (!batchedObj[type]) {
-      batchedObj[type] = {};
+    if (!acc[type]) {
+      acc[type] = {};
     }
 
-    batchedObj[type][key] = value;
+    acc[type][key] = value;
 
-    return batchedObj;
+    return acc;
   }, {});
 
-  if (newObj.state) {
-    newObj.state = batchSameTypes(newObj.state);
+  if (batched.state) {
+    batched.state = batchSameTypes(batched.state);
   }
 
-  return newObj;
+  return batched;
 };
 
 function generateHandler(type, obj) {
@@ -117,10 +116,10 @@ function generateHandler(type, obj) {
   const seed = uuid(4);
   const attrName = `data-${type}-${seed}`;
   const dataAttr = `${attrName}="${id}"`;
-  const arr = [];
+  const handlers = [];
 
   Object.entries(obj).forEach(([name, value]) => {
-    arr.push({
+    handlers.push({
       type,
       query: `[${dataAttr}]`,
       attr: attrName,
@@ -129,9 +128,9 @@ function generateHandler(type, obj) {
     });
   });
 
-  arr[arr.length - 1].remove = true;
+  handlers[handlers.length - 1].remove = true;
 
-  return { str: dataAttr, handlers: arr };
+  return { str: dataAttr, handlers };
 }
 
 const generateHandlerAll = (obj) =>
@@ -139,14 +138,14 @@ const generateHandlerAll = (obj) =>
     obj,
     Object.entries,
     (items) => items.map((args) => generateHandler(...args)),
-    _reduceArray
+    reduceHandlerArray
   );
 
 const parse = (val, handlers = []) => {
   // isArray
   if (isArray(val)) {
     // Will be parsed as an array of object { str, handlers }
-    const final = _reduceArray(val.map((item) => parse(item, handlers)));
+    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
 
     return {
       str: final.str.join(' '),
@@ -164,11 +163,11 @@ const parse = (val, handlers = []) => {
 
   // isObject --> batchSameTypes
   if (isObject(val)) {
-    const { state, ...batchedObj } = batchSameTypes(val);
+    const { state, ...otherTypes } = batchSameTypes(val);
 
     // This will be an array of arrays
     // Where each item is [str, handlers]
-    const a = generateHandlerAll(batchedObj);
+    const a = generateHandlerAll(otherTypes);
     const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
 
     return {
@@ -184,8 +183,9 @@ const parse = (val, handlers = []) => {
 };
 
 const addPlaceholders = (str) => {
+  const placeholderRegex = /{%\s*(.*)\s*%}/;
   let newString = str;
-  let match = newString.match(/{%\s*(.*)\s*%}/);
+  let match = newString.match(placeholderRegex);
 
   while (match) {
     newString = newString.replace(
@@ -193,23 +193,23 @@ const addPlaceholders = (str) => {
       `<!-- placeholder-${match[1].trim()} -->`
     );
 
-    match = newString.slice(match.index).match(/{%\s*(.*)\s*%}/);
+    match = newString.slice(match.index).match(placeholderRegex);
   }
 
   return newString;
 };
 
 const parseString = (fragments, ...values) => {
-  const result = _reduceArray(values.map((value) => parse(value)));
+  const result = reduceHandlerArray(values.map((value) => parse(value)));
 
-  const htmlString = result.str.reduce(
-    (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
-    fragments[0]
+  const htmlString = addPlaceholders(
+    result.str.reduce(
+      (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
+      fragments[0]
+    )
   );
 
-  const finalHTMLString = addPlaceholders(htmlString);
-
-  return new Template(finalHTMLString, result.handlers.flat());
+  return new Template(htmlString, result.handlers.flat());
 };
 
 const modifyElement = ({ query, type, data, context = document }) => {
@@ -281,16 +281,16 @@ const replacePlaceholderComments = (root) => {
 };
 
 function createElementFromString(str, handlers = []) {
-  const createdElement = document.createRange().createContextualFragment(str);
+  const fragment = document.createRange().createContextualFragment(str);
 
   handlers.forEach((handler) => {
-    const el = createdElement.querySelector(handler.query);
+    const el = fragment.querySelector(handler.query);
 
     modifyElement({
       query: handler.query,
       type: handler.type,
       data: handler.data,
-      context: createdElement,
+      context: fragment,
     });
 
     if (handler.remove) {
@@ -299,9 +299,9 @@ function createElementFromString(str, handlers = []) {
   });
 
   // Replace all placeholder comments
-  [...createdElement.children].forEach(replacePlaceholderComments);
+  [...fragment.children].forEach(replacePlaceholderComments);
 
-  return createdElement;
+  return fragment;
 }
 
 function render(template) {
@@ -321,7 +321,7 @@ function generateStateHandler(state = {}) {
       const bindedElements = StateStore.get(ref);
       const existingHandlers = bindedElements.get(id) || [];
 
-      const finalValue = _reduceValue(data.value, data.trap);
+      const finalValue = reduceValue(data.value, data.trap);
 
       if (!batchedObj[type]) {
         batchedObj[type] = {};
@@ -357,7 +357,7 @@ const _setter = (ref) => (target, prop, value, receiver) => {
       handlers.forEach((handler) => {
         if (prop !== handler.prop) return;
 
-        const finalValue = _reduceValue(value, handler.trap);
+        const finalValue = reduceValue(value, handler.trap);
 
         modifyElement({
           query,
@@ -398,7 +398,8 @@ const _getter = (ref) => (target, rawProp, receiver) => {
   return Reflect.get(target, prop, receiver);
 };
 
-const createState = (obj, seal = true) => {
+const createState = (value, seal = true) => {
+  const obj = isObject(value) ? value : { value };
   StateStore.set(obj, new Map());
 
   const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
@@ -416,13 +417,4 @@ const createState = (obj, seal = true) => {
   return [proxy, _deleteState];
 };
 
-const createPrimitiveState = (value) => createState({ value });
-const createObjectState = createState; // alias
-
-export {
-  settings,
-  parseString as html,
-  render,
-  createPrimitiveState,
-  createObjectState,
-};
+export { settings, parseString as html, render, createState };

@@ -1,9 +1,4 @@
-import {
-  createObjectState,
-  createPrimitiveState,
-  html,
-  render,
-} from '../index.js';
+import { createState, html, render } from '../index.js';
 
 const root = document.createElement('div');
 document.body.append(root);
@@ -91,7 +86,7 @@ const test8 = html`
 root.append(render(test8));
 
 // Primitive state should work
-const [testState1] = createPrimitiveState('test');
+const [testState1] = createState('test');
 // console.log(testState1);
 // console.log(testState1.value, Object.values(testState1.$value));
 
@@ -111,7 +106,7 @@ root.append(render(test9));
 
 let rawObj = { name: 'test', age: 1 };
 // Object state should work
-const [testState2, revoke] = createObjectState(rawObj);
+const [testState2, revoke] = createState(rawObj);
 const test10 = html`
   <input
     type="text"
