@@ -27,8 +27,8 @@ const booleanAttributes = [
 ];
 
 const settings = {
-  addDefaultProp: (prop) => defaultProps.push(prop),
-  addBooleanAttr: (attr) => booleanAttributes.push(attr),
+  addDefaultProp: (...prop) => defaultProps.push(...prop),
+  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
 };
 
 // is functions
@@ -50,6 +50,9 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
 // utils
 const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
+
+const pipe = (args, ...fns) =>
+  fns.reduce((prevResult, fn) => fn(prevResult), args);
 
 const _reduceValue = (value, trap = null) =>
   trap ? trap.call(null, value) : value;
@@ -132,15 +135,11 @@ function generateHandler(type, obj) {
 }
 
 const generateHandlerAll = (obj) =>
-  Object.entries(obj).reduce(
-    (acc, [type, item]) => {
-      const result = generateHandler(type, item);
-      acc.str.push(result.str);
-      acc.handlers.push(result.handlers);
-
-      return acc;
-    },
-    { str: [], handlers: [] }
+  pipe(
+    obj,
+    Object.entries,
+    (items) => items.map((args) => generateHandler(...args)),
+    _reduceArray
   );
 
 const parse = (val, handlers = []) => {
