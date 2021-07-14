@@ -8,8 +8,8 @@ import { html, render } from '..';
  */
 
 describe('html and render', () => {
-  let root;
-  let mockClickCallback;
+  // eslint-disable-next-line one-var
+  let root, mockClickCallback;
   beforeEach(() => {
     mockClickCallback = jest.fn(() => 'I am clicked');
     root = document.createElement('div');
