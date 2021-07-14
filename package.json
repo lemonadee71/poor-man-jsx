@@ -2,7 +2,7 @@
   "name": "component",
   "version": "1.0.0",
   "description": "",
-  "main": "\"\"",
+  "main": "index.js",
   "scripts": {
     "test": "jest --watch --env=jsdom"
   },
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/lemonadee71/component.js.git"
   },
-  "author": "",
+  "author": "Shin Andrei Riego",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/lemonadee71/component.js/issues"
@@ -20,9 +20,7 @@
     "@testing-library/dom": "^8.1.0",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/user-event": "^13.1.9",
-    "jest": "^27.0.6"
-  },
-  "dependencies": {
+    "jest": "^27.0.6",
     "@babel/preset-env": "^7.14.7",
     "eslint": "^7.30.0",
     "eslint-config-airbnb": "^18.2.1",
