@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 // Classes
 class Template {
   constructor(str, handlers) {
@@ -49,7 +53,7 @@ const isStyleAttribute = (key) => key in mockEl.style;
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
 // utils
-const uuid = (length = 8) => Math.random().toString(36).substr(2, length);
+const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
 
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
@@ -112,8 +116,8 @@ const batchSameTypes = (obj) => {
 };
 
 function generateHandler(type, obj) {
-  const id = uuid();
-  const seed = uuid(4);
+  const id = uniqid();
+  const seed = uniqid(4);
   const attrName = `data-${type}-${seed}`;
   const dataAttr = `${attrName}="${id}"`;
   const handlers = [];
@@ -141,6 +145,7 @@ const generateHandlerAll = (obj) =>
     reduceHandlerArray
   );
 
+// Parser
 const parse = (val, handlers = []) => {
   // isArray
   if (isArray(val)) {
@@ -212,7 +217,7 @@ const parseString = (fragments, ...values) => {
   return new Template(htmlString, result.handlers.flat());
 };
 
-const modifyElement = ({ query, type, data, context = document }) => {
+function modifyElement({ query, type, data, context = document }) {
   const node = context.querySelector(query);
 
   if (!node) return;
@@ -243,19 +248,17 @@ const modifyElement = ({ query, type, data, context = document }) => {
       [...node.children].map((child) => child.remove());
 
       node.appendChild(
-        data.value instanceof HTMLElement
-          ? data.value
-          : render(parseString`${data.value}`)
+        data.value instanceof Template ? render(data.value) : data.value
       );
 
       break;
     default:
       throw new Error('Invalid type.');
   }
-};
+}
 
 // Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
-const replacePlaceholderComments = (root) => {
+function replacePlaceholderComments(root) {
   // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
   const iterator = document.createNodeIterator(
     root,
@@ -278,7 +281,7 @@ const replacePlaceholderComments = (root) => {
 
     current = iterator.nextNode();
   }
-};
+}
 
 function createElementFromString(str, handlers = []) {
   const fragment = document.createRange().createContextualFragment(str);
@@ -312,7 +315,7 @@ function render(template) {
 const StateStore = new WeakMap();
 
 function generateStateHandler(state = {}) {
-  const id = uuid();
+  const id = uniqid();
   const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
 

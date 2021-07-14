@@ -27,7 +27,9 @@ const test2 = html`<div ${obj}></div>`;
 root.append(render(test2));
 
 // Special tag children should work
-const test3 = html`<div ${{ children: test2 }}></div>`;
+const test3 = html`<div
+  ${{ children: html`<h1>This is my child</h1>` }}
+></div>`;
 root.append(render(test3));
 
 // Arrays should work

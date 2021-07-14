@@ -4,7 +4,7 @@
   "description": "",
   "main": "\"\"",
   "scripts": {
-    "test": "jest --watch"
+    "test": "jest --watch --env=jsdom"
   },
   "repository": {
     "type": "git",
