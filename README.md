@@ -1,8 +1,20 @@
-# component.js
+# Poor Man's JSX
 
 Create html elements painlessly with tagged template literals.
 
 ## Usage
+
+### Installation
+
+```shell
+npm i poor-man-jsx
+```
+
+Then import
+
+```js
+import { html, render, createState } from 'poor-man-jsx';
+```
 
 ### Creating html elements
 
