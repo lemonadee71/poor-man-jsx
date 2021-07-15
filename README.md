@@ -4,7 +4,7 @@ Create html elements painlessly with tagged template literals.
 
 ## Usage
 
-## Creating html elements
+### Creating html elements
 
 Attach event listeners like you are writing JSX
 
@@ -51,7 +51,7 @@ document.body.append(render(list));
 
 > Important: Props should be inside the opening tag
 
-## State
+### State
 
 component.js also provides a state-like functionality
 
