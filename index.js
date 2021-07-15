@@ -1,10 +1,9 @@
 // This is to hide the ref property an invoked state returns
-// Which is a reference to the original object
-// Just to make sure we won't be able to mutate it
-// outside of its intended use
+// which is a reference to the original object
+// to make sure we won't be able to access it outside of its intended use
 const REF = Symbol('ref');
 
-// Classes
+// classes
 class Template {
   constructor(str, handlers) {
     this.str = str;
@@ -147,7 +146,7 @@ const generateHandlerAll = (obj) =>
     reduceHandlerArray
   );
 
-// Parser
+// parser
 const parse = (val, handlers = []) => {
   if (isArray(val)) {
     // Will be parsed as an array of object { str, handlers }
@@ -220,7 +219,10 @@ const parseString = (fragments, ...values) => {
 function modifyElement({ query, type, data, context = document }) {
   const node = context.querySelector(query);
 
-  if (!node) return;
+  if (!node) {
+    console.error(`Can't find node using selector ${query}`);
+    return;
+  }
 
   switch (type) {
     case 'prop':
@@ -410,6 +412,7 @@ const createState = (value, seal = true) => {
     set: setter(obj),
   });
 
+  // To make sure state gets deleted from memory
   const _deleteState = () => {
     revoke();
     StateStore.delete(obj);
