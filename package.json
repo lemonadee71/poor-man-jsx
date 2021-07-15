@@ -4,18 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --watch --env=jsdom"
+    "test": "jest --env=jsdom",
+    "watch": "jest --watch --env=jsdom"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lemonadee71/component.js.git"
+    "url": "git+https://github.com/lemonadee71/poor-man-jsx.git"
   },
   "author": "Shin Andrei Riego",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/lemonadee71/component.js/issues"
+    "url": "https://github.com/lemonadee71/poor-man-jsx/issues"
   },
-  "homepage": "https://github.com/lemonadee71/component.js#readme",
+  "homepage": "https://github.com/lemonadee71/poor-man-jsx#readme",
   "devDependencies": {
     "@testing-library/dom": "^8.1.0",
     "@testing-library/jest-dom": "^5.14.1",
