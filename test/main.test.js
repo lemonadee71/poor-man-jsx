@@ -1,6 +1,5 @@
-import { screen } from '@testing-library/dom';
+import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
-import userEvent from '@testing-library/user-event';
 import { html, render } from '..';
 
 /**
@@ -41,10 +40,10 @@ describe('html and render', () => {
     </button>`;
     root.append(render(button));
 
-    userEvent.click(screen.getByTestId('button'));
-    userEvent.click(screen.getByTestId('button'));
+    fireEvent.click(screen.getByTestId('button'));
+    fireEvent.click(screen.getByTestId('button'));
 
-    expect(mockClickCallback.mock.calls.length).toBe(2);
+    expect(mockClickCallback).toBeCalledTimes(2);
     expect(mockClickCallback.mock.results[0].value).toBe('I am clicked');
   });
 
@@ -62,7 +61,7 @@ describe('html and render', () => {
     root.append(render(el));
 
     const testEl = screen.getByTestId('props and attr');
-    userEvent.click(testEl);
+    fireEvent.click(testEl);
 
     expect(testEl).toHaveAttribute('id', 'test');
     expect(testEl).toHaveClass('myclass');
@@ -72,7 +71,7 @@ describe('html and render', () => {
       border: props.border,
     });
     expect(testEl).toContainElement(screen.getByTestId('child'));
-    expect(mockClickCallback.mock.calls.length).toBe(1);
+    expect(mockClickCallback).toBeCalled();
   });
 
   it('works with special prop children', () => {
@@ -132,10 +131,10 @@ describe('html and render', () => {
     const button = html`<button data-testid="obj array" ${props}></button>`;
     root.append(render(button));
 
-    userEvent.click(screen.getByTestId('obj array'));
+    fireEvent.click(screen.getByTestId('obj array'));
 
     expect(screen.getByTestId('obj array')).toHaveTextContent('Click me');
-    expect(mockClickCallback.mock.calls.length).toBe(1);
+    expect(mockClickCallback).toBeCalled();
   });
 
   it('batches multiple objects', () => {

@@ -53,17 +53,17 @@ describe('state', () => {
   });
 
   describe('primitive', () => {
-    const state = {};
-    beforeEach(setup('test', state));
-    afterEach(teardown(state));
+    const obj = {};
+    beforeEach(setup('test', obj));
+    afterEach(teardown(obj));
 
     it('works', () => {
       const input = html`
         ${createInput('state input', (e) => {
           mockCallback();
-          state.state.value = e.target.value;
+          obj.state.value = e.target.value;
         })}
-        <p data-testid="state text" ${{ $textContent: state.state.$value }}></p>
+        <p data-testid="state text" ${{ $textContent: obj.state.$value }}></p>
       `;
       root.append(render(input));
 
@@ -81,19 +81,19 @@ describe('state', () => {
   });
 
   describe('object', () => {
-    const state = {};
-    beforeEach(setup({ name: 'Shin', age: 0 }, state));
-    afterEach(teardown(state));
+    const obj = {};
+    beforeEach(setup({ name: 'Shin', age: 0 }, obj));
+    afterEach(teardown(obj));
 
     it('works', () => {
       const el = html`${createInput('name input', (e) => {
-          state.state.name = e.target.value;
+          obj.state.name = e.target.value;
         })}
-        <p data-testid="name text" ${{ $textContent: state.state.$name }}></p>
+        <p data-testid="name text" ${{ $textContent: obj.state.$name }}></p>
         <p
           data-testid="age text"
           ${{
-            $textContent: state.state.$age((age) => {
+            $textContent: obj.state.$age((age) => {
               mockCallback();
               return `Your age is an ${age % 2 === 0 ? 'even' : 'odd'} number`;
             }),
@@ -101,7 +101,7 @@ describe('state', () => {
         ></p> `;
       root.append(render(el));
 
-      state.state.age = 21;
+      obj.state.age = 21;
       fireEvent.input(screen.getByTestId('name input'), {
         target: { value: 'Andrei' },
       });
