@@ -76,17 +76,38 @@ describe('html and render', () => {
   });
 
   it('works with special prop children', () => {
-    const child = html`<strong data-testid="my child"
+    const child = (testid) => html`<strong data-testid="${testid}"
       >This is my child</strong
     >`;
-    const parent = html`<div
+    const parent1 = html`<div
       data-testid="with children"
-      ${{ children: child }}
+      ${{ children: child('my child') }}
     ></div>`;
-    root.append(render(parent));
+    root.append(render(parent1));
+
+    const parent2 = html`<div
+      data-testid="with array children"
+      ${{
+        children: [
+          child('another child'),
+          'This is a string',
+          document.createElement('h2'),
+        ],
+      }}
+    ></div>`;
+    root.append(render(parent2));
 
     expect(screen.getByTestId('with children')).toContainElement(
       screen.getByTestId('my child')
+    );
+    expect(screen.getByTestId('with array children')).toContainElement(
+      screen.getByTestId('another child')
+    );
+    expect(screen.getByTestId('with array children')).toContainHTML(
+      '<h2></h2>'
+    );
+    expect(screen.getByTestId('with array children').innerHTML).toContain(
+      'This is a string'
     );
   });
 

@@ -61,6 +61,8 @@ const pipe = (args, ...fns) =>
 
 const reduceValue = (value, fn = null) => (fn ? fn.call(null, value) : value);
 
+const reduceNode = (node) => (isTemplate(node) ? render(node) : node);
+
 const reduceHandlerArray = (arr) =>
   arr.reduce(
     (acc, item) => {
@@ -249,9 +251,11 @@ function modifyElement({ query, type, data, context = document }) {
     case 'children':
       [...node.children].map((child) => child.remove());
 
-      node.appendChild(
-        data.value instanceof Template ? render(data.value) : data.value
-      );
+      if (isArray(data.value)) {
+        node.append(...data.value.map(reduceNode));
+      } else {
+        node.append(reduceNode(data.value));
+      }
 
       break;
     default:
