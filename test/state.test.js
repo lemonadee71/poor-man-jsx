@@ -46,6 +46,7 @@ describe('state', () => {
   it('is sealed', () => {
     const [state] = createState({ test: 1 });
 
+    expect(state.$test.ref).toBe(undefined);
     expect(() => {
       state.prop = 'test';
     }).toThrowError();

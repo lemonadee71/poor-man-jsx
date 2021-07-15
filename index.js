@@ -1,6 +1,8 @@
-/**
- * @jest-environment jsdom
- */
+// This is to hide the ref property an invoked state returns
+// Which is a reference to the original object
+// Just to make sure we won't be able to mutate it
+// outside of its intended use
+const REF = Symbol('ref');
 
 // Classes
 class Template {
@@ -147,9 +149,9 @@ const generateHandlerAll = (obj) =>
 
 // Parser
 const parse = (val, handlers = []) => {
-  // isArray
   if (isArray(val)) {
     // Will be parsed as an array of object { str, handlers }
+    // And will be reduced to a single { str, handlers }
     const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
 
     return {
@@ -158,20 +160,18 @@ const parse = (val, handlers = []) => {
     };
   }
 
-  // isTemplate
   if (isTemplate(val)) {
+    // Just add its string and handlers
     return {
       str: val.str,
       handlers: [...handlers, ...val.handlers],
     };
   }
 
-  // isObject --> batchSameTypes
   if (isObject(val)) {
     const { state, ...otherTypes } = batchSameTypes(val);
 
-    // This will be an array of arrays
-    // Where each item is [str, handlers]
+    // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
     const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
 
@@ -320,11 +320,11 @@ function generateStateHandler(state = {}) {
   const batchedObj = {};
 
   Object.entries(state).forEach(([type, batch]) => {
-    Object.entries(batch).forEach(([key, { ref, data }]) => {
-      const bindedElements = StateStore.get(ref);
+    Object.entries(batch).forEach(([key, info]) => {
+      const bindedElements = StateStore.get(info[REF]);
       const existingHandlers = bindedElements.get(id) || [];
 
-      const finalValue = reduceValue(data.value, data.trap);
+      const finalValue = reduceValue(info.data.value, info.data.trap);
 
       if (!batchedObj[type]) {
         batchedObj[type] = {};
@@ -337,8 +337,8 @@ function generateStateHandler(state = {}) {
         {
           type,
           target: key,
-          prop: data.prop,
-          trap: data.trap,
+          prop: info.data.prop,
+          trap: info.data.trap,
         },
       ]);
     });
@@ -349,7 +349,7 @@ function generateStateHandler(state = {}) {
   return { handlers, str: [...str, proxyId] };
 }
 
-const _setter = (ref) => (target, prop, value, receiver) => {
+const setter = (ref) => (target, prop, value, receiver) => {
   const bindedElements = StateStore.get(ref);
 
   bindedElements.forEach((handlers, id) => {
@@ -380,7 +380,7 @@ const _setter = (ref) => (target, prop, value, receiver) => {
 const _bind =
   (ref, prop, value) =>
   (trap = null) => ({
-    ref,
+    [REF]: ref,
     data: {
       prop,
       trap,
@@ -388,7 +388,7 @@ const _bind =
     },
   });
 
-const _getter = (ref) => (target, rawProp, receiver) => {
+const getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
 
   if (type === 'state' && prop in target) {
@@ -406,8 +406,8 @@ const createState = (value, seal = true) => {
   StateStore.set(obj, new Map());
 
   const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
-    get: _getter(obj),
-    set: _setter(obj),
+    get: getter(obj),
+    set: setter(obj),
   });
 
   const _deleteState = () => {
@@ -420,4 +420,10 @@ const createState = (value, seal = true) => {
   return [proxy, _deleteState];
 };
 
-export { settings, parseString as html, render, createState };
+export {
+  settings,
+  parseString as html,
+  createElementFromString,
+  render,
+  createState,
+};
