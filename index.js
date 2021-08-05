@@ -308,8 +308,18 @@ function createElementFromString(str, handlers = []) {
   return fragment;
 }
 
-function render(template) {
-  return createElementFromString(...Object.values(template));
+function render(template, element) {
+  const el = createElementFromString(...Object.values(template));
+
+  if (element) {
+    if (typeof element === 'string') {
+      document.querySelector(element).append(el);
+    } else {
+      element.append(el);
+    }
+  }
+
+  return el;
 }
 
 // State
