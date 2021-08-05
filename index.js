@@ -49,7 +49,8 @@ const isEventListener = (key) => key.toLowerCase().startsWith('on');
 
 const isDefaultProp = (key) => defaultProps.includes(key);
 
-const isStyleAttribute = (key) => key in mockEl.style;
+const isStyleAttribute = (key) =>
+  key in mockEl.style || key.startsWith('style_');
 
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
@@ -95,7 +96,7 @@ const determineType = (key) => {
     k = key.toLowerCase();
   }
 
-  return [k.replace(/^(\$|on)/gi, ''), type];
+  return [k.replace(/^(\$|on|style_)/gi, ''), type];
 };
 
 const batchSameTypes = (obj) => {

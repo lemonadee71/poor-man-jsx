@@ -74,6 +74,22 @@ describe('html and render', () => {
     expect(mockClickCallback).toBeCalled();
   });
 
+  it('style works with option style_ prefix', () => {
+    const props = {
+      style_height: '20px',
+      style_width: '300px',
+      border: '1px solid black',
+    };
+    const el = html`<div data-testid="style" ${props}></div>`;
+    render(el, root);
+
+    expect(screen.getByTestId('style')).toHaveStyle({
+      height: props.style_height,
+      width: props.style_width,
+      border: props.border,
+    });
+  });
+
   it('works with special prop children', () => {
     const child = (testid) => html`<strong data-testid="${testid}"
       >This is my child</strong
