@@ -218,7 +218,7 @@ const parseString = (fragments, ...values) => {
   return new Template(htmlString, result.handlers.flat());
 };
 
-function modifyElement({ query, type, data, context = document }) {
+function modifyElement(query, type, data, context = document) {
   const node = context.querySelector(query);
 
   if (!node) {
@@ -295,12 +295,7 @@ function createElementFromString(str, handlers = []) {
   handlers.forEach((handler) => {
     const el = fragment.querySelector(handler.query);
 
-    modifyElement({
-      query: handler.query,
-      type: handler.type,
-      data: handler.data,
-      context: fragment,
-    });
+    modifyElement(handler.query, handler.type, handler.data, fragment);
 
     if (handler.remove) {
       el.removeAttribute(handler.attr);
@@ -368,10 +363,9 @@ const setter = (ref) => (target, prop, value, receiver) => {
 
         const finalValue = reduceValue(value, handler.trap);
 
-        modifyElement({
-          query,
-          type: handler.type,
-          data: { name: handler.target, value: finalValue },
+        modifyElement(query, handler.type, {
+          name: handler.target,
+          value: finalValue,
         });
       });
     } else {
