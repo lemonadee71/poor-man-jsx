@@ -3,12 +3,6 @@ import '@testing-library/jest-dom/extend-expect';
 import { html, render } from '..';
 
 describe('render', () => {
-  let root;
-  beforeEach(() => {
-    root = document.createElement('div');
-    document.body.append(root);
-  });
-
   afterEach(() => {
     document.body.innerHTML = '';
   });
