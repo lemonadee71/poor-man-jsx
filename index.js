@@ -43,6 +43,8 @@ const isArray = (val) => Array.isArray(val);
 
 const isTemplate = (val) => val instanceof Template;
 
+const isHTML = (val) => val instanceof HTMLElement;
+
 const isState = (key) => key.startsWith('$');
 
 const isEventListener = (key) => key.toLowerCase().startsWith('on');
@@ -151,14 +153,15 @@ const generateHandlerAll = (obj) =>
 
 // parser
 const parse = (val, handlers = []) => {
-  if (isArray(val)) {
-    // Will be parsed as an array of object { str, handlers }
-    // And will be reduced to a single { str, handlers }
-    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
+  if (isHTML(val)) {
+    const id = uniqid();
 
     return {
-      str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers].flat(),
+      str: `<marker id="html-${id}" />`,
+      handlers: [
+        ...handlers.flat(),
+        { type: 'html', query: `#html-${id}`, data: { value: val } },
+      ],
     };
   }
 
@@ -167,6 +170,17 @@ const parse = (val, handlers = []) => {
     return {
       str: val.str,
       handlers: [...handlers, ...val.handlers],
+    };
+  }
+
+  if (isArray(val)) {
+    // Will be parsed as an array of object { str, handlers }
+    // And will be reduced to a single { str, handlers }
+    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
+
+    return {
+      str: final.str.join(' '),
+      handlers: [...handlers, ...final.handlers].flat(),
     };
   }
 
@@ -258,6 +272,9 @@ function modifyElement(query, type, data, context = document) {
         node.append(reduceNode(data.value));
       }
 
+      break;
+    case 'html':
+      node.replaceWith(data.value);
       break;
     default:
       throw new Error('Invalid type.');

@@ -203,4 +203,15 @@ describe('html and render', () => {
     );
     expect(screen.getByTestId('comment3')).not.toHaveTextContent();
   });
+
+  it('accepts HTMLElement', () => {
+    render(
+      html`<div data-testid="htmlElement">
+        ${document.createElement('div')}
+      </div>`,
+      root
+    );
+
+    expect(screen.getByTestId('htmlElement')).toContainHTML('<div></div>');
+  });
 });
