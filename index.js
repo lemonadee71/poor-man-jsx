@@ -40,7 +40,9 @@ const settings = {
   addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
 };
 
-// is functions
+/**
+ * is functions used for type checking
+ */
 const isObject = (val) => typeof val === 'object';
 
 const isArray = (val) => Array.isArray(val);
@@ -60,7 +62,9 @@ const isStyleAttribute = (key) =>
 
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
-// utils
+/**
+ * utility functions
+ */
 const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
 
 const pipe = (args, ...fns) =>
@@ -154,7 +158,12 @@ const generateHandlerAll = (obj) =>
     reduceHandlerArray
   );
 
-// parser
+/**
+ * The parser
+ * @param {*} val
+ * @param {Array} handlers
+ * @returns
+ */
 const parse = (val, handlers = []) => {
   if (isHTML(val)) {
     const id = uniqid();
@@ -353,7 +362,7 @@ function createElementFromString(str, handlers = []) {
 }
 
 /**
- * Alias for `createElementFromString`
+ * Creates element from a `Template`. Alias for `createElementFromString`
  * @param {Template} template - a `Template` returned by `html`
  * @param {String|HTMLElement} element - the element to append to
  * @returns {DocumentFragment}
@@ -375,40 +384,34 @@ function render(template, element) {
 // State
 const StateStore = new WeakMap();
 
-function generateStateHandler(state = {}) {
-  const id = uniqid();
-  const proxyId = `data-proxyid="${id}"`;
-  const batchedObj = {};
+/**
+ * Creates a state
+ * @param {any} value - the initial value of state
+ * @param {Boolean} [seal=true] - seal the object with Object.seal
+ * @returns {[Proxy, function]}
+ */
+const createState = (value, seal = true) => {
+  const obj = isObject(value) ? value : { value };
+  StateStore.set(obj, new Map());
 
-  Object.entries(state).forEach(([type, batch]) => {
-    Object.entries(batch).forEach(([key, info]) => {
-      const bindedElements = StateStore.get(info[REF]);
-      const existingHandlers = bindedElements.get(id) || [];
-
-      const finalValue = reduceValue(info.data.value, info.data.trap);
-
-      if (!batchedObj[type]) {
-        batchedObj[type] = {};
-      }
-
-      batchedObj[type][key] = finalValue;
-
-      bindedElements.set(id, [
-        ...existingHandlers,
-        {
-          type,
-          target: key,
-          prop: info.data.prop,
-          trap: info.data.trap,
-        },
-      ]);
-    });
+  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
+    get: getter(obj),
+    set: setter(obj),
   });
 
-  const { str, handlers } = generateHandlerAll(batchedObj);
+  /**
+   * Delete the state
+   * @returns {Object} the original object
+   */
+  const deleteState = () => {
+    revoke();
+    StateStore.delete(obj);
 
-  return { handlers, str: [...str, proxyId] };
-}
+    return obj;
+  };
+
+  return [proxy, deleteState];
+};
 
 const setter = (ref) => (target, prop, value, receiver) => {
   const bindedElements = StateStore.get(ref);
@@ -458,33 +461,39 @@ const getter = (ref) => (target, rawProp, receiver) => {
   return Reflect.get(target, prop, receiver);
 };
 
-/**
- * Creates a state
- * @param {any} value - the initial value of state
- * @param {Boolean} [seal=true] - seal the object with Object.seal
- * @returns {[Proxy, function]}
- */
-const createState = (value, seal = true) => {
-  const obj = isObject(value) ? value : { value };
-  StateStore.set(obj, new Map());
+function generateStateHandler(state = {}) {
+  const id = uniqid();
+  const proxyId = `data-proxyid="${id}"`;
+  const batchedObj = {};
 
-  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
-    get: getter(obj),
-    set: setter(obj),
+  Object.entries(state).forEach(([type, batch]) => {
+    Object.entries(batch).forEach(([key, info]) => {
+      const bindedElements = StateStore.get(info[REF]);
+      const existingHandlers = bindedElements.get(id) || [];
+
+      const finalValue = reduceValue(info.data.value, info.data.trap);
+
+      if (!batchedObj[type]) {
+        batchedObj[type] = {};
+      }
+
+      batchedObj[type][key] = finalValue;
+
+      bindedElements.set(id, [
+        ...existingHandlers,
+        {
+          type,
+          target: key,
+          prop: info.data.prop,
+          trap: info.data.trap,
+        },
+      ]);
+    });
   });
 
-  /**
-   * Delete the state
-   * @returns {Object} the original object
-   */
-  const deleteState = () => {
-    revoke();
-    StateStore.delete(obj);
+  const { str, handlers } = generateHandlerAll(batchedObj);
 
-    return obj;
-  };
-
-  return [proxy, deleteState];
-};
+  return { handlers, str: [...str, proxyId] };
+}
 
 export { settings, html, createElementFromString, render, createState };
