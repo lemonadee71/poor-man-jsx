@@ -145,8 +145,7 @@ function generateHandler(type, obj) {
 
 const generateHandlerAll = (obj) =>
   pipe(
-    obj,
-    Object.entries,
+    Object.entries(obj),
     (items) => items.map((args) => generateHandler(...args)),
     reduceHandlerArray
   );
@@ -220,7 +219,7 @@ const addPlaceholders = (str) => {
   return newString;
 };
 
-const parseString = (fragments, ...values) => {
+const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
 
   const htmlString = addPlaceholders(
@@ -232,6 +231,12 @@ const parseString = (fragments, ...values) => {
 
   return new Template(htmlString, result.handlers.flat());
 };
+
+function removeChildren(parent) {
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild);
+  }
+}
 
 function modifyElement(query, type, data, context = document) {
   const node = context.querySelector(query);
@@ -263,16 +268,21 @@ function modifyElement(query, type, data, context = document) {
     case 'style':
       node.style[data.name] = data.value;
       break;
-    case 'children':
-      [...node.children].map((child) => child.remove());
+    case 'children': {
+      removeChildren(node);
+
+      const fragment = document.createDocumentFragment();
 
       if (isArray(data.value)) {
-        node.append(...data.value.map(reduceNode));
+        fragment.append(...data.value.map(reduceNode));
       } else {
-        node.append(reduceNode(data.value));
+        fragment.append(reduceNode(data.value));
       }
 
+      node.append(fragment);
+
       break;
+    }
     case 'html':
       node.replaceWith(data.value);
       break;
@@ -449,10 +459,4 @@ const createState = (value, seal = true) => {
   return [proxy, _deleteState];
 };
 
-export {
-  settings,
-  parseString as html,
-  createElementFromString,
-  render,
-  createState,
-};
+export { settings, html, createElementFromString, render, createState };

@@ -97,7 +97,9 @@ describe('html and render', () => {
     const parent1 = html`<div
       data-testid="with children"
       ${{ children: child('my child') }}
-    ></div>`;
+    >
+      <p>This should be deleted</p>
+    </div>`;
     root.append(render(parent1));
 
     const parent2 = html`<div
@@ -112,6 +114,9 @@ describe('html and render', () => {
     ></div>`;
     root.append(render(parent2));
 
+    expect(screen.getByTestId('with children')).not.toContainHTML(
+      '<p>This should be deleted</p>'
+    );
     expect(screen.getByTestId('with children')).toContainElement(
       screen.getByTestId('my child')
     );
