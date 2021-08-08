@@ -3,8 +3,12 @@
 // to make sure we won't be able to access it outside of its intended use
 const REF = Symbol('ref');
 
-// classes
 class Template {
+  /**
+   * Create a template
+   * @param {String} str - an html string
+   * @param {Array} handlers - an array of handlers
+   */
   constructor(str, handlers) {
     this.str = str;
     this.handlers = handlers;
@@ -219,6 +223,12 @@ const addPlaceholders = (str) => {
   return newString;
 };
 
+/**
+ * Creates a `Template` from a template literal. Must be used as a tag.
+ * @param {Array.<String>} fragments
+ * @param  {...(String|Object|Array|Template)} values
+ * @returns {Template}
+ */
 const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
 
@@ -317,6 +327,12 @@ function replacePlaceholderComments(root) {
   }
 }
 
+/**
+ * Creates an element from string with `createContextualFragment`
+ * @param {String} str - the html string to be rendered
+ * @param {Array} handlers - array of handlers
+ * @returns {DocumentFragment}
+ */
 function createElementFromString(str, handlers = []) {
   const fragment = document.createRange().createContextualFragment(str);
 
@@ -336,6 +352,12 @@ function createElementFromString(str, handlers = []) {
   return fragment;
 }
 
+/**
+ * Alias for `createElementFromString`
+ * @param {Template} template - a `Template` returned by `html`
+ * @param {String|HTMLElement} element - the element to append to
+ * @returns {DocumentFragment}
+ */
 function render(template, element) {
   const el = createElementFromString(...Object.values(template));
 
@@ -415,30 +437,33 @@ const setter = (ref) => (target, prop, value, receiver) => {
   return Reflect.set(target, prop, value, receiver);
 };
 
-const _bind =
-  (ref, prop, value) =>
-  (trap = null) => ({
-    [REF]: ref,
-    data: {
-      prop,
-      trap,
-      value,
-    },
-  });
-
 const getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
 
+  const $ =
+    (value) =>
+    (trap = null) => ({
+      [REF]: ref,
+      data: {
+        prop,
+        trap,
+        value,
+      },
+    });
+
   if (type === 'state' && prop in target) {
-    return Object.assign(
-      _bind(ref, prop, target[prop]),
-      _bind(ref, prop, target[prop])()
-    );
+    return Object.assign($(target[prop]), $(target[prop])());
   }
 
   return Reflect.get(target, prop, receiver);
 };
 
+/**
+ * Creates a state
+ * @param {any} value - the initial value of state
+ * @param {Boolean} [seal=true] - seal the object with Object.seal
+ * @returns {[Proxy, function]}
+ */
 const createState = (value, seal = true) => {
   const obj = isObject(value) ? value : { value };
   StateStore.set(obj, new Map());
@@ -448,15 +473,18 @@ const createState = (value, seal = true) => {
     set: setter(obj),
   });
 
-  // To make sure state gets deleted from memory
-  const _deleteState = () => {
+  /**
+   * Delete the state
+   * @returns {Object} the original object
+   */
+  const deleteState = () => {
     revoke();
     StateStore.delete(obj);
 
     return obj;
   };
 
-  return [proxy, _deleteState];
+  return [proxy, deleteState];
 };
 
 export { settings, html, createElementFromString, render, createState };
