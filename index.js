@@ -362,7 +362,7 @@ function createElementFromString(str, handlers = []) {
 }
 
 /**
- * Creates element from a `Template`. Alias for `createElementFromString`
+ * Creates element from a `Template` and appends it to `element` if provided
  * @param {Template} template - a `Template` returned by `html`
  * @param {String|HTMLElement} element - the element to append to
  * @returns {DocumentFragment}
