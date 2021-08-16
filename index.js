@@ -388,7 +388,7 @@ const StateStore = new WeakMap();
  * Creates a state
  * @param {any} value - the initial value of state
  * @param {Boolean} [seal=true] - seal the object with Object.seal
- * @returns {[Proxy, function]}
+ * @returns {[Object, function]}
  */
 const createState = (value, seal = true) => {
   const obj = isObject(value) ? value : { value };
