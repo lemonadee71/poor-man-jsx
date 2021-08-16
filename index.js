@@ -432,7 +432,7 @@ function createElementFromString(str, handlers = []) {
  * Otherwise, it'll return the `element`
  * @param {Template} template - a `Template` returned by `html`
  * @param {String|HTMLElement} element - the element to append to
- * @returns {DocumentFragment|HTMLElement}
+ * @returns
  */
 function render(template, element) {
   const fragment = createElementFromString(...Object.values(template));
@@ -445,9 +445,11 @@ function render(template, element) {
     fragment[MOUNT_SYMBOL](parent);
     fragment[MOUNT_SYMBOL] = null;
 
+    /** @type {HTMLElement} */
     return parent;
   }
 
+  /** @type {DocumentFragment} */
   return fragment;
 }
 
