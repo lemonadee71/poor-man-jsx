@@ -400,14 +400,14 @@ const createState = (value, seal = true) => {
   });
 
   /**
-   * Delete the state
-   * @returns {Object} the original object
+   * Delete the state and returns the original value
+   * @returns {any}
    */
   const deleteState = () => {
     revoke();
     StateStore.delete(obj);
 
-    return obj;
+    return value;
   };
 
   return [proxy, deleteState];
