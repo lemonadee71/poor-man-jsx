@@ -2,6 +2,7 @@
 // which is a reference to the original object
 // to make sure we won't be able to access it outside of its intended use
 const REF = Symbol('ref');
+const MOUNT_SYMBOL = Symbol('mount');
 
 class Template {
   /**
@@ -34,6 +35,7 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
+const lifecycleMethods = ['create', 'mount'];
 
 const settings = {
   addDefaultProp: (...prop) => defaultProps.push(...prop),
@@ -53,6 +55,8 @@ const isHTML = (val) => val instanceof HTMLElement;
 
 const isState = (key) => key.startsWith('$');
 
+const isLifecycleMethod = (key) => key.startsWith('@');
+
 const isEventListener = (key) => key.toLowerCase().startsWith('on');
 
 const isDefaultProp = (key) => defaultProps.includes(key);
@@ -66,6 +70,15 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
  * utility functions
  */
 const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
+
+const generateAttribute = (type) => {
+  const id = uniqid();
+  const seed = uniqid(4);
+  const attrName = `data-${type}-${seed}`;
+  const dataAttr = `${attrName}="${id}"`;
+
+  return [dataAttr, attrName];
+};
 
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
@@ -100,13 +113,19 @@ const determineType = (key) => {
     type = 'style';
   } else if (key === 'children') {
     type = 'children';
+  } else if (isLifecycleMethod(key)) {
+    if (!lifecycleMethods.includes(key.replace('@', ''))) {
+      throw new Error(`${key} is not a lifecycle method`);
+    }
+
+    type = 'lifecycle';
   }
 
   if (type === 'listener') {
     k = key.toLowerCase();
   }
 
-  return [k.replace(/^(\$|on|style_)/gi, ''), type];
+  return [k.replace(/^(\$|@|on|style_)/gi, ''), type];
 };
 
 const batchSameTypes = (obj) => {
@@ -129,11 +148,8 @@ const batchSameTypes = (obj) => {
   return batched;
 };
 
-function generateHandler(type, obj) {
-  const id = uniqid();
-  const seed = uniqid(4);
-  const attrName = `data-${type}-${seed}`;
-  const dataAttr = `${attrName}="${id}"`;
+function generateHandler(type, obj, remove = true) {
+  const [dataAttr, attrName] = generateAttribute(type);
   const handlers = [];
 
   Object.entries(obj).forEach(([name, value]) => {
@@ -146,7 +162,9 @@ function generateHandler(type, obj) {
     });
   });
 
-  handlers[handlers.length - 1].remove = true;
+  if (remove) {
+    handlers[handlers.length - 1].remove = true;
+  }
 
   return { str: dataAttr, handlers };
 }
@@ -157,6 +175,26 @@ const generateHandlerAll = (obj) =>
     (items) => items.map((args) => generateHandler(...args)),
     reduceHandlerArray
   );
+
+const generateLifecycleHandler = (obj) => {
+  const str = [];
+  const handlers = [];
+
+  Object.entries(obj).forEach(([type, fn]) => {
+    const [dataAttr, attrName] = generateAttribute(type);
+
+    str.push(dataAttr);
+    handlers.push({
+      type,
+      fn,
+      query: `[${dataAttr}]`,
+      attr: attrName,
+      remove: true,
+    });
+  });
+
+  return { str: str.join(' '), handlers };
+};
 
 /**
  * The parser
@@ -197,15 +235,17 @@ const parse = (val, handlers = []) => {
   }
 
   if (isObject(val)) {
-    const { state, ...otherTypes } = batchSameTypes(val);
+    const { state, lifecycle, ...otherTypes } = batchSameTypes(val);
+    const blank = { str: [], handlers: [] };
 
     // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
-    const b = state ? generateStateHandler(state) : { str: [], handlers: [] };
+    const b = state ? generateStateHandler(state) : blank;
+    const c = lifecycle ? generateLifecycleHandler(lifecycle) : blank;
 
     return {
-      str: [...a.str, ...b.str].join(' '),
-      handlers: [...handlers, ...a.handlers, ...b.handlers].flat(),
+      str: [...a.str, ...b.str, c.str].join(' '),
+      handlers: [...handlers, ...a.handlers, ...c.handlers].flat(),
     };
   }
 
@@ -336,6 +376,23 @@ function replacePlaceholderComments(root) {
   }
 }
 
+const execHandlers =
+  (handlers = [], isLifeCycle) =>
+  (context) =>
+    handlers.forEach((handler) => {
+      const el = context.querySelector(handler.query);
+
+      if (isLifeCycle) {
+        handler.fn.call(el);
+      } else {
+        modifyElement(handler.query, handler.type, handler.data, context);
+      }
+
+      if (handler.remove) {
+        el.removeAttribute(handler.attr);
+      }
+    });
+
 /**
  * Creates an element from string with `createContextualFragment`
  * @param {String} str - the html string to be rendered
@@ -344,41 +401,54 @@ function replacePlaceholderComments(root) {
  */
 function createElementFromString(str, handlers = []) {
   const fragment = document.createRange().createContextualFragment(str);
+  const [createHandlers, mountHandlers, otherHandlers] = handlers.reduce(
+    (acc, curr) => {
+      let idx = 2;
+      if (curr.type === 'create') {
+        idx = 0;
+      } else if (curr.type === 'mount') {
+        idx = 1;
+      }
 
-  handlers.forEach((handler) => {
-    const el = fragment.querySelector(handler.query);
+      acc[idx].push(curr);
 
-    modifyElement(handler.query, handler.type, handler.data, fragment);
+      return acc;
+    },
+    [[], [], []]
+  );
 
-    if (handler.remove) {
-      el.removeAttribute(handler.attr);
-    }
-  });
-
-  // Replace all placeholder comments
+  execHandlers(otherHandlers, false)(fragment);
   [...fragment.children].forEach(replacePlaceholderComments);
+
+  execHandlers(createHandlers, true)(fragment);
+  fragment[MOUNT_SYMBOL] = execHandlers(mountHandlers, true);
 
   return fragment;
 }
 
 /**
- * Creates element from a `Template` and appends it to `element` if provided
+ * Creates element from a `Template` and appends it to `element` if provided.
+ * If element is not provided, it'll return the created document fragment.
+ * Otherwise, it'll return the `element`
  * @param {Template} template - a `Template` returned by `html`
  * @param {String|HTMLElement} element - the element to append to
- * @returns {DocumentFragment}
+ * @returns {DocumentFragment|HTMLElement}
  */
 function render(template, element) {
-  const el = createElementFromString(...Object.values(template));
+  const fragment = createElementFromString(...Object.values(template));
 
   if (element) {
-    if (typeof element === 'string') {
-      document.querySelector(element).append(el);
-    } else {
-      element.append(el);
-    }
+    const parent =
+      typeof element === 'string' ? document.querySelector(element) : element;
+    parent.append(fragment);
+
+    fragment[MOUNT_SYMBOL](parent);
+    fragment[MOUNT_SYMBOL] = null;
+
+    return parent;
   }
 
-  return el;
+  return fragment;
 }
 
 // State
