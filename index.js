@@ -245,7 +245,7 @@ const parse = (val, handlers = []) => {
 
     return {
       str: [...a.str, ...b.str, c.str].join(' '),
-      handlers: [...handlers, ...a.handlers, ...c.handlers].flat(),
+      handlers: [handlers, a.handlers, b.handlers, c.handlers].flat(2),
     };
   }
 
