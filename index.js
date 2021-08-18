@@ -590,10 +590,35 @@ const generateStateHandler = (state = {}) => {
   return { handlers, str: [...str, proxyId] };
 };
 
+/**
+ * Settings
+ */
+
+/**
+ * Add a defaul property (anything that can be called directly from the element)
+ * @param  {...string} prop - the default prop that will be added
+ * @returns
+ */
+const addDefaultProp = (...prop) => defaultProps.push(...prop);
+
+/**
+ * Add a boolean attribute to the list.
+ * @param  {...string} attr - the boolean attribute to be added
+ * @returns
+ */
+const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
+
+/**
+ * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
+ * This means that `@mount` and `@unmount` will no longer work.
+ * @returns
+ */
+const disconnectObserver = () => observer.disconnect();
+
 const settings = {
-  addDefaultProp: (...prop) => defaultProps.push(...prop),
-  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
-  disconnectObserver: () => observer.disconnect(),
+  addDefaultProp,
+  addBooleanAttr,
+  disconnectObserver,
 };
 
 export { settings, html, createElementFromString, render, createState };
