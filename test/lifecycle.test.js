@@ -50,6 +50,22 @@ describe('lifecycle methods', () => {
       }, 0);
     });
 
+    it('runs when node is moved', (done) => {
+      const el = render(div, 'body');
+      const test = render(html`<div id="test"></div>`).firstChild;
+      document.body.append(test);
+      test.append(el.firstChild);
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(2);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
     it('has reference to element it was attached to', (done) => {
       const el = render(div, 'body');
 
@@ -73,6 +89,22 @@ describe('lifecycle methods', () => {
     it('runs on unmount', (done) => {
       const el = render(div, 'body');
       el.firstChild.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(1);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('runs when node is moved', (done) => {
+      const el = render(div, 'body');
+      const test = render(html`<div id="test"></div>`).firstChild;
+      document.body.append(test);
+      test.append(el.firstChild);
 
       setTimeout(() => {
         try {
