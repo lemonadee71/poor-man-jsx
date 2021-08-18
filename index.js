@@ -29,7 +29,7 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
-const lifecycleMethods = ['create', 'mount', 'unmount'];
+const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 
 /**
  * Is functions used for type checking
@@ -188,6 +188,7 @@ const generateLifecycleHandler = (obj) => {
   return { str: str.join(' '), handlers };
 };
 
+const DESTROY_SYMBOL = Symbol('@destroy');
 const MOUNT_SYMBOL = Symbol('@mount');
 const UNMOUNT_SYMBOL = Symbol('@unmount');
 const config = { childList: true, subtree: true };
@@ -199,6 +200,10 @@ const mutationCallback = (mutationRecords) => {
         if (node[MOUNT_SYMBOL]) node[MOUNT_SYMBOL].call(node);
       });
       mutation.removedNodes.forEach((node) => {
+        if (!node.parentNode) {
+          if (node[DESTROY_SYMBOL]) node[DESTROY_SYMBOL].call(node);
+        }
+
         if (node[UNMOUNT_SYMBOL]) node[UNMOUNT_SYMBOL].call(node);
       });
     }
@@ -400,6 +405,9 @@ const createHydrateFn =
       switch (handler.type) {
         case 'create':
           handler.fn.call(el);
+          break;
+        case 'destroy':
+          el[DESTROY_SYMBOL] = handler.fn;
           break;
         case 'mount':
           el[MOUNT_SYMBOL] = handler.fn;

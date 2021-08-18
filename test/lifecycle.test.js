@@ -31,6 +31,58 @@ describe('lifecycle methods', () => {
     });
   });
 
+  describe('@destroy', () => {
+    let div;
+    beforeEach(() => {
+      div = html`<div ${{ '@destroy': cb }}>This is my div</div>`;
+    });
+
+    it('runs when element is destroyed', (done) => {
+      const el = render(div, 'body');
+      el.firstChild.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(1);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('does not run when node is moved', (done) => {
+      const el = render(div, 'body');
+      const test = render(html`<div id="test"></div>`).firstChild;
+      document.body.append(test);
+      test.append(el.firstChild);
+
+      setTimeout(() => {
+        try {
+          expect(cb).not.toHaveBeenCalled();
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('has reference to element it was attached to', (done) => {
+      const el = render(div, 'body');
+      const child = el.firstChild;
+      child.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveReturnedWith(child);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+  });
+
   describe('@mount', () => {
     let div;
     beforeEach(() => {
@@ -86,7 +138,7 @@ describe('lifecycle methods', () => {
       div = html`<div ${{ '@unmount': cb }}>This is my div</div>`;
     });
 
-    it('runs on unmount', (done) => {
+    it('runs when element is destroyed', (done) => {
       const el = render(div, 'body');
       el.firstChild.remove();
 
