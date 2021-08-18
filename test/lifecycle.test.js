@@ -21,7 +21,7 @@ describe('lifecycle methods', () => {
 
     it('runs on element creation', () => {
       render(div);
-      expect(cb).toHaveBeenCalled();
+      expect(cb).toHaveBeenCalledTimes(1);
     });
 
     it('has reference to the element it was attached to', () => {
@@ -37,23 +37,66 @@ describe('lifecycle methods', () => {
       div = html`<div ${{ '@mount': cb }}>This is my div</div>`;
     });
 
-    it('runs on mount', () => {
+    it('runs on mount', (done) => {
       render(div, 'body');
 
-      expect(cb).toHaveBeenCalled();
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(1);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
     });
 
-    it("doesn't run if element was appended manually", () => {
-      const el = render(div);
-      document.body.append(el);
-
-      expect(cb).not.toHaveBeenCalled();
-    });
-
-    it('has reference to element it was attached to', () => {
+    it('has reference to element it was attached to', (done) => {
       const el = render(div, 'body');
 
-      expect(cb).toHaveReturnedWith(el.firstChild);
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveReturnedWith(el.firstChild);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+  });
+
+  describe('@unmount', () => {
+    let div;
+    beforeEach(() => {
+      div = html`<div ${{ '@unmount': cb }}>This is my div</div>`;
+    });
+
+    it('runs on unmount', (done) => {
+      const el = render(div, 'body');
+      el.firstChild.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(1);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('has reference to element it was attached to', (done) => {
+      const el = render(div, 'body');
+      const child = el.firstChild;
+      child.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveReturnedWith(child);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
     });
   });
 });

@@ -29,7 +29,7 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
-const lifecycleMethods = ['create', 'mount'];
+const lifecycleMethods = ['create', 'mount', 'unmount'];
 
 /**
  * Is functions used for type checking
@@ -165,6 +165,9 @@ const generateHandlerAll = (obj) =>
     reduceHandlerArray
   );
 
+/**
+ * Lifecycle
+ */
 const generateLifecycleHandler = (obj) => {
   const str = [];
   const handlers = [];
@@ -184,6 +187,26 @@ const generateLifecycleHandler = (obj) => {
 
   return { str: str.join(' '), handlers };
 };
+
+const MOUNT_SYMBOL = Symbol('@mount');
+const UNMOUNT_SYMBOL = Symbol('@unmount');
+const config = { childList: true, subtree: true };
+
+const mutationCallback = (mutationRecords) => {
+  mutationRecords.forEach((mutation) => {
+    if (mutation.type === 'childList') {
+      mutation.addedNodes.forEach((node) => {
+        if (node[MOUNT_SYMBOL]) node[MOUNT_SYMBOL].call(node);
+      });
+      mutation.removedNodes.forEach((node) => {
+        if (node[UNMOUNT_SYMBOL]) node[UNMOUNT_SYMBOL].call(node);
+      });
+    }
+  });
+};
+
+const observer = new MutationObserver(mutationCallback);
+observer.observe(document.body, config);
 
 /**
  * The parser
@@ -280,6 +303,9 @@ const html = (fragments, ...values) => {
   return new Template(htmlString, result.handlers.flat());
 };
 
+/**
+ * Hydrate helpers
+ */
 const removeChildren = (parent) => {
   while (parent.firstChild) {
     parent.removeChild(parent.firstChild);
@@ -365,19 +391,25 @@ const replacePlaceholderComments = (root) => {
   }
 };
 
-const MOUNT_SYMBOL = Symbol('@mount');
-const UNMOUNT_SYMBOL = Symbol('@unmount');
-
 const createHydrateFn =
-  (handlers = [], isLifeCycle) =>
+  (handlers = []) =>
   (context) =>
     handlers.forEach((handler) => {
       const el = context.querySelector(handler.query);
 
-      if (isLifeCycle) {
-        handler.fn.call(el);
-      } else {
-        modifyElement(handler.query, handler.type, handler.data, context);
+      switch (handler.type) {
+        case 'create':
+          handler.fn.call(el);
+          break;
+        case 'mount':
+          el[MOUNT_SYMBOL] = handler.fn;
+          break;
+        case 'unmount':
+          el[UNMOUNT_SYMBOL] = handler.fn;
+          break;
+        default:
+          modifyElement(handler.query, handler.type, handler.data, context);
+          break;
       }
 
       if (handler.remove) {
@@ -393,27 +425,20 @@ const createHydrateFn =
  */
 function createElementFromString(str, handlers = []) {
   const fragment = document.createRange().createContextualFragment(str);
-  const [createHandlers, mountHandlers, otherHandlers] = handlers.reduce(
-    (acc, curr) => {
-      let idx = 2;
-      if (curr.type === 'create') {
-        idx = 0;
-      } else if (curr.type === 'mount') {
-        idx = 1;
-      }
-
-      acc[idx].push(curr);
+  const [createHandlers, otherHandlers] = handlers.reduce(
+    (acc, current) => {
+      if (current.type === 'create') acc[0].push(current);
+      else acc[1].push(current);
 
       return acc;
     },
-    [[], [], []]
+    [[], []]
   );
 
-  createHydrateFn(otherHandlers, false)(fragment);
+  createHydrateFn(otherHandlers)(fragment);
   [...fragment.children].forEach(replacePlaceholderComments);
 
-  createHydrateFn(createHandlers, true)(fragment);
-  fragment[MOUNT_SYMBOL] = createHydrateFn(mountHandlers, true);
+  createHydrateFn(createHandlers)(fragment);
 
   return fragment;
 }
@@ -432,10 +457,8 @@ const render = (template, element) => {
   if (element) {
     const parent =
       typeof element === 'string' ? document.querySelector(element) : element;
-    parent.append(fragment);
 
-    fragment[MOUNT_SYMBOL](parent);
-    fragment[MOUNT_SYMBOL] = null;
+    parent.append(fragment);
 
     /** @type {HTMLElement} */
     return parent;
@@ -570,6 +593,7 @@ const generateStateHandler = (state = {}) => {
 const settings = {
   addDefaultProp: (...prop) => defaultProps.push(...prop),
   addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
+  disconnectObserver: () => observer.disconnect(),
 };
 
 export { settings, html, createElementFromString, render, createState };
