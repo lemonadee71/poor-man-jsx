@@ -1,9 +1,3 @@
-// This is to hide the ref property an invoked state returns
-// which is a reference to the original object
-// to make sure we won't be able to access it outside of its intended use
-const REF = Symbol('ref');
-const MOUNT_SYMBOL = Symbol('mount');
-
 class Template {
   /**
    * Create a template
@@ -37,13 +31,8 @@ const booleanAttributes = [
 ];
 const lifecycleMethods = ['create', 'mount'];
 
-const settings = {
-  addDefaultProp: (...prop) => defaultProps.push(...prop),
-  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
-};
-
 /**
- * is functions used for type checking
+ * Is functions used for type checking
  */
 const isObject = (val) => typeof val === 'object';
 
@@ -67,7 +56,7 @@ const isStyleAttribute = (key) =>
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
 /**
- * utility functions
+ * Utility functions
  */
 const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
 
@@ -148,7 +137,7 @@ const batchSameTypes = (obj) => {
   return batched;
 };
 
-function generateHandler(type, obj, remove = true) {
+const generateHandler = (type, obj, remove = true) => {
   const [dataAttr, attrName] = generateAttribute(type);
   const handlers = [];
 
@@ -167,7 +156,7 @@ function generateHandler(type, obj, remove = true) {
   }
 
   return { str: dataAttr, handlers };
-}
+};
 
 const generateHandlerAll = (obj) =>
   pipe(
@@ -291,13 +280,13 @@ const html = (fragments, ...values) => {
   return new Template(htmlString, result.handlers.flat());
 };
 
-function removeChildren(parent) {
+const removeChildren = (parent) => {
   while (parent.firstChild) {
     parent.removeChild(parent.firstChild);
   }
-}
+};
 
-function modifyElement(query, type, data, context = document) {
+const modifyElement = (query, type, data, context = document) => {
   const node = context.querySelector(query);
 
   if (!node) {
@@ -348,10 +337,10 @@ function modifyElement(query, type, data, context = document) {
     default:
       throw new Error('Invalid type.');
   }
-}
+};
 
 // Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
-function replacePlaceholderComments(root) {
+const replacePlaceholderComments = (root) => {
   // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
   const iterator = document.createNodeIterator(
     root,
@@ -374,9 +363,12 @@ function replacePlaceholderComments(root) {
 
     current = iterator.nextNode();
   }
-}
+};
 
-const execHandlers =
+const MOUNT_SYMBOL = Symbol('@mount');
+const UNMOUNT_SYMBOL = Symbol('@unmount');
+
+const createHydrateFn =
   (handlers = [], isLifeCycle) =>
   (context) =>
     handlers.forEach((handler) => {
@@ -417,11 +409,11 @@ function createElementFromString(str, handlers = []) {
     [[], [], []]
   );
 
-  execHandlers(otherHandlers, false)(fragment);
+  createHydrateFn(otherHandlers, false)(fragment);
   [...fragment.children].forEach(replacePlaceholderComments);
 
-  execHandlers(createHandlers, true)(fragment);
-  fragment[MOUNT_SYMBOL] = execHandlers(mountHandlers, true);
+  createHydrateFn(createHandlers, true)(fragment);
+  fragment[MOUNT_SYMBOL] = createHydrateFn(mountHandlers, true);
 
   return fragment;
 }
@@ -434,7 +426,7 @@ function createElementFromString(str, handlers = []) {
  * @param {String|HTMLElement} element - the element to append to
  * @returns
  */
-function render(template, element) {
+const render = (template, element) => {
   const fragment = createElementFromString(...Object.values(template));
 
   if (element) {
@@ -451,10 +443,17 @@ function render(template, element) {
 
   /** @type {DocumentFragment} */
   return fragment;
-}
+};
 
-// State
+/**
+ * State
+ */
 const StateStore = new WeakMap();
+
+// This is to hide the ref property an invoked state returns
+// which is a reference to the original object
+// to make sure we won't be able to access it outside of its intended use
+const REF = Symbol('ref');
 
 /**
  * Creates a state
@@ -533,7 +532,7 @@ const getter = (ref) => (target, rawProp, receiver) => {
   return Reflect.get(target, prop, receiver);
 };
 
-function generateStateHandler(state = {}) {
+const generateStateHandler = (state = {}) => {
   const id = uniqid();
   const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
@@ -566,6 +565,12 @@ function generateStateHandler(state = {}) {
   const { str, handlers } = generateHandlerAll(batchedObj);
 
   return { handlers, str: [...str, proxyId] };
-}
+};
+
+const settings = {
+  addDefaultProp: (...prop) => defaultProps.push(...prop),
+  addBooleanAttr: (...attr) => booleanAttributes.push(...attr),
+};
 
 export { settings, html, createElementFromString, render, createState };
+export default settings;
