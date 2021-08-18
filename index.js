@@ -193,18 +193,32 @@ const MOUNT_SYMBOL = Symbol('@mount');
 const UNMOUNT_SYMBOL = Symbol('@unmount');
 const config = { childList: true, subtree: true };
 
+const traverseNode = (node, callback) => {
+  callback.call(null, node);
+
+  if (node.children && node.children.length) {
+    [...node.children].forEach((child) => traverseNode(child, callback));
+  }
+};
+
 const mutationCallback = (mutationRecords) => {
   mutationRecords.forEach((mutation) => {
     if (mutation.type === 'childList') {
       mutation.addedNodes.forEach((node) => {
-        if (node[MOUNT_SYMBOL]) node[MOUNT_SYMBOL].call(node);
+        traverseNode(node, (n) => {
+          if (n[MOUNT_SYMBOL]) n[MOUNT_SYMBOL].call(n);
+        });
       });
       mutation.removedNodes.forEach((node) => {
         if (!node.parentNode) {
-          if (node[DESTROY_SYMBOL]) node[DESTROY_SYMBOL].call(node);
+          traverseNode(node, (n) => {
+            if (n[DESTROY_SYMBOL]) n[DESTROY_SYMBOL].call(n);
+          });
         }
 
-        if (node[UNMOUNT_SYMBOL]) node[UNMOUNT_SYMBOL].call(node);
+        traverseNode(node, (n) => {
+          if (n[UNMOUNT_SYMBOL]) n[UNMOUNT_SYMBOL].call(n);
+        });
       });
     }
   });

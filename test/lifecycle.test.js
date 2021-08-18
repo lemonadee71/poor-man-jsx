@@ -3,6 +3,9 @@ import { html, render } from '..';
 
 describe('lifecycle methods', () => {
   let cb;
+  const createDiv = (children, method) =>
+    html`<div ${{ [`@${method}`]: cb }}>${children}</div>`;
+
   beforeEach(() => {
     cb = jest.fn(function () {
       return this;
@@ -14,31 +17,46 @@ describe('lifecycle methods', () => {
   });
 
   describe('@create', () => {
-    let div;
+    // eslint-disable-next-line
+    let div1, div2;
     beforeEach(() => {
-      div = html`<div ${{ '@create': cb }}>This is my div</div>`;
+      div1 = createDiv('This is my div', 'create');
+      div2 = createDiv(
+        createDiv(createDiv('This is the innermost div', 'create'), 'create'),
+        'create'
+      );
     });
 
     it('runs on element creation', () => {
-      render(div);
+      render(div1);
       expect(cb).toHaveBeenCalledTimes(1);
     });
 
+    it('runs recursively', () => {
+      render(div2);
+      expect(cb).toHaveBeenCalledTimes(3);
+    });
+
     it('has reference to the element it was attached to', () => {
-      const el = render(div);
+      const el = render(div1);
 
       expect(cb).toHaveReturnedWith(el.firstChild);
     });
   });
 
   describe('@destroy', () => {
-    let div;
+    // eslint-disable-next-line
+    let div1, div2;
     beforeEach(() => {
-      div = html`<div ${{ '@destroy': cb }}>This is my div</div>`;
+      div1 = createDiv('This is my div', 'destroy');
+      div2 = createDiv(
+        createDiv(createDiv('This is the innermost div', 'destroy'), 'destroy'),
+        'destroy'
+      );
     });
 
     it('runs when element is destroyed', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
       el.firstChild.remove();
 
       setTimeout(() => {
@@ -52,7 +70,7 @@ describe('lifecycle methods', () => {
     });
 
     it('does not run when node is moved', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
       const test = render(html`<div id="test"></div>`).firstChild;
       document.body.append(test);
       test.append(el.firstChild);
@@ -67,8 +85,23 @@ describe('lifecycle methods', () => {
       }, 0);
     });
 
+    it('runs recursively', (done) => {
+      const el = render(div2, 'body');
+      const child = el.firstChild;
+      child.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(3);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
     it('has reference to element it was attached to', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
       const child = el.firstChild;
       child.remove();
 
@@ -84,13 +117,18 @@ describe('lifecycle methods', () => {
   });
 
   describe('@mount', () => {
-    let div;
+    // eslint-disable-next-line
+    let div1, div2;
     beforeEach(() => {
-      div = html`<div ${{ '@mount': cb }}>This is my div</div>`;
+      div1 = createDiv('This is my div', 'mount');
+      div2 = createDiv(
+        createDiv(createDiv('This is the innermost div', 'mount'), 'mount'),
+        'mount'
+      );
     });
 
     it('runs on mount', (done) => {
-      render(div, 'body');
+      render(div1, 'body');
 
       setTimeout(() => {
         try {
@@ -103,10 +141,11 @@ describe('lifecycle methods', () => {
     });
 
     it('runs when node is moved', (done) => {
-      const el = render(div, 'body');
-      const test = render(html`<div id="test"></div>`).firstChild;
-      document.body.append(test);
-      test.append(el.firstChild);
+      const el = render(div1, 'body').firstChild;
+      const test = render(html`<div id="test"></div>`, 'body');
+      setTimeout(() => {
+        test.append(el);
+      }, 0);
 
       setTimeout(() => {
         try {
@@ -118,8 +157,21 @@ describe('lifecycle methods', () => {
       }, 0);
     });
 
+    it('runs recursively', (done) => {
+      render(div2, 'body');
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(3);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
     it('has reference to element it was attached to', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
 
       setTimeout(() => {
         try {
@@ -133,13 +185,18 @@ describe('lifecycle methods', () => {
   });
 
   describe('@unmount', () => {
-    let div;
+    // eslint-disable-next-line
+    let div1, div2;
     beforeEach(() => {
-      div = html`<div ${{ '@unmount': cb }}>This is my div</div>`;
+      div1 = createDiv('This is my div', 'unmount');
+      div2 = createDiv(
+        createDiv(createDiv('This is the innermost div', 'unmount'), 'unmount'),
+        'unmount'
+      );
     });
 
     it('runs when element is destroyed', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
       el.firstChild.remove();
 
       setTimeout(() => {
@@ -153,10 +210,10 @@ describe('lifecycle methods', () => {
     });
 
     it('runs when node is moved', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body').firstChild;
       const test = render(html`<div id="test"></div>`).firstChild;
       document.body.append(test);
-      test.append(el.firstChild);
+      test.append(el);
 
       setTimeout(() => {
         try {
@@ -168,8 +225,22 @@ describe('lifecycle methods', () => {
       }, 0);
     });
 
+    it('runs recursively', (done) => {
+      const el = render(div2, 'body');
+      el.firstChild.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb).toHaveBeenCalledTimes(3);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
     it('has reference to element it was attached to', (done) => {
-      const el = render(div, 'body');
+      const el = render(div1, 'body');
       const child = el.firstChild;
       child.remove();
 
