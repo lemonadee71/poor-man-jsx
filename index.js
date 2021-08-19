@@ -60,15 +60,6 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
  */
 const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
 
-const generateAttribute = (type) => {
-  const id = uniqid();
-  const seed = uniqid(4);
-  const attrName = `data-${type}-${seed}`;
-  const dataAttr = `${attrName}="${id}"`;
-
-  return [dataAttr, attrName];
-};
-
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
 
@@ -86,6 +77,15 @@ const reduceHandlerArray = (arr) =>
     },
     { str: [], handlers: [] }
   );
+
+const generateAttribute = (type) => {
+  const id = uniqid();
+  const seed = uniqid(4);
+  const attrName = `data-${type}-${seed}`;
+  const dataAttr = `${attrName}="${id}"`;
+
+  return [dataAttr, attrName];
+};
 
 const determineType = (key) => {
   // Any unrecognizable key will be treated as attr
@@ -185,12 +185,14 @@ const generateLifecycleHandler = (obj) => {
     });
   });
 
-  return { str: str.join(' '), handlers };
+  return { str, handlers };
 };
 
-const DESTROY_SYMBOL = Symbol('@destroy');
-const MOUNT_SYMBOL = Symbol('@mount');
-const UNMOUNT_SYMBOL = Symbol('@unmount');
+const LIFECYCLE_SYMBOLS = {
+  destroy: Symbol('@destroy'),
+  mount: Symbol('@mount'),
+  unmount: Symbol('@unmount'),
+};
 const config = { childList: true, subtree: true };
 
 const traverseNode = (node, callback) => {
@@ -201,23 +203,30 @@ const traverseNode = (node, callback) => {
   }
 };
 
-const mutationCallback = (mutationRecords) => {
-  mutationRecords.forEach((mutation) => {
+const mutationCallback = (mutations) => {
+  mutations.forEach((mutation) => {
     if (mutation.type === 'childList') {
       mutation.addedNodes.forEach((node) => {
         traverseNode(node, (n) => {
-          if (n[MOUNT_SYMBOL]) n[MOUNT_SYMBOL].call(n);
+          const cb = n[LIFECYCLE_SYMBOLS.mount];
+
+          if (cb) cb.call(n);
         });
       });
+
       mutation.removedNodes.forEach((node) => {
-        if (!node.parentNode) {
+        if (!document.body.contains(node)) {
           traverseNode(node, (n) => {
-            if (n[DESTROY_SYMBOL]) n[DESTROY_SYMBOL].call(n);
+            const cb = n[LIFECYCLE_SYMBOLS.destroy];
+
+            if (cb) cb.call(n);
           });
         }
 
         traverseNode(node, (n) => {
-          if (n[UNMOUNT_SYMBOL]) n[UNMOUNT_SYMBOL].call(n);
+          const cb = n[LIFECYCLE_SYMBOLS.unmount];
+
+          if (cb) cb.call(n);
         });
       });
     }
@@ -275,7 +284,7 @@ const parse = (val, handlers = []) => {
     const c = lifecycle ? generateLifecycleHandler(lifecycle) : blank;
 
     return {
-      str: [...a.str, ...b.str, c.str].join(' '),
+      str: [...a.str, ...b.str, ...c.str].join(' '),
       handlers: [handlers, a.handlers, b.handlers, c.handlers].flat(2),
     };
   }
@@ -421,13 +430,9 @@ const createHydrateFn =
           handler.fn.call(el);
           break;
         case 'destroy':
-          el[DESTROY_SYMBOL] = handler.fn;
-          break;
         case 'mount':
-          el[MOUNT_SYMBOL] = handler.fn;
-          break;
         case 'unmount':
-          el[UNMOUNT_SYMBOL] = handler.fn;
+          el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
           break;
         default:
           modifyElement(handler.query, handler.type, handler.data, context);
