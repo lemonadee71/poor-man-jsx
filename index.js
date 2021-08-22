@@ -629,7 +629,7 @@ const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
 
 /**
  * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
- * This means that `@mount` and `@unmount` will no longer work.
+ * This means that `@mount`, `@unmount`, and `@destroy` will no longer work.
  * @returns
  */
 const disableObserver = () => observer.disconnect();
