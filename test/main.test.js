@@ -219,4 +219,29 @@ describe('html and render', () => {
 
     expect(screen.getByTestId('htmlElement')).toContainHTML('<div></div>');
   });
+
+  it('accepts Text Node', () => {
+    render(
+      html`<div data-testid="text node">
+        ${document.createTextNode('This is my text')}
+      </div>`,
+      root
+    );
+
+    expect(screen.getByTestId('text node')).toHaveTextContent(
+      'This is my text'
+    );
+  });
+
+  it('accepts DocumentFragment', () => {
+    const fragment = new DocumentFragment();
+    fragment.append(document.createElement('div'));
+    fragment.append(document.createElement('div'));
+
+    render(html`<div data-testid="fragment">${fragment}</div>`, root);
+
+    expect(screen.getByTestId('fragment')).toContainHTML(
+      '<div></div><div></div>'
+    );
+  });
 });

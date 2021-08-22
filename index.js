@@ -40,7 +40,7 @@ const isArray = (val) => Array.isArray(val);
 
 const isTemplate = (val) => val instanceof Template;
 
-const isHTML = (val) => val instanceof HTMLElement;
+const isNode = (val) => val instanceof Node;
 
 const isState = (key) => key.startsWith('$');
 
@@ -243,7 +243,7 @@ observer.observe(document.body, config);
  * @returns
  */
 const parse = (val, handlers = []) => {
-  if (isHTML(val)) {
+  if (isNode(val)) {
     const id = uniqid();
 
     return {
