@@ -34,13 +34,13 @@ const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 /**
  * Is functions used for type checking
  */
-const isObject = (val) => typeof val === 'object';
+const isObject = (value) => typeof value === 'object';
 
-const isArray = (val) => Array.isArray(val);
+const isArray = (value) => Array.isArray(value);
 
-const isTemplate = (val) => val instanceof Template;
+const isTemplate = (value) => value instanceof Template;
 
-const isNode = (val) => val instanceof Node;
+const isNode = (value) => value instanceof Node;
 
 const isState = (key) => key.startsWith('$');
 
@@ -137,23 +137,21 @@ const batchSameTypes = (obj) => {
   return batched;
 };
 
-const generateHandler = (type, obj, remove = true) => {
+const generateHandler = (type, obj) => {
   const [dataAttr, attrName] = generateAttribute(type);
   const handlers = [];
 
   Object.entries(obj).forEach(([name, value]) => {
     handlers.push({
       type,
-      query: `[${dataAttr}]`,
+      selector: `[${dataAttr}]`,
       attr: attrName,
       data: { name, value },
       remove: false,
     });
   });
 
-  if (remove) {
-    handlers[handlers.length - 1].remove = true;
-  }
+  handlers[handlers.length - 1].remove = true;
 
   return { str: dataAttr, handlers };
 };
@@ -179,7 +177,7 @@ const generateLifecycleHandler = (obj) => {
     handlers.push({
       type,
       fn,
-      query: `[${dataAttr}]`,
+      selector: `[${dataAttr}]`,
       attr: attrName,
       remove: true,
     });
@@ -238,44 +236,46 @@ observer.observe(document.body, config);
 
 /**
  * The parser
- * @param {*} val
+ * @param {*} value
  * @param {Array} handlers
  * @returns
  */
-const parse = (val, handlers = []) => {
-  if (isNode(val)) {
+const parse = (value, handlers = []) => {
+  if (isNode(value)) {
     const id = uniqid();
 
     return {
-      str: `<marker id="html-${id}" />`,
+      str: `<marker id="node-${id}" />`,
       handlers: [
         ...handlers.flat(),
-        { type: 'html', query: `#html-${id}`, data: { value: val } },
+        { type: 'node', selector: `#node-${id}`, data: { value } },
       ],
     };
   }
 
-  if (isTemplate(val)) {
+  if (isTemplate(value)) {
     // Just add its string and handlers
     return {
-      str: val.str,
-      handlers: [...handlers, ...val.handlers],
+      str: value.str,
+      handlers: [...handlers, ...value.handlers],
     };
   }
 
-  if (isArray(val)) {
+  if (isArray(value)) {
     // Will be parsed as an array of object { str, handlers }
     // And will be reduced to a single { str, handlers }
-    const final = reduceHandlerArray(val.map((item) => parse(item, handlers)));
+    const final = reduceHandlerArray(
+      value.map((item) => parse(item, handlers))
+    );
 
     return {
       str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers].flat(),
+      handlers: [handlers, final.handlers].flat(2),
     };
   }
 
-  if (isObject(val)) {
-    const { state, lifecycle, ...otherTypes } = batchSameTypes(val);
+  if (isObject(value)) {
+    const { state, lifecycle, ...otherTypes } = batchSameTypes(value);
     const blank = { str: [], handlers: [] };
 
     // Will be parsed to { str: [], handlers: [] }
@@ -291,7 +291,7 @@ const parse = (val, handlers = []) => {
 
   return {
     handlers,
-    str: `${val}`,
+    str: `${value}`,
   };
 };
 
@@ -321,11 +321,12 @@ const addPlaceholders = (str) => {
 const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
 
-  const htmlString = addPlaceholders(
+  const htmlString = pipe(
     result.str.reduce(
       (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
       fragments[0]
-    )
+    ),
+    addPlaceholders
   );
 
   return new Template(htmlString, result.handlers.flat());
@@ -340,11 +341,11 @@ const removeChildren = (parent) => {
   }
 };
 
-const modifyElement = (query, type, data, context = document) => {
-  const node = context.querySelector(query);
+const modifyElement = (selector, type, data, context = document) => {
+  const node = context.querySelector(selector);
 
   if (!node) {
-    console.error(`Can't find node using selector ${query}`);
+    console.error(`Can't find node using selector ${selector}`);
     return;
   }
 
@@ -385,7 +386,7 @@ const modifyElement = (query, type, data, context = document) => {
 
       break;
     }
-    case 'html':
+    case 'node':
       node.replaceWith(data.value);
       break;
     default:
@@ -393,29 +394,24 @@ const modifyElement = (query, type, data, context = document) => {
   }
 };
 
-// Taken from https://stackoverflow.com/questions/13363946/how-do-i-get-an-html-comment-with-javascript
 const replacePlaceholderComments = (root) => {
-  // Fourth argument, which is actually obsolete according to the DOM4 standard, is required in IE 11
   const iterator = document.createNodeIterator(
     root,
     NodeFilter.SHOW_COMMENT,
-    () => NodeFilter.FILTER_ACCEPT,
-    false
+    () => NodeFilter.FILTER_ACCEPT
   );
 
-  let current = iterator.nextNode();
-  while (current) {
-    const isPlaceholder = current.nodeValue.trim().startsWith('placeholder-');
+  let current;
+  // eslint-disable-next-line
+  while ((current = iterator.nextNode())) {
+    const text = current.nodeValue.trim();
+    const isPlaceholder = text.startsWith('placeholder-');
 
     if (isPlaceholder) {
       current.replaceWith(
-        document.createTextNode(
-          current.nodeValue.trim().replace('placeholder-', '')
-        )
+        document.createTextNode(text.replace('placeholder-', ''))
       );
     }
-
-    current = iterator.nextNode();
   }
 };
 
@@ -423,7 +419,7 @@ const createHydrateFn =
   (handlers = []) =>
   (context) =>
     handlers.forEach((handler) => {
-      const el = context.querySelector(handler.query);
+      const el = context.querySelector(handler.selector);
 
       switch (handler.type) {
         case 'create':
@@ -435,7 +431,7 @@ const createHydrateFn =
           el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
           break;
         default:
-          modifyElement(handler.query, handler.type, handler.data, context);
+          modifyElement(handler.selector, handler.type, handler.data, context);
           break;
       }
 
@@ -534,33 +530,6 @@ const createState = (value, seal = true) => {
   return [proxy, deleteState];
 };
 
-const setter = (ref) => (target, prop, value, receiver) => {
-  const bindedElements = StateStore.get(ref);
-
-  bindedElements.forEach((handlers, id) => {
-    const query = `[data-proxyid="${id}"]`;
-    const el = document.querySelector(query);
-
-    if (el) {
-      handlers.forEach((handler) => {
-        if (prop !== handler.prop) return;
-
-        const finalValue = reduceValue(value, handler.trap);
-
-        modifyElement(query, handler.type, {
-          name: handler.target,
-          value: finalValue,
-        });
-      });
-    } else {
-      // delete handler when the target is unreachable (most likely deleted)
-      bindedElements.delete(id);
-    }
-  });
-
-  return Reflect.set(target, prop, value, receiver);
-};
-
 const getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
 
@@ -582,6 +551,31 @@ const getter = (ref) => (target, rawProp, receiver) => {
   return Reflect.get(target, prop, receiver);
 };
 
+const setter = (ref) => (target, prop, value, receiver) => {
+  const bindedElements = StateStore.get(ref);
+
+  bindedElements.forEach((handlers, id) => {
+    const selector = `[data-proxyid="${id}"]`;
+    const el = document.querySelector(selector);
+
+    if (el) {
+      handlers.forEach((handler) => {
+        if (prop !== handler.prop) return;
+
+        modifyElement(selector, handler.type, {
+          name: handler.target,
+          value: reduceValue(value, handler.trap),
+        });
+      });
+    } else {
+      // delete handler when the target is unreachable (most likely deleted)
+      bindedElements.delete(id);
+    }
+  });
+
+  return Reflect.set(target, prop, value, receiver);
+};
+
 const generateStateHandler = (state = {}) => {
   const id = uniqid();
   const proxyId = `data-proxyid="${id}"`;
@@ -592,13 +586,11 @@ const generateStateHandler = (state = {}) => {
       const bindedElements = StateStore.get(info[REF]);
       const existingHandlers = bindedElements.get(id) || [];
 
-      const finalValue = reduceValue(info.data.value, info.data.trap);
-
       if (!batchedObj[type]) {
         batchedObj[type] = {};
       }
 
-      batchedObj[type][key] = finalValue;
+      batchedObj[type][key] = reduceValue(info.data.value, info.data.trap);
 
       bindedElements.set(id, [
         ...existingHandlers,
@@ -640,12 +632,12 @@ const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
  * This means that `@mount` and `@unmount` will no longer work.
  * @returns
  */
-const disconnectObserver = () => observer.disconnect();
+const disableObserver = () => observer.disconnect();
 
 const settings = {
   addDefaultProp,
   addBooleanAttr,
-  disconnectObserver,
+  disableObserver,
 };
 
 export { settings, html, createElementFromString, render, createState };
