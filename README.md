@@ -166,13 +166,13 @@ To create one, just use `createHook` which returns an array `[proxy, revoke]`. I
 ```js
 import { createHook } from 'poor-man-jsx';
 
-const [state1] = createState('test');
-console.log(state1); // Proxy { value: 'test' }
+const [hook1] = createHook('test');
+console.log(hook1); // Proxy { value: 'test' }
 
-const [state2, revoke] = createState({ num: 1 });
-console.log(state2); // Proxy { num: 1 }
+const [hook2, revoke] = createHook({ num: 1 });
+console.log(hook2); // Proxy { num: 1 }
 
-// and use revoke to revoke the Proxy and delete the state from memory
+// and use revoke to revoke the Proxy and delete the hook from memory
 // this will also return the original unproxied object
 revoke(); // returns { num: 1 }
 ```
