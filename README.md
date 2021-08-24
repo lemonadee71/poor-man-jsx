@@ -2,9 +2,7 @@
 
 Create html elements painlessly with tagged template literals.
 
-## Usage
-
-### Installation
+## Installation
 
 ```shell
 npm i poor-man-jsx
@@ -13,22 +11,35 @@ npm i poor-man-jsx
 Then import
 
 ```js
-import { html, render, createState } from 'poor-man-jsx';
+import { html, render } from 'poor-man-jsx';
 ```
 
-### Creating html elements
+## Creating html elements
 
-Attach event listeners like you are writing JSX
+Use the `html` function and prefix your template literals with it (use it as a tag).
 
 ```js
+// event listeners must be prefixed with 'on'
 const button = html`
   <button ${{ onClick: () => alert('Button clicked') }}>Click me!</button>
 `;
-document.body.append(render(button));
-// And now you have a button that'll show an alert when clicked
 ```
 
-You could do this too
+`html` returns a `Template`. Use the `render` function that takes in a `Template` to create an element (or specifically, creates a `DocumentFragment`)
+
+To create an element, we use the `render` function. `render` takes in a second argument which is either a selector string or a node. The created element will be appended to this if provided.
+
+```js
+// Let's append the button we created before to the body
+render(button, document.body);
+//or
+render(button, 'body');
+// and now you have a button that shows an alert when clicked
+```
+
+> `render` returns the created element if second argument is not provided otherwise it'll return the parent
+
+And now that you know the basics, you could do this too. You can add class, style attributes, and some props like innerHTML or textContent.
 
 ```js
 const props = {
@@ -39,15 +50,44 @@ const props = {
   display: 'flex',
   innerHTML: '<h1>Title</h1>',
 };
-const el = html`<header ${props}></header>`;
-document.body.append(render(el));
+const header = html`<header ${props}></header>`;
+render(header, document.body);
 ```
 
-If you don't want to render user injected html strings, just wrap it in `{% string here $}`
+You can use the style attribute directly as a key or prefix it with the `style_`. So the example above could be,
 
 ```js
-const str = '<strong>This will render as a text node</strong>';
-const p = html`<p>{% ${str} %}</p>`;
+const props = {
+  class: 'my-header',
+  style_height: '30px',
+  style_width: '100%',
+  style_borderBottom: '1px solid black',
+  style_display: 'flex',
+  innerHTML: '<h1>Title</h1>',
+};
+```
+
+and we'll get the same result.
+
+> Use camelCase for style attributes
+
+By default, any string you passed in will be rendered as element (slightly the same behavior as `innerHTML`). If you don't want to render user injected html strings, just wrap it in `{% string here $}`. Now this behaves more like `textContent`.
+
+```js
+const str = '<strong>This will render as a text</strong>';
+const p = html`<p id="test">{% ${str} %}</p>`;
+
+render(p, 'body');
+console.log(document.getElementById('test').textContent); // <strong>This will render as a text</strong>
+```
+
+or you could just pass a text node to achieve the same result
+
+```js
+...
+const p = html`<p id="test">${document.createTextNode(str)}</p>`;
+...
+console.log(document.getElementById('test').textContent); // <strong>This will render as a text</strong>
 ```
 
 And you could pass arrays too
@@ -58,18 +98,74 @@ const list = html`
     ${new Array(3).fill('test').map((str, i) => `<li>${str} ${i}</li>`)}
   </ul>
 `;
-document.body.append(render(list));
 ```
 
-> Important: Props should be inside the opening tag
-
-### State
-
-component.js also provides a state-like functionality
-
-To create one, just use `createState` which returns an array `[state, revoke]`. It accepts a primitive or an object. Since under the hood we're using `Proxy`, we convert a primitive to an object
+You could also pass in a `Template` which was returned by `html`. This allows for better composition.
 
 ```js
+// add the list we created above to our nav
+const nav = html`<nav>${list}</nav>`;
+render(nav, 'body');
+```
+
+Among what was mentioned already, you could also pass `HTMLElement`, `DocumentFragment`, or anything of type `Node`.
+
+> Important: Props should be inside the opening tag. Anything passed that are between the opening and closing tags will be treated as children.
+
+## Lifecycle Methods
+
+Poor Man's JSX also allows you to have lifecycle methods in your elements. These methods must be prefixed with `@`. The lifecycle methods available are: `create`, `destroy`, `mount`, and `unmount`.
+
+Here's a modified example from the [React docs](https://reactjs.org/docs/state-and-lifecycle.html) written with Poor Man's JSX.
+
+```js
+const Clock = () => {
+  let date = new Date();
+  let timerID;
+
+  const atMount = () => {
+    timerID = setInterval(() => tick(), 1000);
+  };
+
+  const atUnmount = () => {
+    clearInterval(timerID);
+  };
+
+  const tick = () => {
+    date = new Date();
+    const text = document.getElementById('text');
+    text.textContent = `It is ${date.toLocaleTimeString()}`;
+  };
+
+  return html`
+    <div
+      ${{
+        '@mount': atMount,
+        '@unmount': atUnmount,
+      }}
+    >
+      <h1>Hello, world!</h1>
+      <h2 id="text">It is ${date.toLocaleTimeString()}.</h2>
+    </div>
+  `;
+};
+
+render(Clock(), document.body);
+```
+
+Any callbacks passed as a lifecycle method will be passed the node it was attached to as an argument and also as `this`.
+
+`create` and `destroy` will only be called once unlike `mount` and `unmount` which can be called multiple times if the node is removed or moved (appended elsewhere). This behavior is similar to `connectedCallback` and `disconnectedCallback` of custom elements.
+
+## Data Binding
+
+Poor Man's JSX also allows you to bind an object to an element so that changes in the object is reflected to the elements it was binded to. We call it a `hook`.
+
+To create one, just use `createHook` which returns an array `[proxy, revoke]`. It accepts a primitive or an object. Since under the hood we're using `Proxy`, we need the `hook` to be an object. By default, the object key will be `value` if a primitive is passed.
+
+```js
+import { createHook } from 'poor-man-jsx';
+
 const [state1] = createState('test');
 console.log(state1); // Proxy { value: 'test' }
 
@@ -81,39 +177,89 @@ console.log(state2); // Proxy { num: 1 }
 revoke(); // returns { num: 1 }
 ```
 
-> Under the hood, we're using `WeakMap` to store state so it's not really necessary to use revoke but use it when you can
+> Under the hood, we're using `WeakMap` to store data so it's not really necessary to use revoke but use it when you can in a `destroy` or `unmount` callback.
 
-Here's an example,
+Let's take our Clock example and rewrite it to look more React-ish using a hook,
 
 ```js
-const [count] = createState(0);
-const el = html`
-  <button ${{ onClick: () => count.value++ }}>Increment</button>
-  <p id="test" ${{ $textContent: count.$value }}></p>
-`;
-document.body.append(render(el));
+const Clock = () => {
+  const [current, revoke] = createHook({ date: new Date(), timerID: null });
 
-// Click the button two times
-// p's textContent should be 2
-console.log(document.getElementById('test').textContent); // 2
+  const atMount = () => {
+    current.timerID = setInterval(() => tick(), 1000);
+  };
+
+  const atUnmount = () => {
+    clearInterval(current.timerID);
+  };
+
+  const tick = () => {
+    current.date = new Date();
+  };
+
+  return html`
+    <div
+      ${{
+        '@mount': atMount,
+        '@unmount': atUnmount,
+        '@destroy': revoke, // delete hook
+      }}
+    >
+      <h1>Hello, world!</h1>
+      <h2
+        ${{
+          $textContent: current.$date(
+            (date) => `It is ${date.toLocaleTimeString()}.`
+          ),
+        }}
+      ></h2>
+    </div>
+  `;
+};
+
+render(Clock(), document.body);
 ```
 
-What this does is that every time we click the button, we increment count's `value`. What `$textContent: count.$value` is doing is that every time count's `value` changes, it will reflect the change in the element's `textContent`.
-
-Note that we prefixed both `textContent` and `value` with `$`.
+Let's take a look at the code more closely. _Hooking_ an object to element happens in this line
 
 ```js
-// This will just set the element's textContent to count.value
-// But won't change when value changes
-textContent: count.value;
+$textContent: current.$date(
+  (date) => `It is ${date.toLocaleTimeString()}.`
+),
+```
+
+What this does is that whenever current's `date` changes, the `h2`'s textContent will be updated. As you can see, we're passing a function. This function will have the current value as argument which in this case the current value of `date` and anything we return from this will be what the `textContent` will be. So if we just do,
+
+```js
+$textContent: current.$date;
+```
+
+it will just set the `textContent` to an unformatted complete date.
+
+In React, this is like the difference between
+
+```js
+<h2>It is {date.toLocaleTimeString()}.</h2>
+// and
+<h2>{date}</h2>
+```
+
+Also, as you can see, we just need to set `current.date` to the new date. No need to target the `h2` unlike in our previous example. This makes our code cleaner.
+
+Also note that we prefixed both `textContent` and `date` with `$`. This is required. It tells the code that we want `textContent` to be _hooked_ to `date`.
+
+```js
+// This will just set the element's textContent to current.date
+// But won't change when date changes
+textContent: current.date;
 
 // And this will probably throw an error
-$textContent: count.value;
-textContent: count.$value;
+$textContent: current.date;
+textContent: current.$date;
 
 // Do this
-$textContent: count.$value;
+$textContent: current.$date;
 
 // Or more generally
-$prop: state.$key;
+$prop: object.$key;
 ```

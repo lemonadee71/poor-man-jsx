@@ -43,7 +43,7 @@ const isTemplate = (value) => value instanceof Template;
 
 const isNode = (value) => value instanceof Node;
 
-const isState = (key) => key.startsWith('$');
+const isHook = (key) => key.startsWith('$');
 
 const isLifecycleMethod = (key) => key.startsWith('@');
 
@@ -94,8 +94,8 @@ const determineType = (key) => {
   let type = 'attr';
   let k = key;
 
-  if (isState(key)) {
-    type = 'state';
+  if (isHook(key)) {
+    type = 'hook';
   } else if (isEventListener(key)) {
     type = 'listener';
   } else if (isDefaultProp(key)) {
@@ -132,8 +132,8 @@ const batchSameTypes = (obj) => {
     return acc;
   }, {});
 
-  if (batched.state) {
-    batched.state = batchSameTypes(batched.state);
+  if (batched.hook) {
+    batched.hook = batchSameTypes(batched.hook);
   }
 
   return batched;
@@ -277,12 +277,12 @@ const parse = (value, handlers = []) => {
   }
 
   if (isObject(value)) {
-    const { state, lifecycle, ...otherTypes } = batchSameTypes(value);
+    const { hook, lifecycle, ...otherTypes } = batchSameTypes(value);
     const blank = { str: [], handlers: [] };
 
     // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
-    const b = state ? generateStateHandler(state) : blank;
+    const b = hook ? generateHookHandler(hook) : blank;
     const c = lifecycle ? generateLifecycleHandler(lifecycle) : blank;
 
     return {
@@ -494,24 +494,24 @@ const render = (template, element) => {
 };
 
 /**
- * State
+ * Hook
  */
-const StateStore = new WeakMap();
+const Hooks = new WeakMap();
 
-// This is to hide the ref property an invoked state returns
+// This is to hide the ref property an invoked hook returns
 // which is a reference to the original object
 // to make sure we won't be able to access it outside of its intended use
 const REF = Symbol('ref');
 
 /**
- * Creates a state
- * @param {any} value - the initial value of state
+ * Creates a hook
+ * @param {any} value - the initial value of the hook
  * @param {Boolean} [seal=true] - seal the object with Object.seal
  * @returns {[Object, function]}
  */
-const createState = (value, seal = true) => {
+const createHook = (value, seal = true) => {
   const obj = isObject(value) ? value : { value };
-  StateStore.set(obj, new Map());
+  Hooks.set(obj, new Map());
 
   const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
     get: getter(obj),
@@ -519,17 +519,17 @@ const createState = (value, seal = true) => {
   });
 
   /**
-   * Delete the state and returns the original value
+   * Delete the hook object and returns the original value
    * @returns {any}
    */
-  const deleteState = () => {
+  const deleteHook = () => {
     revoke();
-    StateStore.delete(obj);
+    Hooks.delete(obj);
 
     return value;
   };
 
-  return [proxy, deleteState];
+  return [proxy, deleteHook];
 };
 
 const getter = (ref) => (target, rawProp, receiver) => {
@@ -546,7 +546,7 @@ const getter = (ref) => (target, rawProp, receiver) => {
       },
     });
 
-  if (type === 'state' && prop in target) {
+  if (type === 'hook' && prop in target) {
     return Object.assign($(target[prop]), $(target[prop])());
   }
 
@@ -554,7 +554,7 @@ const getter = (ref) => (target, rawProp, receiver) => {
 };
 
 const setter = (ref) => (target, prop, value, receiver) => {
-  const bindedElements = StateStore.get(ref);
+  const bindedElements = Hooks.get(ref);
 
   bindedElements.forEach((handlers, id) => {
     const selector = `[data-proxyid="${id}"]`;
@@ -578,14 +578,14 @@ const setter = (ref) => (target, prop, value, receiver) => {
   return Reflect.set(target, prop, value, receiver);
 };
 
-const generateStateHandler = (state = {}) => {
+const generateHookHandler = (hook = {}) => {
   const id = uniqid();
   const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
 
-  Object.entries(state).forEach(([type, batch]) => {
+  Object.entries(hook).forEach(([type, batch]) => {
     Object.entries(batch).forEach(([key, info]) => {
-      const bindedElements = StateStore.get(info[REF]);
+      const bindedElements = Hooks.get(info[REF]);
       const existingHandlers = bindedElements.get(id) || [];
 
       if (!batchedObj[type]) {
@@ -652,5 +652,5 @@ const settings = {
   disableObserver,
 };
 
-export { html, createElementFromString, render, createState };
+export { html, createElementFromString, render, createHook };
 export default settings;

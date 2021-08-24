@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
-import { createState, html, render } from '..';
+import { createHook, html, render } from '..';
 
 /**
  * @jest-environment jsdom
@@ -20,7 +20,7 @@ describe('state', () => {
   });
 
   const setup = (value, obj) => () => {
-    const [state, revoke] = createState(value);
+    const [state, revoke] = createHook(value);
     obj.state = state;
     obj.revoke = revoke;
   };
@@ -44,7 +44,7 @@ describe('state', () => {
     `;
 
   it('is sealed', () => {
-    const [state] = createState({ test: 1 });
+    const [state] = createHook({ test: 1 });
 
     expect(state.$test.ref).toBe(undefined);
     expect(() => {
