@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
-import { html, render } from '..';
+import PoorManJSX, { html, render } from '..';
 
 /**
  * @jest-environment jsdom
@@ -74,7 +74,7 @@ describe('html and render', () => {
     expect(mockClickCallback).toBeCalled();
   });
 
-  it('style works with option style_ prefix', () => {
+  it('style works with optional style_ prefix', () => {
     const props = {
       style_height: '20px',
       style_width: '300px',
@@ -88,6 +88,19 @@ describe('html and render', () => {
       width: props.style_width,
       border: props.border,
     });
+  });
+
+  it('custom attribute is not considered as style', () => {
+    PoorManJSX.addCustomAttribute('color');
+
+    const props = { color: 'yellow' };
+    const el = html`<div data-testid="style" ${props}></div>`;
+    render(el, root);
+
+    expect(screen.getByTestId('style')).not.toHaveStyle({
+      color: props.color,
+    });
+    expect(screen.getByTestId('style')).toHaveAttribute('color', 'yellow');
   });
 
   it('works with special prop children', () => {

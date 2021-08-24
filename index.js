@@ -29,6 +29,7 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
+const customAttributes = [];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 
 /**
@@ -51,7 +52,8 @@ const isEventListener = (key) => key.toLowerCase().startsWith('on');
 const isDefaultProp = (key) => defaultProps.includes(key);
 
 const isStyleAttribute = (key) =>
-  key in mockEl.style || key.startsWith('style_');
+  !customAttributes.includes(key) &&
+  (key in mockEl.style || key.startsWith('style_'));
 
 const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 
@@ -618,14 +620,23 @@ const generateStateHandler = (state = {}) => {
  * @param  {...string} prop - the default prop that will be added
  * @returns
  */
-const addDefaultProp = (...prop) => defaultProps.push(...prop);
+const addDefaultProperty = (...prop) => defaultProps.push(...prop);
 
 /**
  * Add a boolean attribute to the list.
  * @param  {...string} attr - the boolean attribute to be added
  * @returns
  */
-const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
+const addBooleanAttribute = (...attr) => booleanAttributes.push(...attr);
+
+/**
+ * Add a custom attribute to the list. This is to avoid conflict with custom elements
+ * if their custom attributes coincide with some style attributes
+ * since by default, any string that's a valid style attribute is considered as "style" first
+ * @param  {...string} attr - the custom attribute to be added
+ * @returns
+ */
+const addCustomAttribute = (...attr) => customAttributes.push(...attr);
 
 /**
  * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
@@ -635,10 +646,11 @@ const addBooleanAttr = (...attr) => booleanAttributes.push(...attr);
 const disableObserver = () => observer.disconnect();
 
 const settings = {
-  addDefaultProp,
-  addBooleanAttr,
+  addDefaultProperty,
+  addBooleanAttribute,
+  addCustomAttribute,
   disableObserver,
 };
 
-export { settings, html, createElementFromString, render, createState };
+export { html, createElementFromString, render, createState };
 export default settings;
