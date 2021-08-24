@@ -2,14 +2,16 @@ import '@testing-library/jest-dom/extend-expect';
 import { html, render } from '..';
 
 describe('lifecycle methods', () => {
-  let cb;
-  const createDiv = (children, method) =>
+  // eslint-disable-next-line
+  let cb1, cb2;
+  const createDiv = (children, method, cb) =>
     html`<div ${{ [`@${method}`]: cb }}>${children}</div>`;
 
   beforeEach(() => {
-    cb = jest.fn(function () {
+    cb1 = jest.fn(function () {
       return this;
     });
+    cb2 = jest.fn((node) => node);
   });
 
   afterEach(() => {
@@ -20,27 +22,34 @@ describe('lifecycle methods', () => {
     // eslint-disable-next-line
     let div1, div2;
     beforeEach(() => {
-      div1 = createDiv('This is my div', 'create');
+      div1 = createDiv('This is my div', 'create', cb1);
       div2 = createDiv(
-        createDiv(createDiv('This is the innermost div', 'create'), 'create'),
-        'create'
+        createDiv(createDiv('', 'create', cb1), 'create', cb1),
+        'create',
+        cb1
       );
     });
 
     it('runs on element creation', () => {
       render(div1);
-      expect(cb).toHaveBeenCalledTimes(1);
+      expect(cb1).toHaveBeenCalledTimes(1);
     });
 
     it('runs recursively', () => {
       render(div2);
-      expect(cb).toHaveBeenCalledTimes(3);
+      expect(cb1).toHaveBeenCalledTimes(3);
     });
 
     it('has reference to the element it was attached to', () => {
       const el = render(div1);
 
-      expect(cb).toHaveReturnedWith(el.firstChild);
+      expect(cb1).toHaveReturnedWith(el.firstChild);
+    });
+
+    it('node is passed to the callback', () => {
+      const el = render(createDiv('', 'create', cb2));
+
+      expect(cb2).toHaveReturnedWith(el.firstChild);
     });
   });
 
@@ -48,10 +57,11 @@ describe('lifecycle methods', () => {
     // eslint-disable-next-line
     let div1, div2;
     beforeEach(() => {
-      div1 = createDiv('This is my div', 'destroy');
+      div1 = createDiv('This is my div', 'destroy', cb1);
       div2 = createDiv(
-        createDiv(createDiv('This is the innermost div', 'destroy'), 'destroy'),
-        'destroy'
+        createDiv(createDiv('', 'destroy', cb1), 'destroy', cb1),
+        'destroy',
+        cb1
       );
     });
 
@@ -61,7 +71,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(1);
+          expect(cb1).toHaveBeenCalledTimes(1);
           done();
         } catch (error) {
           done(error);
@@ -77,7 +87,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).not.toHaveBeenCalled();
+          expect(cb1).not.toHaveBeenCalled();
           done();
         } catch (error) {
           done(error);
@@ -92,7 +102,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(3);
+          expect(cb1).toHaveBeenCalledTimes(3);
           done();
         } catch (error) {
           done(error);
@@ -107,7 +117,22 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveReturnedWith(child);
+          expect(cb1).toHaveReturnedWith(child);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('node is passed to the callback', (done) => {
+      const el = render(createDiv('', 'destroy', cb2), 'body');
+      const child = el.firstChild;
+      child.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb2).toHaveReturnedWith(child);
           done();
         } catch (error) {
           done(error);
@@ -120,10 +145,11 @@ describe('lifecycle methods', () => {
     // eslint-disable-next-line
     let div1, div2;
     beforeEach(() => {
-      div1 = createDiv('This is my div', 'mount');
+      div1 = createDiv('This is my div', 'mount', cb1);
       div2 = createDiv(
-        createDiv(createDiv('This is the innermost div', 'mount'), 'mount'),
-        'mount'
+        createDiv(createDiv('', 'mount', cb1), 'mount', cb1),
+        'mount',
+        cb1
       );
     });
 
@@ -132,7 +158,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(1);
+          expect(cb1).toHaveBeenCalledTimes(1);
           done();
         } catch (error) {
           done(error);
@@ -149,7 +175,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(2);
+          expect(cb1).toHaveBeenCalledTimes(2);
           done();
         } catch (error) {
           done(error);
@@ -162,7 +188,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(3);
+          expect(cb1).toHaveBeenCalledTimes(3);
           done();
         } catch (error) {
           done(error);
@@ -175,7 +201,20 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveReturnedWith(el.firstChild);
+          expect(cb1).toHaveReturnedWith(el.firstChild);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('node is passed to the callback', (done) => {
+      const el = render(createDiv('', 'mount', cb2), 'body');
+
+      setTimeout(() => {
+        try {
+          expect(cb2).toHaveReturnedWith(el.firstChild);
           done();
         } catch (error) {
           done(error);
@@ -188,10 +227,11 @@ describe('lifecycle methods', () => {
     // eslint-disable-next-line
     let div1, div2;
     beforeEach(() => {
-      div1 = createDiv('This is my div', 'unmount');
+      div1 = createDiv('This is my div', 'unmount', cb1);
       div2 = createDiv(
-        createDiv(createDiv('This is the innermost div', 'unmount'), 'unmount'),
-        'unmount'
+        createDiv(createDiv('', 'unmount', cb1), 'unmount', cb1),
+        'unmount',
+        cb1
       );
     });
 
@@ -201,7 +241,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(1);
+          expect(cb1).toHaveBeenCalledTimes(1);
           done();
         } catch (error) {
           done(error);
@@ -217,7 +257,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(1);
+          expect(cb1).toHaveBeenCalledTimes(1);
           done();
         } catch (error) {
           done(error);
@@ -231,7 +271,7 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveBeenCalledTimes(3);
+          expect(cb1).toHaveBeenCalledTimes(3);
           done();
         } catch (error) {
           done(error);
@@ -246,7 +286,22 @@ describe('lifecycle methods', () => {
 
       setTimeout(() => {
         try {
-          expect(cb).toHaveReturnedWith(child);
+          expect(cb1).toHaveReturnedWith(child);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('node is passed to the callback', (done) => {
+      const el = render(createDiv('', 'unmount', cb2), 'body');
+      const child = el.firstChild;
+      child.remove();
+
+      setTimeout(() => {
+        try {
+          expect(cb2).toHaveReturnedWith(child);
           done();
         } catch (error) {
           done(error);

@@ -208,7 +208,7 @@ const mutationCallback = (mutations) => {
         traverseNode(node, (n) => {
           const cb = n[LIFECYCLE_SYMBOLS.mount];
 
-          if (cb) cb.call(n);
+          if (cb) cb.call(n, n);
         });
       });
 
@@ -217,14 +217,14 @@ const mutationCallback = (mutations) => {
           traverseNode(node, (n) => {
             const cb = n[LIFECYCLE_SYMBOLS.destroy];
 
-            if (cb) cb.call(n);
+            if (cb) cb.call(n, n);
           });
         }
 
         traverseNode(node, (n) => {
           const cb = n[LIFECYCLE_SYMBOLS.unmount];
 
-          if (cb) cb.call(n);
+          if (cb) cb.call(n, n);
         });
       });
     }
@@ -423,7 +423,7 @@ const createHydrateFn =
 
       switch (handler.type) {
         case 'create':
-          handler.fn.call(el);
+          handler.fn.call(el, el);
           break;
         case 'destroy':
         case 'mount':
