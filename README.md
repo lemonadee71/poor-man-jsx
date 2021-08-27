@@ -1,6 +1,6 @@
 # Poor Man's JSX
 
-Create html elements painlessly with tagged template literals.
+Create DOM elements painlessly with tagged template literals.
 
 ## Installation
 
