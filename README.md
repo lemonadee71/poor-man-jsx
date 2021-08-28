@@ -1,6 +1,6 @@
 # Poor Man's JSX
 
-Create html elements painlessly with tagged template literals.
+Create DOM elements painlessly with tagged template literals.
 
 ## Installation
 
@@ -116,36 +116,37 @@ Among what was mentioned already, you could also pass `HTMLElement`, `DocumentFr
 
 Poor Man's JSX also allows you to have lifecycle methods in your elements. These methods must be prefixed with `@`. The lifecycle methods available are: `create`, `destroy`, `mount`, and `unmount`.
 
-Here's a modified example from the [React docs](https://reactjs.org/docs/state-and-lifecycle.html) written with Poor Man's JSX.
+Here's a modified example from the [React docs](https://reactjs.org/docs/state-and-lifecycle.html) written with Poor Man's JSX. See it in action [here](https://codesandbox.io/s/poor-man-jsx-lifecycle-n0u3f?file=/src/index.js)
 
 ```js
 const Clock = () => {
   let date = new Date();
   let timerID;
 
-  const atMount = () => {
-    timerID = setInterval(() => tick(), 1000);
+  const atMount = (el) => {
+    timerID = setInterval(() => tick(el), 1000);
   };
 
   const atUnmount = () => {
     clearInterval(timerID);
   };
 
-  const tick = () => {
+  const tick = (el) => {
     date = new Date();
-    const text = document.getElementById('text');
-    text.textContent = `It is ${date.toLocaleTimeString()}`;
+    el.textContent = `It is ${date.toLocaleTimeString()}.`;
   };
 
   return html`
-    <div
-      ${{
-        '@mount': atMount,
-        '@unmount': atUnmount,
-      }}
-    >
+    <div>
       <h1>Hello, world!</h1>
-      <h2 id="text">It is ${date.toLocaleTimeString()}.</h2>
+      <h2
+        ${{
+          "@mount": atMount,
+          "@unmount": atUnmount
+        }}
+      >
+        It is ${date.toLocaleTimeString()}.
+      </h2>
     </div>
   `;
 };
@@ -179,7 +180,7 @@ revoke(); // returns { num: 1 }
 
 > Under the hood, we're using `WeakMap` to store data so it's not really necessary to use revoke but use it when you can in a `destroy` or `unmount` callback.
 
-Let's take our Clock example and rewrite it to look more React-ish using a hook,
+Let's take our Clock example and rewrite it using a hook,
 
 ```js
 const Clock = () => {
@@ -244,7 +245,7 @@ In React, this is like the difference between
 <h2>{date}</h2>
 ```
 
-Also, as you can see, we just need to set `current.date` to the new date. No need to target the `h2` unlike in our previous example. This makes our code cleaner.
+Also, as you can see, we just need to set `current.date` to the new date. No need to target the `h2` unlike in our previous example. See it working [here](https://codesandbox.io/s/poor-man-jsx-hook-92e9y?file=/src/index.js).
 
 Also note that we prefixed both `textContent` and `date` with `$`. This is required. It tells the code that we want `textContent` to be _hooked_ to `date`.
 
