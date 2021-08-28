@@ -29,8 +29,9 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
-const customAttributes = [];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
+const customAttributes = [];
+let preprocessors = [];
 
 /**
  * Is functions used for type checking
@@ -417,6 +418,31 @@ const replacePlaceholderComments = (root) => {
   }
 };
 
+const preprocess = (str) => {
+  const handlers = [];
+  let htmlString = str;
+
+  preprocessors.forEach((processor) => {
+    let result;
+    if (isArray(processor)) {
+      result = pipe(htmlString, ...processor);
+    } else {
+      result = processor(htmlString);
+    }
+
+    if (isArray(result)) {
+      htmlString = result[0];
+      handlers.push(...(result[1] || []));
+    } else if (typeof result === 'string') {
+      htmlString = result;
+    } else {
+      throw new Error('Preprocessor must return a string or an array');
+    }
+  });
+
+  return [htmlString, handlers];
+};
+
 const createHydrateFn =
   (handlers = []) =>
   (context) =>
@@ -449,7 +475,11 @@ const createHydrateFn =
  * @returns {DocumentFragment}
  */
 function createElementFromString(str, handlers = []) {
-  const fragment = document.createRange().createContextualFragment(str);
+  const [processedString, extraHandlers] = preprocess(str);
+  const fragment = document
+    .createRange()
+    .createContextualFragment(processedString);
+
   const [createHandlers, otherHandlers] = handlers.reduce(
     (acc, current) => {
       if (current.type === 'create') acc[0].push(current);
@@ -459,6 +489,7 @@ function createElementFromString(str, handlers = []) {
     },
     [[], []]
   );
+  otherHandlers.push(...extraHandlers);
 
   createHydrateFn(otherHandlers)(fragment);
   [...fragment.children].forEach(replacePlaceholderComments);
@@ -616,7 +647,7 @@ const generateHookHandler = (hook = {}) => {
  */
 
 /**
- * Add a defaul property (anything that can be called directly from the element)
+ * Add a default property (anything that can be called directly from the element)
  * @param  {...string} prop - the default prop that will be added
  * @returns
  */
@@ -639,6 +670,22 @@ const addBooleanAttribute = (...attr) => booleanAttributes.push(...attr);
 const addCustomAttribute = (...attr) => customAttributes.push(...attr);
 
 /**
+ * Adds a preprocessor. Preprocessors are used to process the html string
+ * before rendering it.
+ * @param  {...Function|Array.<Function>} processors
+ * @returns
+ */
+const addPreprocessor = (...processors) => preprocessors.push(...processors);
+
+/**
+ * Removes a preprocessor
+ * @param {Function} processor - the function to remove
+ */
+const removePreprocessor = (processor) => {
+  preprocessors = preprocessors.filter((fn) => fn !== processor);
+};
+
+/**
  * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
  * This means that `@mount`, `@unmount`, and `@destroy` will no longer work.
  * @returns
@@ -649,6 +696,8 @@ const settings = {
   addDefaultProperty,
   addBooleanAttribute,
   addCustomAttribute,
+  addPreprocessor,
+  removePreprocessor,
   disableObserver,
 };
 

@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`html and render supports preprocessors supports multiple preprocessors 1`] = `
+<main
+  data-testid="preprocessed3"
+  data-text="test"
+>
+  test
+</main>
+`;
+
+exports[`html and render supports preprocessors that returns a string 1`] = `
+<div
+  data-testid="preprocessed1"
+/>
+`;
+
+exports[`html and render supports preprocessors with extra handlers 1`] = `
+<div
+  data-testid="preprocessed2"
+  data-text="test"
+>
+  test
+</div>
+`;
