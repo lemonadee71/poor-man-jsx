@@ -344,12 +344,80 @@ const removeChildren = (parent) => {
   }
 };
 
+const shouldDiffNode = (node) =>
+  node.getAttribute('diff') === 'true' ||
+  node.getAttribute('x-list') !== null ||
+  node.getAttribute('data-list') !== null;
+
+const getKeyString = (node) =>
+  node.getAttribute('keystring') || node.getAttribute('x-keystring');
+
+const getKey = (node, keyString) =>
+  node.getAttribute(keyString) ||
+  node.getAttribute('key') ||
+  node.getAttribute('x-key') ||
+  node.getAttribute('data-key');
+
+const hasNoKey = (nodes, keyString) =>
+  nodes.some((node) => !getKey(node, keyString));
+
+// currently not checking for unkeyed nodes
+// so might result in some weird behavior or even error
+const naiveDiff = (parent, newNodes, keyString) => {
+  const cb = (key) => (node) => getKey(node, keyString) === key;
+
+  const oldNodes = [...parent.children];
+  const oldKeys = oldNodes.map((node) => getKey(node, keyString));
+  const newKeys = newNodes.map((node) => getKey(node, keyString));
+
+  const toAdd = newKeys.filter((key) => !oldKeys.includes(key));
+
+  // at this point, currentKeys should have the same items as newKeys
+  // but with differing order (if there was change)
+  const currentKeys = oldKeys.filter((key) => newKeys.includes(key));
+  currentKeys.push(...toAdd);
+
+  // remove nodes
+  oldKeys
+    .filter((key) => !newKeys.includes(key))
+    .forEach((key) => oldNodes.find(cb(key)).remove());
+
+  let prevElement;
+  newKeys.forEach((key, newIndex) => {
+    const oldIndex = currentKeys.indexOf(key);
+    const currentElement = toAdd.includes(key)
+      ? newNodes[newIndex]
+      : [...parent.children].find(cb(key));
+
+    // check if node is moved to a new place
+    // or if it's a new one
+    if (oldIndex !== newIndex || !parent.contains(currentElement)) {
+      if (!prevElement) {
+        parent.prepend(currentElement);
+
+        // new and unkeyed elements will fall here
+      } else if (currentElement.previousElementSibling !== prevElement) {
+        prevElement.after(currentElement);
+      }
+    }
+
+    prevElement = currentElement;
+  });
+
+  // update nodes
+  [...parent.children].forEach((node, i) => {
+    const newNode = newNodes[i];
+    if (!node.isEqualNode(newNode)) {
+      node.replaceWith(newNode);
+    }
+  });
+};
+
 const modifyElement = (selector, type, data, context = document) => {
   const node = context.querySelector(selector);
 
   if (!node) {
-    console.error(`Can't find node using selector ${selector}`);
-    return;
+    throw new Error(`Can't find node using selector ${selector}.`);
   }
 
   switch (type) {
@@ -375,17 +443,56 @@ const modifyElement = (selector, type, data, context = document) => {
       node.style[data.name] = data.value;
       break;
     case 'children': {
-      removeChildren(node);
+      if (shouldDiffNode(node)) {
+        if (!isArray(data.value)) {
+          throw new Error(
+            'children should be an Array if parent is of type list'
+          );
+        }
 
-      const fragment = document.createDocumentFragment();
+        // if there's no children, it means we're adding them for the first time
+        // so just ignore diffing for now
+        if (!node.children.length) {
+          node.append(...data.value.map(reduceNode));
+          return;
+        }
 
-      if (isArray(data.value)) {
-        fragment.append(...data.value.map(reduceNode));
+        const newNodes = data.value.map((n) => {
+          const el = reduceNode(n);
+
+          if (el instanceof DocumentFragment) {
+            if (el.children.length > 1) {
+              throw new Error('List item should have a parent');
+            }
+            return el.firstChild;
+          }
+
+          return el;
+        });
+        const keyString = getKeyString(node);
+
+        // no support for unkeyed elements for now
+        // and will also throw if "keystring" is not found in any of the new nodes
+        if (hasNoKey(newNodes, keyString)) {
+          throw new Error(
+            'every children should have a key if parent is of type list'
+          );
+        }
+
+        naiveDiff(node, newNodes, keyString);
       } else {
-        fragment.append(reduceNode(data.value));
-      }
+        removeChildren(node);
 
-      node.append(fragment);
+        const fragment = document.createDocumentFragment();
+
+        if (isArray(data.value)) {
+          fragment.append(...data.value.map(reduceNode));
+        } else {
+          fragment.append(reduceNode(data.value));
+        }
+
+        node.append(fragment);
+      }
 
       break;
     }
@@ -448,6 +555,10 @@ const createHydrateFn =
   (context) =>
     handlers.forEach((handler) => {
       const el = context.querySelector(handler.selector);
+
+      if (!el) {
+        throw new Error(`Can't find node using selector ${handler.selector}.`);
+      }
 
       switch (handler.type) {
         case 'create':
