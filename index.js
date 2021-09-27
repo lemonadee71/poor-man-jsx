@@ -29,6 +29,34 @@ const booleanAttributes = [
   'reversed',
   'autocomplete',
 ];
+const elementsToAlwaysRerender = [
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'p',
+  'a',
+  'span',
+  'em',
+  'i',
+  'small',
+  'strong',
+  'sub',
+  'sup',
+  'ins',
+  'del',
+  'mark',
+  'pre',
+  'b',
+  'code',
+  'abbr',
+  'kbd',
+  'cite',
+  'li',
+  'button',
+];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 const customAttributes = [];
 let preprocessors = [];
@@ -43,6 +71,8 @@ const isArray = (value) => Array.isArray(value);
 const isTemplate = (value) => value instanceof Template;
 
 const isNode = (value) => value instanceof Node;
+
+const isEqualNode = (a, b) => a.isEqualNode(b);
 
 const isHook = (key) => key.startsWith('$');
 
@@ -61,7 +91,7 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
 /**
  * Utility functions
  */
-const uniqid = (length = 8) => Math.random().toString(36).substr(2, length);
+const randomId = (length = 8) => Math.random().toString(36).substr(2, length);
 
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
@@ -81,9 +111,9 @@ const reduceHandlerArray = (arr) =>
     { str: [], handlers: [] }
   );
 
-const generateAttribute = (type) => {
-  const id = uniqid();
-  const seed = uniqid(4);
+const generateDataAttribute = (type) => {
+  const id = randomId();
+  const seed = randomId(4);
   const attrName = `data-${type}-${seed}`;
   const dataAttr = `${attrName}="${id}"`;
 
@@ -141,7 +171,7 @@ const batchSameTypes = (obj) => {
 };
 
 const generateHandler = (type, obj) => {
-  const [dataAttr, attrName] = generateAttribute(type);
+  const [dataAttr, attrName] = generateDataAttribute(type);
   const handlers = [];
 
   Object.entries(obj).forEach(([name, value]) => {
@@ -174,7 +204,7 @@ const generateLifecycleHandler = (obj) => {
   const handlers = [];
 
   Object.entries(obj).forEach(([type, fn]) => {
-    const [dataAttr, attrName] = generateAttribute(type);
+    const [dataAttr, attrName] = generateDataAttribute(type);
 
     str.push(dataAttr);
     handlers.push({
@@ -207,28 +237,22 @@ const traverseNode = (node, callback) => {
 const mutationCallback = (mutations) => {
   mutations.forEach((mutation) => {
     if (mutation.type === 'childList') {
-      mutation.addedNodes.forEach((node) => {
-        traverseNode(node, (n) => {
-          const cb = n[LIFECYCLE_SYMBOLS.mount];
+      const _createLifecycleCallback = (type) => (node) => {
+        const fn = node[LIFECYCLE_SYMBOLS[type]];
 
-          if (cb) cb.call(n, n);
-        });
+        if (fn) fn.call(node, node);
+      };
+
+      mutation.addedNodes.forEach((node) => {
+        traverseNode(node, _createLifecycleCallback('mount'));
       });
 
       mutation.removedNodes.forEach((node) => {
         if (!document.body.contains(node)) {
-          traverseNode(node, (n) => {
-            const cb = n[LIFECYCLE_SYMBOLS.destroy];
-
-            if (cb) cb.call(n, n);
-          });
+          traverseNode(node, _createLifecycleCallback('destroy'));
         }
 
-        traverseNode(node, (n) => {
-          const cb = n[LIFECYCLE_SYMBOLS.unmount];
-
-          if (cb) cb.call(n, n);
-        });
+        traverseNode(node, _createLifecycleCallback('unmount'));
       });
     }
   });
@@ -238,14 +262,11 @@ const observer = new MutationObserver(mutationCallback);
 observer.observe(document.body, config);
 
 /**
- * The parser
- * @param {*} value
- * @param {Array} handlers
- * @returns
+ * Parser
  */
 const parse = (value, handlers = []) => {
   if (isNode(value)) {
-    const id = uniqid();
+    const id = randomId();
 
     return {
       str: `<marker id="node-${id}" />`,
@@ -318,7 +339,7 @@ const addPlaceholders = (str) => {
 /**
  * Creates a `Template` from a template literal. Must be used as a tag.
  * @param {Array.<String>} fragments
- * @param  {...(String|Object|Array|Template)} values
+ * @param  {...any} values
  * @returns {Template}
  */
 const html = (fragments, ...values) => {
@@ -344,58 +365,56 @@ const removeChildren = (parent) => {
   }
 };
 
-const shouldDiffNode = (node) =>
-  node.getAttribute('diff') === 'true' ||
-  node.getAttribute('x-list') !== null ||
-  node.getAttribute('data-list') !== null;
+// Diffing utils
+const getBehavior = (node, type) =>
+  node.getAttribute(`is-${type}`) !== null ||
+  node.getAttribute('behavior') === type;
 
-const getKeyString = (node) =>
-  node.getAttribute('keystring') || node.getAttribute('x-keystring');
+const isDynamic = (node) => getBehavior(node, 'dynamic');
+
+const shouldDiffNode = (node) => getBehavior(node, 'list');
+
+const getKeyString = (node) => node.getAttribute('keystring') || 'key';
 
 const getKey = (node, keyString) =>
   node.getAttribute(keyString) ||
   node.getAttribute('key') ||
-  node.getAttribute('x-key') ||
   node.getAttribute('data-key');
 
 const hasNoKey = (nodes, keyString) =>
   nodes.some((node) => !getKey(node, keyString));
 
-// currently not checking for unkeyed nodes
-// so might result in some weird behavior or even error
+// * currently not checking for unkeyed nodes
 const naiveDiff = (parent, newNodes, keyString) => {
-  const cb = (key) => (node) => getKey(node, keyString) === key;
+  const _findNode = (key) => (node) => getKey(node, keyString) === key;
 
   const oldNodes = [...parent.children];
   const oldKeys = oldNodes.map((node) => getKey(node, keyString));
   const newKeys = newNodes.map((node) => getKey(node, keyString));
-
   const toAdd = newKeys.filter((key) => !oldKeys.includes(key));
+
+  // remove nodes
+  oldKeys
+    .filter((key) => !newKeys.includes(key))
+    .forEach((key) => oldNodes.find(_findNode(key)).remove());
 
   // at this point, currentKeys should have the same items as newKeys
   // but with differing order (if there was change)
   const currentKeys = oldKeys.filter((key) => newKeys.includes(key));
   currentKeys.push(...toAdd);
 
-  // remove nodes
-  oldKeys
-    .filter((key) => !newKeys.includes(key))
-    .forEach((key) => oldNodes.find(cb(key)).remove());
-
   let prevElement;
   newKeys.forEach((key, newIndex) => {
     const oldIndex = currentKeys.indexOf(key);
     const currentElement = toAdd.includes(key)
       ? newNodes[newIndex]
-      : [...parent.children].find(cb(key));
+      : [...parent.children].find(_findNode(key));
 
     // check if node is moved to a new place
     // or if it's a new one
     if (oldIndex !== newIndex || !parent.contains(currentElement)) {
       if (!prevElement) {
         parent.prepend(currentElement);
-
-        // new and unkeyed elements will fall here
       } else if (currentElement.previousElementSibling !== prevElement) {
         prevElement.after(currentElement);
       }
@@ -404,13 +423,33 @@ const naiveDiff = (parent, newNodes, keyString) => {
     prevElement = currentElement;
   });
 
-  // update nodes
-  [...parent.children].forEach((node, i) => {
-    const newNode = newNodes[i];
-    if (!node.isEqualNode(newNode)) {
-      node.replaceWith(newNode);
+  const _compareNodes = (oldNode, newNode) => {
+    if (
+      isDynamic(oldNode) ||
+      elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase()) ||
+      (oldNode.children.length !== newNode.children.length &&
+        !shouldDiffNode(newNode))
+    ) {
+      if (!isEqualNode(oldNode, newNode)) oldNode.replaceWith(newNode);
+      return;
     }
-  });
+
+    if (shouldDiffNode(oldNode)) {
+      naiveDiff(oldNode, [...newNode.children], getKeyString(oldNode));
+    } else if (oldNode.children && oldNode.children.length) {
+      [...oldNode.children].forEach((child, i) =>
+        _compareNodes(child, newNode.children[i])
+      );
+    }
+
+    // update all attributes
+    [...newNode.attributes].forEach((attr) => {
+      oldNode.setAttribute(attr.name, attr.value);
+    });
+  };
+
+  // update nodes
+  [...parent.children].forEach((child, i) => _compareNodes(child, newNodes[i]));
 };
 
 const modifyElement = (selector, type, data, context = document) => {
@@ -464,15 +503,15 @@ const modifyElement = (selector, type, data, context = document) => {
             if (el.children.length > 1) {
               throw new Error('List item should have a parent');
             }
-            return el.firstChild;
+            return el.firstElementChild;
           }
 
           return el;
         });
         const keyString = getKeyString(node);
 
-        // no support for unkeyed elements for now
-        // and will also throw if "keystring" is not found in any of the new nodes
+        // * no support for unkeyed elements for now
+        // * and will also throw if "keystring" is not found in any of the new nodes
         if (hasNoKey(newNodes, keyString)) {
           throw new Error(
             'every children should have a key if parent is of type list'
@@ -586,10 +625,8 @@ const createHydrateFn =
  * @returns {DocumentFragment}
  */
 function createElementFromString(str, handlers = []) {
-  const [processedString, extraHandlers] = preprocess(str);
-  const fragment = document
-    .createRange()
-    .createContextualFragment(processedString);
+  const [final, extraHandlers] = preprocess(str);
+  const fragment = document.createRange().createContextualFragment(final);
 
   const [createHandlers, otherHandlers] = handlers.reduce(
     (acc, current) => {
@@ -615,7 +652,7 @@ function createElementFromString(str, handlers = []) {
  * If element is not provided, it'll return the created document fragment.
  * Otherwise, it'll return the `element`
  * @param {Template} template - a `Template` returned by `html`
- * @param {String|HTMLElement} element - the element to append to
+ * @param {String|HTMLElement} element - the element to append to.
  * @returns
  */
 const render = (template, element) => {
@@ -721,14 +758,14 @@ const setter = (ref) => (target, prop, value, receiver) => {
 };
 
 const generateHookHandler = (hook = {}) => {
-  const id = uniqid();
+  const id = randomId();
   const proxyId = `data-proxyid="${id}"`;
   const batchedObj = {};
 
   Object.entries(hook).forEach(([type, batch]) => {
     Object.entries(batch).forEach(([key, info]) => {
       const bindedElements = Hooks.get(info[REF]);
-      const existingHandlers = bindedElements.get(id) || [];
+      const handlers = bindedElements.get(id) || [];
 
       if (!batchedObj[type]) {
         batchedObj[type] = {};
@@ -737,7 +774,7 @@ const generateHookHandler = (hook = {}) => {
       batchedObj[type][key] = reduceValue(info.data.value, info.data.trap);
 
       bindedElements.set(id, [
-        ...existingHandlers,
+        ...handlers,
         {
           type,
           target: key,
@@ -766,6 +803,8 @@ const addDefaultProperty = (...prop) => defaultProps.push(...prop);
 
 /**
  * Add a boolean attribute to the list.
+ * Making an attribute a boolean means you can just pass a boolean
+ * value to it instead of a string
  * @param  {...string} attr - the boolean attribute to be added
  * @returns
  */
