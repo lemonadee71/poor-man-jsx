@@ -72,8 +72,6 @@ const isTemplate = (value) => value instanceof Template;
 
 const isNode = (value) => value instanceof Node;
 
-const isEqualNode = (a, b) => a.isEqualNode(b);
-
 const isHook = (key) => key.startsWith('$');
 
 const isLifecycleMethod = (key) => key.startsWith('@');
@@ -110,6 +108,8 @@ const reduceHandlerArray = (arr) =>
     },
     { str: [], handlers: [] }
   );
+
+const getChildren = (parent) => [...parent.children];
 
 const generateDataAttribute = (type) => {
   const id = randomId();
@@ -230,7 +230,7 @@ const traverseNode = (node, callback) => {
   callback.call(null, node);
 
   if (node.children && node.children.length) {
-    [...node.children].forEach((child) => traverseNode(child, callback));
+    getChildren(node).forEach((child) => traverseNode(child, callback));
   }
 };
 
@@ -365,6 +365,10 @@ const removeChildren = (parent) => {
   }
 };
 
+const updateNode = (a, b) => {
+  if (!a.isEqualNode(b)) a.replaceWith(b);
+};
+
 // Diffing utils
 const getBehavior = (node, type) =>
   node.getAttribute(`is-${type}`) !== null ||
@@ -388,7 +392,7 @@ const hasNoKey = (nodes, keyString) =>
 const naiveDiff = (parent, newNodes, keyString) => {
   const _findNode = (key) => (node) => getKey(node, keyString) === key;
 
-  const oldNodes = [...parent.children];
+  const oldNodes = getChildren(parent);
   const oldKeys = oldNodes.map((node) => getKey(node, keyString));
   const newKeys = newNodes.map((node) => getKey(node, keyString));
   const toAdd = newKeys.filter((key) => !oldKeys.includes(key));
@@ -408,7 +412,7 @@ const naiveDiff = (parent, newNodes, keyString) => {
     const oldIndex = currentKeys.indexOf(key);
     const currentElement = toAdd.includes(key)
       ? newNodes[newIndex]
-      : [...parent.children].find(_findNode(key));
+      : getChildren(parent).find(_findNode(key));
 
     // check if node is moved to a new place
     // or if it's a new one
@@ -430,14 +434,14 @@ const naiveDiff = (parent, newNodes, keyString) => {
       (oldNode.children.length !== newNode.children.length &&
         !shouldDiffNode(newNode))
     ) {
-      if (!isEqualNode(oldNode, newNode)) oldNode.replaceWith(newNode);
+      updateNode(oldNode, newNode);
       return;
     }
 
     if (shouldDiffNode(oldNode)) {
-      naiveDiff(oldNode, [...newNode.children], getKeyString(oldNode));
-    } else if (oldNode.children && oldNode.children.length) {
-      [...oldNode.children].forEach((child, i) =>
+      naiveDiff(oldNode, getChildren(newNode), getKeyString(oldNode));
+    } else if (oldNode.children.length) {
+      getChildren(oldNode).forEach((child, i) =>
         _compareNodes(child, newNode.children[i])
       );
     }
@@ -449,7 +453,7 @@ const naiveDiff = (parent, newNodes, keyString) => {
   };
 
   // update nodes
-  [...parent.children].forEach((child, i) => _compareNodes(child, newNodes[i]));
+  getChildren(parent).forEach((child, i) => _compareNodes(child, newNodes[i]));
 };
 
 const modifyElement = (selector, type, data, context = document) => {
@@ -638,7 +642,7 @@ function createElementFromString(str, handlers = []) {
   otherHandlers.push(...extraHandlers);
 
   hydrate(fragment, otherHandlers);
-  [...fragment.children].forEach(replacePlaceholderComments);
+  getChildren(fragment).forEach(replacePlaceholderComments);
 
   hydrate(fragment, createHandlers);
 
