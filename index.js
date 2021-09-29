@@ -589,34 +589,32 @@ const preprocess = (str) => {
   return [htmlString, handlers];
 };
 
-const createHydrateFn =
-  (handlers = []) =>
-  (context) =>
-    handlers.forEach((handler) => {
-      const el = context.querySelector(handler.selector);
+const hydrate = (context, handlers = []) =>
+  handlers.forEach((handler) => {
+    const el = context.querySelector(handler.selector);
 
-      if (!el) {
-        throw new Error(`Can't find node using selector ${handler.selector}.`);
-      }
+    if (!el) {
+      throw new Error(`Can't find node using selector ${handler.selector}.`);
+    }
 
-      switch (handler.type) {
-        case 'create':
-          handler.fn.call(el, el);
-          break;
-        case 'destroy':
-        case 'mount':
-        case 'unmount':
-          el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
-          break;
-        default:
-          modifyElement(handler.selector, handler.type, handler.data, context);
-          break;
-      }
+    switch (handler.type) {
+      case 'create':
+        handler.fn.call(el, el);
+        break;
+      case 'destroy':
+      case 'mount':
+      case 'unmount':
+        el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
+        break;
+      default:
+        modifyElement(handler.selector, handler.type, handler.data, context);
+        break;
+    }
 
-      if (handler.remove) {
-        el.removeAttribute(handler.attr);
-      }
-    });
+    if (handler.remove) {
+      el.removeAttribute(handler.attr);
+    }
+  });
 
 /**
  * Creates an element from string with `createContextualFragment`
@@ -639,10 +637,10 @@ function createElementFromString(str, handlers = []) {
   );
   otherHandlers.push(...extraHandlers);
 
-  createHydrateFn(otherHandlers)(fragment);
+  hydrate(fragment, otherHandlers);
   [...fragment.children].forEach(replacePlaceholderComments);
 
-  createHydrateFn(createHandlers)(fragment);
+  hydrate(fragment, createHandlers);
 
   return fragment;
 }
