@@ -57,6 +57,7 @@ const elementsToAlwaysRerender = [
   'li',
   'button',
 ];
+const ignoreUpdate = ['data-proxyid'];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 const customAttributes = [];
 let preprocessors = [];
@@ -427,7 +428,7 @@ const naiveDiff = (parent, newNodes, keyString) => {
     prevElement = currentElement;
   });
 
-  const _compareNodes = (oldNode, newNode) => {
+  const _patchNodes = (oldNode, newNode) => {
     if (
       isDynamic(oldNode) ||
       elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase()) ||
@@ -442,18 +443,30 @@ const naiveDiff = (parent, newNodes, keyString) => {
       naiveDiff(oldNode, getChildren(newNode), getKeyString(oldNode));
     } else if (oldNode.children.length) {
       getChildren(oldNode).forEach((child, i) =>
-        _compareNodes(child, newNode.children[i])
+        _patchNodes(child, newNode.children[i])
       );
     }
 
     // update all attributes
-    [...newNode.attributes].forEach((attr) => {
+    const oldAttributes = [...oldNode.attributes];
+    const newAttributes = [...newNode.attributes];
+    const toRemove = oldAttributes.filter(
+      (attr) => !newAttributes.map((a) => a.name).includes(attr.name)
+    );
+
+    toRemove.forEach((attr) => {
+      oldNode.removeAttribute(attr.name);
+    });
+
+    newAttributes.forEach((attr) => {
+      if (ignoreUpdate.includes(attr.name)) return;
+
       oldNode.setAttribute(attr.name, attr.value);
     });
   };
 
   // update nodes
-  getChildren(parent).forEach((child, i) => _compareNodes(child, newNodes[i]));
+  getChildren(parent).forEach((child, i) => _patchNodes(child, newNodes[i]));
 };
 
 const modifyElement = (selector, type, data, context = document) => {

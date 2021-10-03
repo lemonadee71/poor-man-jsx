@@ -146,6 +146,42 @@ describe('diffing', () => {
     );
   });
 
+  it('does not update proxy-id by default', () => {
+    const [data] = createHook(1);
+    const child = (i) => {
+      const [current] = createHook(Math.random());
+
+      return html`
+        <div
+          key="${i}"
+          data-testid="test-child-${i}"
+          ${{ $textContent: current.$value }}
+        ></div>
+      `;
+    };
+    const component = html`
+      <div
+        is-list
+        ${{
+          $children: data.$value((n) =>
+            new Array(n).fill().map((_, i) => child(i))
+          ),
+        }}
+      ></div>
+    `;
+    render(component, 'body');
+
+    const proxyid = screen
+      .getByTestId('test-child-0')
+      .getAttribute('data-proxyid');
+
+    data.value = 2;
+
+    expect(
+      screen.getByTestId('test-child-0').getAttribute('data-proxyid')
+    ).toBe(proxyid);
+  });
+
   describe('updates children', () => {
     let listItemMountCallback, listItemUnmountCallback; // eslint-disable-line
     beforeEach(() => {
