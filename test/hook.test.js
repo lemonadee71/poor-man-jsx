@@ -52,6 +52,26 @@ describe('state', () => {
     }).toThrowError();
   });
 
+  it('forwards first level methods', () => {
+    const [state] = createHook({ tags: [] });
+    const list = html`
+      <ul
+        data-testid="list"
+        ${{ $children: state.$tags.map((tag) => html`<li>${tag}</li>`) }}
+      ></ul>
+      <p data-testid="paragraph" ${{ $textContent: state.$tags.join(' ') }}></p>
+    `;
+    render(list, 'body');
+    state.tags = ['bug', 'enhancement'];
+
+    expect(screen.getByTestId('list')).toContainHTML(
+      '<li>bug</li><li>enhancement</li>'
+    );
+    expect(screen.getByTestId('paragraph')).toHaveTextContent(
+      'bug enhancement'
+    );
+  });
+
   describe('primitive', () => {
     const obj = {};
     beforeEach(setup('test', obj));

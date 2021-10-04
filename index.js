@@ -726,22 +726,31 @@ const createHook = (value, seal = true) => {
   return [proxy, deleteHook];
 };
 
+const createHookFunction =
+  (ref, prop, value) =>
+  (trap = null) => ({
+    [REF]: ref,
+    data: {
+      prop,
+      trap,
+      value,
+    },
+  });
+
+const createMethodForwarder = (origValue) => (target, prop) => {
+  const callback = (...args) => target((value) => value[prop](...args));
+
+  if (typeof origValue[prop] === 'function') return callback;
+  return Reflect.get(target, prop);
+};
+
 const getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
-
-  const $ =
-    (value) =>
-    (trap = null) => ({
-      [REF]: ref,
-      data: {
-        prop,
-        trap,
-        value,
-      },
-    });
+  const hook = createHookFunction(ref, prop, target[prop]);
+  const forwarder = createMethodForwarder(target[prop]);
 
   if (type === 'hook' && prop in target) {
-    return Object.assign($(target[prop]), $(target[prop])());
+    return Object.assign(new Proxy(hook, { get: forwarder }), hook());
   }
 
   return Reflect.get(target, prop, receiver);
