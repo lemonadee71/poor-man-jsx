@@ -737,7 +737,8 @@ const createHookFunction =
     },
   });
 
-const createMethodForwarder = (origValue) => (target, prop) => {
+const methodForwarder = (target, prop) => {
+  const origValue = target.data.value;
   const callback = (...args) => target((value) => value[prop](...args));
 
   if (typeof origValue[prop] === 'function') return callback;
@@ -747,10 +748,9 @@ const createMethodForwarder = (origValue) => (target, prop) => {
 const getter = (ref) => (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
   const hook = createHookFunction(ref, prop, target[prop]);
-  const forwarder = createMethodForwarder(target[prop]);
 
   if (type === 'hook' && prop in target) {
-    return Object.assign(new Proxy(hook, { get: forwarder }), hook());
+    return Object.assign(new Proxy(hook, { get: methodForwarder }), hook());
   }
 
   return Reflect.get(target, prop, receiver);
