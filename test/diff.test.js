@@ -2,8 +2,8 @@ import { screen } from '@testing-library/dom';
 import { createHook, html, render } from '..';
 import '@testing-library/jest-dom/extend-expect';
 
-function createTodoItem(mountCallback, unmountCallback) {
-  return (data) => html`
+const createTodoItem = (mountCallback, unmountCallback) => (data) =>
+  html`
     <div class="todo" ${data.keyString}="${data.id}">
       <h2
         class="todo__title"
@@ -13,32 +13,21 @@ function createTodoItem(mountCallback, unmountCallback) {
       </h2>
     </div>
   `;
-}
 
-function createTodoList(todoItem, keyString = 'key') {
-  const [data] = createHook({
-    todos: [
-      { id: 'eat', name: 'eat' },
-      { id: 'shower', name: 'shower' },
-      { id: 'sleep', name: 'sleep' },
-    ],
-  });
+const createTodoList = (defaultData, Todo, keyString = 'key') => {
+  const [data] = createHook({ todos: defaultData });
   const component = html`
     <h2>This is my Todo</h2>
     <div
       is-list
       data-testid="todo-list"
       keystring="${keyString}"
-      ${{
-        $children: data.$todos((items) =>
-          items.map((todo) => todoItem({ ...todo, keyString }))
-        ),
-      }}
+      ${{ $children: data.$todos.map((todo) => Todo({ ...todo, keyString })) }}
     ></div>
   `;
 
   return { data, component };
-}
+};
 
 const getKeys = (node) =>
   [...node.children]
@@ -51,10 +40,17 @@ const getTitle = (node) =>
     .join();
 
 describe('diffing', () => {
-  let mountCallback, unmountCallback; //eslint-disable-line
+  const defaultData = [
+    { id: 'eat', name: 'eat' },
+    { id: 'shower', name: 'shower' },
+    { id: 'sleep', name: 'sleep' },
+  ];
+
+  let mountCallback, unmountCallback, defaultTodo; //eslint-disable-line
   beforeEach(() => {
     mountCallback = jest.fn();
     unmountCallback = jest.fn();
+    defaultTodo = createTodoItem(mountCallback, unmountCallback);
   });
 
   afterEach(() => {
@@ -62,9 +58,7 @@ describe('diffing', () => {
   });
 
   it('shuffles the children efficiently', (done) => {
-    const { data, component } = createTodoList(
-      createTodoItem(mountCallback, unmountCallback)
-    );
+    const { data, component } = createTodoList(defaultData, defaultTodo);
     render(component, 'body');
 
     data.todos = [
@@ -88,9 +82,7 @@ describe('diffing', () => {
   });
 
   it('adds new children', (done) => {
-    const { data, component } = createTodoList(
-      createTodoItem(mountCallback, unmountCallback)
-    );
+    const { data, component } = createTodoList(defaultData, defaultTodo);
     render(component, 'body');
 
     data.todos = [
@@ -116,9 +108,7 @@ describe('diffing', () => {
   });
 
   it('throws an error if child has no key', () => {
-    const { data, component } = createTodoList(
-      createTodoItem(mountCallback, unmountCallback)
-    );
+    const { data, component } = createTodoList(defaultData, defaultTodo);
     render(component, 'body');
 
     expect(() => {
@@ -135,10 +125,7 @@ describe('diffing', () => {
   });
 
   it('accepts other key string', () => {
-    const { data, component } = createTodoList(
-      createTodoItem(mountCallback, unmountCallback),
-      'id'
-    );
+    const { data, component } = createTodoList(defaultData, defaultTodo, 'id');
     render(component, 'body');
 
     expect(getKeys(screen.getByTestId('todo-list'))).toBe(
@@ -196,13 +183,15 @@ describe('diffing', () => {
         <div
           class="todo"
           ${data.keyString}="${data.id}"
+          data-testid="todo-${data.id}"
           checked="${data.checked || 'false'}"
         >
-          <div class="todo__labels" ${{ '@unmount': unmount }}>
-            <ul is-list ${{ '@unmount': unmount }}>
+          <div class="todo__labels">
+            <ul is-list>
               ${(data.labels || defaultLabels).map(
                 (label) =>
                   html`<li
+                    is-text
                     ${data.keyString}="${label}"
                     ${{
                       '@mount': listItemMountCallback,
@@ -218,8 +207,9 @@ describe('diffing', () => {
             <h2 class="todo__title" ${{ '@mount': mount, '@unmount': unmount }}>
               ${data.name}
             </h2>
+            <span class="todo__id">${data.id}</span>
           </div>
-          <div is-dynamic class="todo__footer" ${{ '@unmount': unmount }}>
+          <div is-text class="todo__date" ${{ '@unmount': unmount }}>
             <span>Due date: </span>${data.dueDate}
           </div>
         </div>
@@ -228,6 +218,7 @@ describe('diffing', () => {
 
     it('but only the node that was actually changed', (done) => {
       const { data, component } = createTodoList(
+        defaultData,
         createCustomTodoItem(mountCallback, unmountCallback)
       );
       render(component, 'body');
@@ -240,14 +231,15 @@ describe('diffing', () => {
 
       setTimeout(() => {
         try {
-          expect(
-            screen.getByTestId('todo-list').querySelector('[key="eat"]')
-          ).toHaveAttribute('checked', 'true');
+          expect(screen.getByTestId('todo-eat')).toHaveAttribute(
+            'checked',
+            'true'
+          );
           expect(getTitle(screen.getByTestId('todo-list'))).toBe(
             data.todos.map((todo) => todo.name).join()
           );
-          expect(mountCallback).toHaveBeenCalledTimes(4);
-          expect(unmountCallback).toHaveBeenCalledTimes(1);
+          expect(mountCallback).toHaveBeenCalledTimes(3);
+          expect(unmountCallback).not.toHaveBeenCalled();
           done();
         } catch (error) {
           done(error);
@@ -255,8 +247,9 @@ describe('diffing', () => {
       }, 0);
     });
 
-    it('by rerendering the whole node if is-dynamic', (done) => {
+    it('by updating innerHTML if is-text', (done) => {
       const { data, component } = createTodoList(
+        defaultData,
         createCustomTodoItem(mountCallback, unmountCallback)
       );
       render(component, 'body');
@@ -267,14 +260,14 @@ describe('diffing', () => {
         { id: 'sleep', name: 'sleep' },
       ];
 
+      const el = screen.getByTestId('todo-eat').querySelector('.todo__date');
+
       setTimeout(() => {
         try {
-          expect(
-            screen
-              .getByTestId('todo-list')
-              .querySelector('[key="eat"] .todo__footer')
-          ).toContainHTML(`<span>Due date: </span>${data.todos[0].dueDate}`);
-          expect(unmountCallback).toHaveBeenCalledTimes(1);
+          expect(el).toContainHTML(
+            `<span>Due date: </span>${data.todos[0].dueDate}`
+          );
+          expect(unmountCallback).not.toHaveBeenCalled();
           done();
         } catch (error) {
           done(error);
@@ -284,6 +277,7 @@ describe('diffing', () => {
 
     it('by diffing recursively if child is type list', (done) => {
       const { data, component } = createTodoList(
+        defaultData,
         createCustomTodoItem(mountCallback, unmountCallback)
       );
       render(component, 'body');
@@ -298,21 +292,26 @@ describe('diffing', () => {
         try {
           expect(
             getKeys(
-              screen
-                .getByTestId('todo-list')
-                .querySelector('[key="eat"] .todo__labels [is-list]')
+              screen.getByTestId('todo-eat').querySelector('.todo__labels ul')
             )
           ).toBe(data.todos[0].labels.join());
           expect(
             getKeys(
-              screen
-                .getByTestId('todo-list')
-                .querySelector('[key="sleep"] .todo__labels [is-list]')
+              screen.getByTestId('todo-sleep').querySelector('.todo__labels ul')
             )
           ).toBe(data.todos[2].labels.join());
           expect(unmountCallback).not.toHaveBeenCalled();
-          // ? This should not be below 9 but it gives 8 so I don't what the issue is
-          // ? So ignore for now since this assertion isn't that important
+          /**
+             the base should be 9 as there are 9 labels on first render
+            plus 1 for "diet" but instead we get 8
+            which happens when we remove a label without a replacement
+            which is on task "sleep" because we remove 2 labels
+            so I guess what is happening is that 9 + 1 ("diet") - 2 (the removed labels)
+            to check, remove labels for "sleep" and we should get 10
+            this is weird because we get the correct amount of calls for unmount
+            and this could also happen to other test cases
+            commenting out this assertion for now till I figured out the real issue
+           */
           // expect(listItemMountCallback).toHaveBeenCalledTimes(10);
           expect(listItemUnmountCallback).toHaveBeenCalledTimes(3);
           done();

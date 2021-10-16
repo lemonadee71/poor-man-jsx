@@ -54,8 +54,6 @@ const elementsToAlwaysRerender = [
   'abbr',
   'kbd',
   'cite',
-  'li',
-  'button',
 ];
 const ignoreUpdate = ['data-proxyid'];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
@@ -366,16 +364,12 @@ const removeChildren = (parent) => {
   }
 };
 
-const updateNode = (a, b) => {
-  if (!a.isEqualNode(b)) a.replaceWith(b);
-};
-
 // Diffing utils
 const getBehavior = (node, type) =>
   node.getAttribute(`is-${type}`) !== null ||
   node.getAttribute('behavior') === type;
 
-const isDynamic = (node) => getBehavior(node, 'dynamic');
+const isText = (node) => getBehavior(node, 'text');
 
 const shouldDiffNode = (node) => getBehavior(node, 'list');
 
@@ -388,6 +382,41 @@ const getKey = (node, keyString) =>
 
 const hasNoKey = (nodes, keyString) =>
   nodes.some((node) => !getKey(node, keyString));
+
+const patchNodes = (oldNode, newNode) => {
+  // we assume that the number of children is still the same
+  // and that changes are limited to "content"
+  // and are enclosed in an inline text element (see elementsToAlwaysRerender)
+  if (
+    isText(oldNode) ||
+    elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase())
+  ) {
+    oldNode.innerHTML = newNode.innerHTML;
+  } else if (shouldDiffNode(oldNode)) {
+    naiveDiff(oldNode, getChildren(newNode), getKeyString(oldNode));
+  } else if (oldNode.children.length) {
+    getChildren(oldNode).forEach((child, i) =>
+      patchNodes(child, newNode.children[i])
+    );
+  }
+
+  // update all attributes
+  const oldAttributes = [...oldNode.attributes];
+  const newAttributes = [...newNode.attributes];
+  const toRemove = oldAttributes.filter(
+    (attr) => !newAttributes.map((a) => a.name).includes(attr.name)
+  );
+
+  toRemove.forEach((attr) => {
+    oldNode.removeAttribute(attr.name);
+  });
+
+  newAttributes.forEach((attr) => {
+    if (ignoreUpdate.includes(attr.name)) return;
+
+    oldNode.setAttribute(attr.name, attr.value);
+  });
+};
 
 // * currently not checking for unkeyed nodes
 const naiveDiff = (parent, newNodes, keyString) => {
@@ -428,45 +457,8 @@ const naiveDiff = (parent, newNodes, keyString) => {
     prevElement = currentElement;
   });
 
-  const _patchNodes = (oldNode, newNode) => {
-    if (
-      isDynamic(oldNode) ||
-      elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase()) ||
-      (oldNode.children.length !== newNode.children.length &&
-        !shouldDiffNode(newNode))
-    ) {
-      updateNode(oldNode, newNode);
-      return;
-    }
-
-    if (shouldDiffNode(oldNode)) {
-      naiveDiff(oldNode, getChildren(newNode), getKeyString(oldNode));
-    } else if (oldNode.children.length) {
-      getChildren(oldNode).forEach((child, i) =>
-        _patchNodes(child, newNode.children[i])
-      );
-    }
-
-    // update all attributes
-    const oldAttributes = [...oldNode.attributes];
-    const newAttributes = [...newNode.attributes];
-    const toRemove = oldAttributes.filter(
-      (attr) => !newAttributes.map((a) => a.name).includes(attr.name)
-    );
-
-    toRemove.forEach((attr) => {
-      oldNode.removeAttribute(attr.name);
-    });
-
-    newAttributes.forEach((attr) => {
-      if (ignoreUpdate.includes(attr.name)) return;
-
-      oldNode.setAttribute(attr.name, attr.value);
-    });
-  };
-
   // update nodes
-  getChildren(parent).forEach((child, i) => _patchNodes(child, newNodes[i]));
+  getChildren(parent).forEach((child, i) => patchNodes(child, newNodes[i]));
 };
 
 const modifyElement = (selector, type, data, context = document) => {
