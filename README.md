@@ -114,7 +114,7 @@ Among what was mentioned already, you could also pass `HTMLElement`, `DocumentFr
 
 ## Lifecycle Methods
 
-Poor Man's JSX also allows you to have lifecycle methods in your elements. These methods must be prefixed with `@`. The lifecycle methods available are: `create`, `destroy`, `mount`, and `unmount`.
+Poor Man's JSX also allows you to have lifecycle methods in your elements. The lifecycle methods available are: `create`, `destroy`, `mount`, and `unmount`. To add a lifecycle method, you declare it like an event listener (see example).
 
 Here's a modified example from the [React docs](https://reactjs.org/docs/state-and-lifecycle.html) written with Poor Man's JSX. See it in action [here](https://codesandbox.io/s/poor-man-jsx-lifecycle-n0u3f?file=/src/index.js)
 
@@ -123,11 +123,11 @@ const Clock = () => {
   let date = new Date();
   let timerID;
 
-  const atMount = (el) => {
-    timerID = setInterval(() => tick(el), 1000);
+  const onMount = (e) => {
+    timerID = setInterval(tick, 1000, e.target);
   };
 
-  const atUnmount = () => {
+  const onUnmount = () => {
     clearInterval(timerID);
   };
 
@@ -139,14 +139,7 @@ const Clock = () => {
   return html`
     <div>
       <h1>Hello, world!</h1>
-      <h2
-        ${{
-          "@mount": atMount,
-          "@unmount": atUnmount
-        }}
-      >
-        It is ${date.toLocaleTimeString()}.
-      </h2>
+      <h2 ${{ onMount, onUnmount }}>It is ${date.toLocaleTimeString()}.</h2>
     </div>
   `;
 };
@@ -154,9 +147,26 @@ const Clock = () => {
 render(Clock(), document.body);
 ```
 
-Any callbacks passed as a lifecycle method will be passed the node it was attached to as an argument and also as `this`.
+Any callbacks passed as a lifecycle method are event listeners so you can access the node it was attached to via `event.target` and also as `this`.
 
-`create` and `destroy` will only be called once unlike `mount` and `unmount` which can be called multiple times if the node is removed or moved (appended elsewhere). This behavior is similar to `connectedCallback` and `disconnectedCallback` of custom elements.
+Since lifecycle methods are essentially event listeners, you can also add them manually. Just prefix the lifecycle method name with `@`.
+
+```js
+const arrowFunction = (e) => {
+  console.log(e.target);
+};
+
+const div = document.createElement('div');
+div.addEventListener('@destroy', arrowFunction);
+div.remove();
+
+// arrowFunction should log
+// <div></div>
+```
+
+Doing it this way though means you can not use the `create` lifecycle. You have to manually trigger it since internally, we call the `create` lifecycle methods on element creation from `Template`.
+
+> `create` and `destroy` will only be called once unlike `mount` and `unmount` which can be called multiple times if the node is removed or moved (appended elsewhere). This behavior is similar to `connectedCallback` and `disconnectedCallback` of custom elements.
 
 ## Data Binding
 
@@ -186,11 +196,11 @@ Let's take our Clock example and rewrite it using a hook,
 const Clock = () => {
   const [current, revoke] = createHook({ date: new Date(), timerID: null });
 
-  const atMount = () => {
-    current.timerID = setInterval(() => tick(), 1000);
+  const onMount = () => {
+    current.timerID = setInterval(tick, 1000);
   };
 
-  const atUnmount = () => {
+  const onUnmount = () => {
     clearInterval(current.timerID);
   };
 
@@ -201,9 +211,9 @@ const Clock = () => {
   return html`
     <div
       ${{
-        '@mount': atMount,
-        '@unmount': atUnmount,
-        '@destroy': revoke, // delete hook
+        onMount,
+        onUnmount,
+        onDestroy: revoke, // delete hook
       }}
     >
       <h1>Hello, world!</h1>
