@@ -7,7 +7,7 @@ const createTodoItem = (mountCallback, unmountCallback) => (data) =>
     <div class="todo" ${data.keyString}="${data.id}">
       <h2
         class="todo__title"
-        ${{ '@mount': mountCallback, '@unmount': unmountCallback }}
+        ${{ onMount: mountCallback, onUnmount: unmountCallback }}
       >
         ${data.name}
       </h2>
@@ -194,8 +194,8 @@ describe('diffing', () => {
                     is-text
                     ${data.keyString}="${label}"
                     ${{
-                      '@mount': listItemMountCallback,
-                      '@unmount': listItemUnmountCallback,
+                      onMount: listItemMountCallback,
+                      onUnmount: listItemUnmountCallback,
                     }}
                   >
                     ${label}
@@ -203,13 +203,13 @@ describe('diffing', () => {
               )}
             </ul>
           </div>
-          <div class="todo__body" ${{ '@unmount': unmount }}>
-            <h2 class="todo__title" ${{ '@mount': mount, '@unmount': unmount }}>
+          <div class="todo__body" ${{ onUnmount: unmount }}>
+            <h2 class="todo__title" ${{ onMount: mount, onUnmount: unmount }}>
               ${data.name}
             </h2>
             <span class="todo__id">${data.id}</span>
           </div>
-          <div is-text class="todo__date" ${{ '@unmount': unmount }}>
+          <div is-text class="todo__date" ${{ onUnmount: unmount }}>
             <span>Due date: </span>${data.dueDate}
           </div>
         </div>
