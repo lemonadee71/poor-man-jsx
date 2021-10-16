@@ -73,9 +73,13 @@ const isNode = (value) => value instanceof Node;
 
 const isHook = (key) => key.startsWith('$');
 
-const isLifecycleMethod = (key) => key.startsWith('@');
-
 const isEventListener = (key) => key.toLowerCase().startsWith('on');
+
+const isLifecycleMethod = (key) => {
+  const name = key.replace('on', '').toLowerCase();
+
+  return isEventListener(key) && lifecycleMethods.includes(name);
+};
 
 const isDefaultProp = (key) => defaultProps.includes(key);
 
@@ -135,6 +139,8 @@ const determineType = (key) => {
 
   if (isHook(key)) {
     type = 'hook';
+  } else if (isLifecycleMethod(key)) {
+    type = 'lifecycle';
   } else if (isEventListener(key)) {
     type = 'listener';
   } else if (isDefaultProp(key)) {
@@ -143,15 +149,9 @@ const determineType = (key) => {
     type = 'style';
   } else if (key === 'children') {
     type = 'children';
-  } else if (isLifecycleMethod(key)) {
-    if (!lifecycleMethods.includes(key.replace('@', ''))) {
-      throw new Error(`${key} is not a lifecycle method`);
-    }
-
-    type = 'lifecycle';
   }
 
-  if (type === 'listener') {
+  if (type === 'listener' || type === 'lifecycle') {
     k = key.toLowerCase();
   }
 
@@ -203,36 +203,6 @@ const generateHandlerAll = (obj) =>
     reduceHandlerArray
   )(Object.entries(obj));
 
-/**
- * Lifecycle
- */
-const generateLifecycleHandler = (obj) => {
-  const str = [];
-  const handlers = [];
-
-  Object.entries(obj).forEach(([type, fn]) => {
-    const [dataAttr, attrName] = generateDataAttribute(type);
-
-    str.push(dataAttr);
-    handlers.push({
-      type,
-      fn,
-      selector: `[${dataAttr}]`,
-      attr: attrName,
-      remove: true,
-    });
-  });
-
-  return { str, handlers };
-};
-
-const LIFECYCLE_SYMBOLS = {
-  destroy: Symbol('@destroy'),
-  mount: Symbol('@mount'),
-  unmount: Symbol('@unmount'),
-};
-const config = { childList: true, subtree: true };
-
 const traverseNode = (node, callback) => {
   callback.call(null, node);
 
@@ -241,31 +211,30 @@ const traverseNode = (node, callback) => {
   }
 };
 
+const createLifecycleCallback = (type) => (node) => {
+  node.dispatchEvent(new Event(`@${type}`));
+};
+
 const mutationCallback = (mutations) => {
   mutations.forEach((mutation) => {
     if (mutation.type === 'childList') {
-      const _createLifecycleCallback = (type) => (node) => {
-        const fn = node[LIFECYCLE_SYMBOLS[type]];
-
-        if (fn) fn.call(node, node);
-      };
-
       mutation.addedNodes.forEach((node) => {
-        traverseNode(node, _createLifecycleCallback('mount'));
+        traverseNode(node, createLifecycleCallback('mount'));
       });
 
       mutation.removedNodes.forEach((node) => {
         if (!document.body.contains(node)) {
-          traverseNode(node, _createLifecycleCallback('destroy'));
+          traverseNode(node, createLifecycleCallback('destroy'));
         }
 
-        traverseNode(node, _createLifecycleCallback('unmount'));
+        traverseNode(node, createLifecycleCallback('unmount'));
       });
     }
   });
 };
 
 const observer = new MutationObserver(mutationCallback);
+const config = { childList: true, subtree: true };
 observer.observe(document.body, config);
 
 /**
@@ -306,17 +275,16 @@ const parse = (value, handlers = []) => {
   }
 
   if (isObject(value)) {
-    const { hook, lifecycle, ...otherTypes } = batchSameTypes(value);
+    const { hook, ...otherTypes } = batchSameTypes(value);
     const blank = { str: [], handlers: [] };
 
     // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
     const b = hook ? generateHookHandler(hook) : blank;
-    const c = lifecycle ? generateLifecycleHandler(lifecycle) : blank;
 
     return {
-      str: [...a.str, ...b.str, ...c.str].join(' '),
-      handlers: [handlers, a.handlers, b.handlers, c.handlers].flat(2),
+      str: [...a.str, ...b.str].join(' '),
+      handlers: [handlers, a.handlers, b.handlers].flat(2),
     };
   }
 
@@ -491,6 +459,11 @@ const modifyElement = (selector, type, data, context = document) => {
       }
 
       break;
+    case 'lifecycle':
+      node.addEventListener(`@${data.name}`, data.value, {
+        once: data.name === 'create',
+      });
+      break;
     case 'listener':
       node.addEventListener(data.name, data.value);
       break;
@@ -613,19 +586,7 @@ const hydrate = (context, handlers = []) =>
       throw new Error(`Can't find node using selector ${handler.selector}.`);
     }
 
-    switch (handler.type) {
-      case 'create':
-        handler.fn.call(el, el);
-        break;
-      case 'destroy':
-      case 'mount':
-      case 'unmount':
-        el[LIFECYCLE_SYMBOLS[handler.type]] = handler.fn;
-        break;
-      default:
-        modifyElement(handler.selector, handler.type, handler.data, context);
-        break;
-    }
+    modifyElement(handler.selector, handler.type, handler.data, context);
 
     if (handler.remove) {
       el.removeAttribute(handler.attr);
@@ -640,23 +601,14 @@ const hydrate = (context, handlers = []) =>
  */
 function createElementFromString(str, handlers = []) {
   const [final, extraHandlers] = preprocess(str);
+  const allHandlers = [...handlers, ...extraHandlers];
   const fragment = document.createRange().createContextualFragment(final);
 
-  const [createHandlers, otherHandlers] = handlers.reduce(
-    (acc, current) => {
-      if (current.type === 'create') acc[0].push(current);
-      else acc[1].push(current);
-
-      return acc;
-    },
-    [[], []]
-  );
-  otherHandlers.push(...extraHandlers);
-
-  hydrate(fragment, otherHandlers);
+  hydrate(fragment, allHandlers);
   getChildren(fragment).forEach(replacePlaceholderComments);
-
-  hydrate(fragment, createHandlers);
+  getChildren(fragment).forEach((node) =>
+    traverseNode(node, createLifecycleCallback('create'))
+  );
 
   return fragment;
 }
