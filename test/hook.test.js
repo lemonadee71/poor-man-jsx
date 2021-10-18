@@ -72,6 +72,35 @@ describe('state', () => {
     );
   });
 
+  it('forwards method chains', () => {
+    const [state] = createHook({ tags: [] });
+    const list = html`
+      <ul
+        data-testid="list"
+        ${{
+          $children: state.$tags
+            .filter((tag) => tag.length < 5)
+            .map((tag) => `tag: ${tag}`)
+            .map((tag) => html`<li>${tag}</li>`),
+        }}
+      ></ul>
+      <p
+        data-testid="paragraph"
+        ${{
+          $textContent: state.$tags
+            .reverse()
+            .join(' ')
+            .replace('enhancement', 'feature'),
+        }}
+      ></p>
+    `;
+    render(list, 'body');
+    state.tags = ['bug', 'enhancement'];
+
+    expect(screen.getByTestId('paragraph')).toHaveTextContent('feature bug');
+    expect(screen.getByTestId('list')).toContainHTML('<li>tag: bug</li>');
+  });
+
   describe('primitive', () => {
     const obj = {};
     beforeEach(setup('test', obj));

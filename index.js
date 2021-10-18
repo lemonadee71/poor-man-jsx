@@ -93,6 +93,18 @@ const randomId = (length = 8) => Math.random().toString(36).substr(2, length);
 const pipe = (args, ...fns) =>
   fns.reduce((prevResult, fn) => fn(prevResult), args);
 
+const compose = (...fns) => {
+  if (fns.some((fn) => typeof fn !== 'function')) {
+    throw new Error('Argument must be a function');
+  }
+
+  return fns.reduce(
+    (f, g) =>
+      (...args) =>
+        g(f(...args))
+  );
+};
+
 const reduceValue = (value, fn = null) => (fn ? fn.call(null, value) : value);
 
 const reduceNode = (node) => (isTemplate(node) ? render(node) : node);
@@ -730,10 +742,30 @@ const createHookFunction =
   });
 
 const methodForwarder = (target, prop) => {
-  const origValue = target.data.value;
-  const callback = (...args) => target((value) => value[prop](...args));
+  const dummyFn = (value) => value;
+  const previousTrap = target.data.trap || dummyFn;
+  const previousValue = target.data.value;
 
-  if (typeof origValue[prop] === 'function') return callback;
+  const callback = (...args) => {
+    const copy = {
+      [REF]: target[REF],
+      data: {
+        ...target.data,
+        value: previousValue,
+        // stack callbacks on top of one another to chain them
+        trap: compose(previousTrap, (value) => value[prop](...args)),
+      },
+    };
+
+    return new Proxy(copy, { get: methodForwarder });
+  };
+
+  // run previousTrap against previousValue to determine
+  // what the latest value should be
+  // This can cause weird behaviors if methods mutates the value
+  // like `reverse` in array
+  // in general, mutations should be discouraged inside traps
+  if (typeof previousTrap(previousValue)[prop] === 'function') return callback;
   return Reflect.get(target, prop);
 };
 
