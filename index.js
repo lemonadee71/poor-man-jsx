@@ -63,6 +63,8 @@ let preprocessors = [];
 /**
  * Is functions used for type checking
  */
+const isNullOrUndefined = (value) => value === null || value === undefined;
+
 const isObject = (value) => typeof value === 'object';
 
 const isArray = (value) => Array.isArray(value);
@@ -241,6 +243,8 @@ observer.observe(document.body, config);
  * Parser
  */
 const parse = (value, handlers = []) => {
+  if (isNullOrUndefined(value)) return { handlers, str: '' };
+
   if (isNode(value)) {
     const id = randomId();
 
