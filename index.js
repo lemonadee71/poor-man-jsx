@@ -90,9 +90,6 @@ const isBooleanAttribute = (attr) => booleanAttributes.includes(attr);
  */
 const randomId = (length = 8) => Math.random().toString(36).substr(2, length);
 
-const pipe = (args, ...fns) =>
-  fns.reduce((prevResult, fn) => fn(prevResult), args);
-
 const compose = (...fns) => {
   if (fns.some((fn) => typeof fn !== 'function')) {
     throw new Error('Argument must be a function');
@@ -201,11 +198,10 @@ const generateHandler = (type, obj) => {
 };
 
 const generateHandlerAll = (obj) =>
-  pipe(
-    Object.entries(obj),
+  compose(
     (items) => items.map((args) => generateHandler(...args)),
     reduceHandlerArray
-  );
+  )(Object.entries(obj));
 
 /**
  * Lifecycle
@@ -356,12 +352,11 @@ const addPlaceholders = (str) => {
 const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
 
-  const htmlString = pipe(
+  const htmlString = addPlaceholders(
     result.str.reduce(
       (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
       fragments[0]
-    ),
-    addPlaceholders
+    )
   );
 
   return new Template(htmlString, result.handlers.flat());
@@ -592,7 +587,7 @@ const preprocess = (str) => {
   preprocessors.forEach((processor) => {
     let result;
     if (isArray(processor)) {
-      result = pipe(htmlString, ...processor);
+      result = compose(...processor)(htmlString);
     } else {
       result = processor(htmlString);
     }
