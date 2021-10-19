@@ -158,6 +158,7 @@ const arrowFunction = (e) => {
 
 const div = document.createElement('div');
 div.addEventListener('@destroy', arrowFunction);
+document.body.append(div);
 div.remove();
 
 // arrowFunction should log
