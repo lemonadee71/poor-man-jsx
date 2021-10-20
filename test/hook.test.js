@@ -1,11 +1,12 @@
 import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
-import { createHook, html, render } from '..';
+import { createHook, html, render, text } from '..';
 
 /**
  * @jest-environment jsdom
  */
 
+// TODO: Refactor this for v3.0.0
 describe('state', () => {
   // eslint-disable-next-line one-var
   let root, mockCallback;
@@ -99,6 +100,19 @@ describe('state', () => {
 
     expect(screen.getByTestId('paragraph')).toHaveTextContent('feature bug');
     expect(screen.getByTestId('list')).toContainHTML('<li>tag: bug</li>');
+  });
+
+  describe('text tag works', () => {
+    const [hook] = createHook({ date: new Date() });
+    const date = html`<h1
+      data-testid="date"
+      ${{ $textContent: text`The time is ${hook.$date.toLocaleTimeString()}` }}
+    ></h1>`;
+
+    render(date, document.body);
+    expect(screen.getByTestId('date')).toHaveTextContent(
+      `The time is ${hook.date.toLocaleTimeString()}`
+    );
   });
 
   describe('primitive', () => {
