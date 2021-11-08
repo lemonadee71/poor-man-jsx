@@ -133,14 +133,17 @@ describe('diffing', () => {
     );
   });
 
-  it('does not update proxy-id by default', () => {
+  it('does not update ignored attributes', () => {
     const [data] = createHook(1);
     const child = (i) => {
       const [current] = createHook(Math.random());
 
       return html`
         <div
+          is-text
           key="${i}"
+          ignore="data-id"
+          data-id="${current.value}"
           data-testid="test-child-${i}"
           ${{ $textContent: current.$value }}
         ></div>
@@ -158,15 +161,15 @@ describe('diffing', () => {
     `;
     render(component, 'body');
 
-    const proxyid = screen
-      .getByTestId('test-child-0')
-      .getAttribute('data-proxyid');
+    const el = screen.getByTestId('test-child-0');
+    const proxyId = el.getAttribute('data-proxyid');
+    const dataId = el.dataset.id;
 
     data.value = 2;
 
-    expect(
-      screen.getByTestId('test-child-0').getAttribute('data-proxyid')
-    ).toBe(proxyid);
+    expect(el.getAttribute('data-proxyid')).toBe(proxyId);
+    expect(el.getAttribute('data-id')).toBe(dataId);
+    expect(el.textContent).not.toBe(dataId);
   });
 
   describe('updates children', () => {

@@ -55,7 +55,7 @@ const elementsToAlwaysRerender = [
   'kbd',
   'cite',
 ];
-const ignoreUpdate = ['data-proxyid'];
+const ignoreUpdate = ['data-proxyid', 'ignore'];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 const customAttributes = [];
 let preprocessors = [];
@@ -382,16 +382,17 @@ const patchNodes = (oldNode, newNode) => {
   // update all attributes
   const oldAttributes = [...oldNode.attributes];
   const newAttributes = [...newNode.attributes];
-  const toRemove = oldAttributes.filter(
+  const attributesToRemove = oldAttributes.filter(
     (attr) => !newAttributes.map((a) => a.name).includes(attr.name)
   );
+  const attributesToIgnore = (oldNode.getAttribute('ignore') || '').split(',');
 
-  toRemove.forEach((attr) => {
+  attributesToRemove.forEach((attr) => {
     oldNode.removeAttribute(attr.name);
   });
 
   newAttributes.forEach((attr) => {
-    if (ignoreUpdate.includes(attr.name)) return;
+    if ([...attributesToIgnore, ...ignoreUpdate].includes(attr.name)) return;
 
     oldNode.setAttribute(attr.name, attr.value);
   });
@@ -801,6 +802,14 @@ const generateHookHandler = (hook = {}) => {
 const addDefaultProperty = (...prop) => defaultProps.push(...prop);
 
 /**
+ * Add an attribute to be ignored by diffing. This will be applied to all elements.
+ * Use attribute `ignore` for localized ignored attributes.
+ * @param  {...string} attr - the attribute to be ignored
+ * @returns
+ */
+const addIgnoredAttribute = (...prop) => ignoreUpdate.push(...prop);
+
+/**
  * Add a boolean attribute to the list.
  * Making an attribute a boolean means you can just pass a boolean
  * value to it instead of a string
@@ -843,6 +852,7 @@ const disableObserver = () => observer.disconnect();
 
 const settings = {
   addDefaultProperty,
+  addIgnoredAttribute,
   addBooleanAttribute,
   addCustomAttribute,
   addPreprocessor,
