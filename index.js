@@ -370,7 +370,9 @@ const patchNodes = (oldNode, newNode) => {
     isText(oldNode) ||
     elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase())
   ) {
-    oldNode.innerHTML = newNode.innerHTML;
+    if (oldNode.innerHTML !== newNode.innerHTML) {
+      oldNode.innerHTML = newNode.innerHTML;
+    }
   } else if (shouldDiffNode(oldNode)) {
     naiveDiff(oldNode, getChildren(newNode), getKeyString(oldNode));
   } else if (oldNode.children.length) {
