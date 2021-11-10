@@ -390,6 +390,8 @@ const patchNodes = (oldNode, newNode) => {
   const attributesToIgnore = (oldNode.getAttribute('ignore') || '').split(',');
 
   attributesToRemove.forEach((attr) => {
+    if ([...attributesToIgnore, ...ignoreUpdate].includes(attr.name)) return;
+
     oldNode.removeAttribute(attr.name);
   });
 
