@@ -172,6 +172,36 @@ describe('diffing', () => {
     expect(el.textContent).not.toBe(dataId);
   });
 
+  it('does not remove ignored attributes', () => {
+    const [data] = createHook(true);
+    const component = html`
+      <div
+        is-list
+        ${{
+          $children: data.$value((bool) => {
+            const el = html`<p
+              key="1"
+              ignore="data-state"
+              data-testid="test"
+              ${bool ? 'data-state="test"' : ''}
+            >
+              ${bool}
+            </p>`;
+
+            return [el];
+          }),
+        }}
+      ></div>
+    `;
+    render(component, 'body');
+
+    const text = screen.getByTestId('test').dataset.state;
+    data.value = false;
+
+    expect(screen.getByTestId('test')).toHaveAttribute('data-state');
+    expect(screen.getByTestId('test').dataset.state).toBe(text);
+  });
+
   describe('updates children', () => {
     let listItemMountCallback, listItemUnmountCallback; // eslint-disable-line
     beforeEach(() => {
