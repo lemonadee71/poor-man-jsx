@@ -55,7 +55,7 @@ const elementsToAlwaysRerender = [
   'kbd',
   'cite',
 ];
-const ignoreUpdate = ['data-proxyid', 'ignore'];
+const ignoreUpdate = ['data-proxyid'];
 const lifecycleMethods = ['create', 'destroy', 'mount', 'unmount'];
 const customAttributes = [];
 let preprocessors = [];
