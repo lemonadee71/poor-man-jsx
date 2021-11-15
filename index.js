@@ -350,6 +350,11 @@ const getBehavior = (node, type) =>
 
 const isText = (node) => getBehavior(node, 'text');
 
+const shouldIgnoreContent = (node) =>
+  node.getAttribute('ignore-content') !== null;
+
+const shouldIgnoreAll = (node) => node.getAttribute('ignore-all') !== null;
+
 const shouldDiffNode = (node) => getBehavior(node, 'list');
 
 const getKeyString = (node) => node.getAttribute('keystring') || 'key';
@@ -363,12 +368,15 @@ const hasNoKey = (nodes, keyString) =>
   nodes.some((node) => !getKey(node, keyString));
 
 const patchNodes = (oldNode, newNode) => {
+  if (shouldIgnoreAll(oldNode)) return;
+
   // we assume that the number of children is still the same
   // and that changes are limited to "content"
   // and are enclosed in an inline text element (see elementsToAlwaysRerender)
   if (
-    isText(oldNode) ||
-    elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase())
+    !shouldIgnoreContent(oldNode) &&
+    (isText(oldNode) ||
+      elementsToAlwaysRerender.includes(oldNode.nodeName.toLowerCase()))
   ) {
     if (oldNode.innerHTML !== newNode.innerHTML) {
       oldNode.innerHTML = newNode.innerHTML;
