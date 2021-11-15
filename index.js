@@ -315,6 +315,12 @@ const addPlaceholders = (str) => {
   return newString;
 };
 
+const rebuildString = (fragments, values) =>
+  values.reduce(
+    (full, str, i) => `${full}${str}${fragments[i + 1]}`,
+    fragments[0]
+  );
+
 /**
  * Creates a `Template` from a template literal. Must be used as a tag.
  * @param {Array.<String>} fragments
@@ -323,13 +329,7 @@ const addPlaceholders = (str) => {
  */
 const html = (fragments, ...values) => {
   const result = reduceHandlerArray(values.map((value) => parse(value)));
-
-  const htmlString = addPlaceholders(
-    result.str.reduce(
-      (acc, str, i) => `${acc}${str}${fragments[i + 1]}`,
-      fragments[0]
-    )
-  );
+  const htmlString = addPlaceholders(rebuildString(fragments, result.str));
 
   return new Template(htmlString, result.handlers.flat());
 };
@@ -792,6 +792,34 @@ const generateHookHandler = (hook = {}) => {
 };
 
 /**
+ * Helper for hooks. Only one hook can be passed.
+ * @example
+ * // To format a string, we will do
+ * html`<h1 ${{ $textContent: hook.$str((value) => `The string is ${value}`) }}></h1>`
+ * // but with `text`, we can instead do this to make it more concise
+ * html`<h1 ${{ $textContent: text`The string is ${hook.$str}` }}></h1>`;
+ *
+ * @param {Array.<String>} fragments
+ * @param  {...any} values
+ * @returns
+ */
+const text = (fragments, ...values) => {
+  const pos = values.findIndex((value) => value[REF]);
+  if (pos < 0) throw new Error('A hook is expected');
+
+  const left = values.slice(0, pos);
+  const right = values.slice(pos + 1);
+  const hook = values[pos];
+  const previousTrap = hook.data.trap;
+
+  const regen = (value) => rebuildString(fragments, [...left, value, ...right]);
+
+  hook.data.trap = previousTrap ? compose(previousTrap, regen) : regen;
+
+  return hook;
+};
+
+/**
  * Settings
  */
 
@@ -861,5 +889,5 @@ const settings = {
   disableObserver,
 };
 
-export { html, createElementFromString, render, createHook };
+export { html, createElementFromString, render, createHook, text };
 export default settings;

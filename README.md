@@ -191,6 +191,8 @@ revoke(); // returns { num: 1 }
 
 > Under the hood, we're using `WeakMap` to store data so it's not really necessary to use revoke but use it when you can in a `destroy` or `unmount` callback.
 
+### Example
+
 Let's take our Clock example and rewrite it using a hook,
 
 ```js
@@ -275,3 +277,21 @@ $textContent: current.$date;
 // Or more generally
 $prop: object.$key;
 ```
+
+### Text Tag
+
+We use template strings a lot so it's a lot better if we can write our previous example to be more concise.
+
+```js
+$textContent: current.$date(
+  (date) => `It is ${date.toLocaleTimeString()}.`
+),
+```
+
+That's where the `text` tag is used for. Just use it as a template tag like we use `html` and it allows you to pass a hook to a template literal which makes for a more concise code. Our previous example can now be written like this,
+
+```js
+$textContent: `It is ${current.$date.toLocaleTimeString()}.`;
+```
+
+and it'll still work the same.
