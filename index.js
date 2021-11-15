@@ -664,12 +664,13 @@ const REF = Symbol('ref');
  * @returns {[Object, function]}
  */
 const createHook = (value, seal = true) => {
-  const obj = isObject(value) ? value : { value };
+  let obj = isObject(value) ? value : { value };
+  obj = seal ? Object.seal(obj) : obj;
   Hooks.set(obj, new Map());
 
-  const { proxy, revoke } = Proxy.revocable(seal ? Object.seal(obj) : obj, {
-    get: getter(obj),
-    set: setter(obj),
+  const { proxy, revoke } = Proxy.revocable(obj, {
+    get: getter,
+    set: setter,
   });
 
   /**
@@ -703,15 +704,11 @@ const methodForwarder = (target, prop) => {
   const previousValue = target.data.value;
 
   const callback = (...args) => {
-    const copy = {
-      [REF]: target[REF],
-      data: {
-        ...target.data,
-        value: previousValue,
-        // stack callbacks on top of one another to chain them
-        trap: compose(previousTrap, (value) => value[prop](...args)),
-      },
-    };
+    const copy = createHookFunction(
+      target[REF],
+      target.data.prop,
+      previousValue
+    )(compose(previousTrap, (value) => value[prop](...args)));
 
     return new Proxy(copy, { get: methodForwarder });
   };
@@ -725,9 +722,9 @@ const methodForwarder = (target, prop) => {
   return Reflect.get(target, prop);
 };
 
-const getter = (ref) => (target, rawProp, receiver) => {
+const getter = (target, rawProp, receiver) => {
   const [prop, type] = determineType(rawProp);
-  const hook = createHookFunction(ref, prop, target[prop]);
+  const hook = createHookFunction(target, prop, target[prop]);
 
   if (type === 'hook' && prop in target) {
     return Object.assign(new Proxy(hook, { get: methodForwarder }), hook());
@@ -736,22 +733,22 @@ const getter = (ref) => (target, rawProp, receiver) => {
   return Reflect.get(target, prop, receiver);
 };
 
-const setter = (ref) => (target, prop, value, receiver) => {
-  const bindedElements = Hooks.get(ref);
+const setter = (target, prop, value, receiver) => {
+  const bindedElements = Hooks.get(target);
 
   bindedElements.forEach((handlers, id) => {
     const selector = `[data-proxyid="${id}"]`;
     const el = document.querySelector(selector);
 
     if (el) {
-      handlers.forEach((handler) => {
-        if (prop !== handler.prop) return;
-
-        modifyElement(selector, handler.type, {
-          name: handler.target,
-          value: reduceValue(value, handler.trap),
+      handlers
+        .filter((handler) => handler.prop === prop)
+        .forEach((handler) => {
+          modifyElement(selector, handler.type, {
+            name: handler.target,
+            value: reduceValue(value, handler.trap),
+          });
         });
-      });
     } else {
       // delete handler when the target is unreachable (most likely deleted)
       bindedElements.delete(id);
