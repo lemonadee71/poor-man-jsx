@@ -202,6 +202,45 @@ describe('diffing', () => {
     expect(screen.getByTestId('test').dataset.state).toBe(text);
   });
 
+  it('does not update child with attribute `ignore-all', () => {
+    const [data] = createHook(1);
+    const child = (i) => {
+      const rand = Math.random();
+
+      return html`
+        <div
+          is-text
+          key="${i}"
+          ignore-all
+          data-id="${rand}"
+          data-testid="test-child-${i}"
+        >
+          ${rand}
+        </div>
+      `;
+    };
+    const parent = html`
+      <div
+        is-list
+        ${{
+          $children: data.$value((n) =>
+            new Array(n).fill().map((_, i) => child(i))
+          ),
+        }}
+      ></div>
+    `;
+    render(parent, 'body');
+
+    const test = screen.getByTestId('test-child-0');
+    const text = test.textContent.trim();
+    const id = test.dataset.id;
+
+    data.value = 2;
+
+    expect(test).toHaveAttribute('data-id', id);
+    expect(test.textContent.trim()).toBe(text);
+  });
+
   describe('updates children', () => {
     let listItemMountCallback, listItemUnmountCallback; // eslint-disable-line
     beforeEach(() => {
