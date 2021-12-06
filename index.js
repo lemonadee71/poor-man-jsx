@@ -800,6 +800,49 @@ const generateHookHandler = (hook = {}) => {
 };
 
 /**
+ * Add hooks to a DOM element
+ * @param {HTMLElement} target - the element to add hooks to
+ * @param {Object} hooks - object that has hooks as values
+ * @returns {HTMLElement}
+ */
+const addHooks = (target, hooks) => {
+  const id = target.dataset.proxyid || randomId();
+  target.dataset.proxyid = id;
+
+  Object.entries(hooks).forEach(([rawKey, hook]) => {
+    // check if hook
+    let [key, type] = determineType(rawKey);
+
+    if (type !== 'hook') {
+      throw new Error('Value must be a hook');
+    }
+
+    // then get the actual type
+    [key, type] = determineType(key);
+
+    const bindedElements = Hooks.get(hook[REF]);
+    const handlers = bindedElements.get(id) || [];
+    const handler = {
+      type,
+      target: key,
+      prop: hook.data.prop,
+      trap: hook.data.trap,
+    };
+
+    // store handler
+    bindedElements.set(id, [...handlers, handler]);
+
+    // init values
+    modifyElement(`[data-proxyid="${id}"]`, handler.type, {
+      name: handler.target,
+      value: reduceValue(hook.data.value, handler.trap),
+    });
+  });
+
+  return target;
+};
+
+/**
  * Helper for hooks. Only one hook can be passed.
  * @example
  * // To format a string, we will do
@@ -897,5 +940,5 @@ const settings = {
   disableObserver,
 };
 
-export { html, createElementFromString, render, createHook, text };
+export { html, createElementFromString, render, createHook, addHooks, text };
 export default settings;
