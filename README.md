@@ -291,7 +291,7 @@ $textContent: current.$date(
 That's where the `text` tag is used for. Just use it as a template tag like we use `html` and it allows you to pass a hook to a template literal which makes for a more concise code. Our previous example can now be written like this,
 
 ```js
-$textContent: `It is ${current.$date.toLocaleTimeString()}.`;
+$textContent: text`It is ${current.$date.toLocaleTimeString()}.`;
 ```
 
 and it'll still work the same.
