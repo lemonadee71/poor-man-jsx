@@ -453,11 +453,11 @@ const naiveDiff = (parent, newNodes, keyString) => {
   getChildren(parent).forEach((child, i) => patchNodes(child, newNodes[i]));
 };
 
-const modifyElement = (selector, type, data, context = document) => {
-  const node = context.querySelector(selector);
+const modifyElement = (target, type, data, context = document) => {
+  const node = isNode(target) ? target : context.querySelector(target);
 
   if (!node) {
-    throw new Error(`Can't find node using selector ${selector}.`);
+    throw new Error(`Can't find node using selector ${target}.`);
   }
 
   switch (type) {
@@ -833,7 +833,7 @@ const addHooks = (target, hooks) => {
     bindedElements.set(id, [...handlers, handler]);
 
     // init values
-    modifyElement(`[data-proxyid="${id}"]`, handler.type, {
+    modifyElement(target, handler.type, {
       name: handler.target,
       value: reduceValue(hook.data.value, handler.trap),
     });
