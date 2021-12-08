@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
-import { createHook, html, render, text } from '..';
+import { addHooks, createHook, html, render, text } from '..';
 
 /**
  * @jest-environment jsdom
@@ -113,6 +113,17 @@ describe('state', () => {
     expect(screen.getByTestId('date')).toHaveTextContent(
       `The time is ${hook.date.toLocaleTimeString()}`
     );
+  });
+
+  describe('`addHooks` works', () => {
+    const [hook] = createHook('Test');
+    const div = document.createElement('div');
+    addHooks(div, { $textContent: hook.$value });
+
+    document.body.append(div);
+    hook.value = 'Another test';
+
+    expect(div).toHaveTextContent('Another test');
   });
 
   describe('primitive', () => {
