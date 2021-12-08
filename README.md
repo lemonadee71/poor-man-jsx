@@ -278,6 +278,24 @@ $textContent: current.$date;
 $prop: object.$key;
 ```
 
+### Adding hooks to elements
+
+We can also add hooks to manually created (with `document.createElement`) or existing elements using `addHooks`.
+
+```js
+const [hook] = createHook('Test');
+const p = document.createElement('p');
+
+addHooks(p, { $textContent: hook.$value });
+document.body.append(p);
+
+console.log(p.textContent); // Test
+hook.value = 'Another test';
+console.log(p.textContent); // Another test
+```
+
+> Make sure that the element is in the document first before making changes.
+
 ### Text Tag
 
 We use template strings a lot so it's a lot better if we can write our previous example to be more concise.
