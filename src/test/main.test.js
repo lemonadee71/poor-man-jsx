@@ -90,26 +90,13 @@ describe('html and render', () => {
     });
   });
 
-  it('custom attribute is not considered as style', () => {
-    PoorManJSX.addCustomAttribute('color');
-
-    const props = { color: 'yellow' };
-    const el = html`<div data-testid="style" ${props}></div>`;
-    render(el, root);
-
-    expect(screen.getByTestId('style')).not.toHaveStyle({
-      color: props.color,
-    });
-    expect(screen.getByTestId('style')).toHaveAttribute('color', 'yellow');
-  });
-
   it('works with special prop children', () => {
     const child = (testid) => html`<strong data-testid="${testid}"
       >This is my child</strong
     >`;
     const parent1 = html`<div
       data-testid="with children"
-      ${{ children: child('my child') }}
+      ${{ children: render(child('my child')) }}
     >
       <p>This should be deleted</p>
     </div>`;
@@ -119,7 +106,7 @@ describe('html and render', () => {
       data-testid="with array children"
       ${{
         children: [
-          child('another child'),
+          render(child('another child')),
           'This is a string',
           document.createElement('h2'),
         ],

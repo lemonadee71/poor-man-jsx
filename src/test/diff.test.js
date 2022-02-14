@@ -22,7 +22,11 @@ const createTodoList = (defaultData, Todo, keyString = 'key') => {
       is-list
       data-testid="todo-list"
       keystring="${keyString}"
-      ${{ $children: data.$todos.map((todo) => Todo({ ...todo, keyString })) }}
+      ${{
+        $children: data.$todos.map((todo) =>
+          render(Todo({ ...todo, keyString }))
+        ),
+      }}
     ></div>
   `;
 
@@ -154,7 +158,7 @@ describe('diffing', () => {
         is-list
         ${{
           $children: data.$value((n) =>
-            new Array(n).fill().map((_, i) => child(i))
+            new Array(n).fill().map((_, i) => render(child(i)))
           ),
         }}
       ></div>
@@ -179,14 +183,14 @@ describe('diffing', () => {
         is-list
         ${{
           $children: data.$value((bool) => {
-            const el = html`<p
+            const el = render(html`<p
               key="1"
               ignore="data-state"
               data-testid="test"
               ${bool ? 'data-state="test"' : ''}
             >
               ${bool}
-            </p>`;
+            </p>`);
 
             return [el];
           }),
@@ -224,7 +228,7 @@ describe('diffing', () => {
         is-list
         ${{
           $children: data.$value((n) =>
-            new Array(n).fill().map((_, i) => child(i))
+            new Array(n).fill().map((_, i) => render(child(i)))
           ),
         }}
       ></div>

@@ -58,7 +58,9 @@ describe('state', () => {
     const list = html`
       <ul
         data-testid="list"
-        ${{ $children: state.$tags.map((tag) => html`<li>${tag}</li>`) }}
+        ${{
+          $children: state.$tags.map((tag) => render(html`<li>${tag}</li>`)),
+        }}
       ></ul>
       <p data-testid="paragraph" ${{ $textContent: state.$tags.join(' ') }}></p>
     `;
@@ -82,7 +84,7 @@ describe('state', () => {
           $children: state.$tags
             .filter((tag) => tag.length < 5)
             .map((tag) => `tag: ${tag}`)
-            .map((tag) => html`<li>${tag}</li>`),
+            .map((tag) => render(html`<li>${tag}</li>`)),
         }}
       ></ul>
       <p
