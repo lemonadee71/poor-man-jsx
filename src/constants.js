@@ -1,3 +1,8 @@
+// This is to hide the ref property an invoked hook returns
+// which is a reference to the original object
+// to make sure we won't be able to access it outside of its intended use
+const REF = Symbol('ref');
+
 const DEFAULT_PROPS = [
   'textContent',
   'innerHTML',
@@ -46,6 +51,16 @@ const IGNORE_UPDATE = ['data-proxyid'];
 const LIFECYCLE_METHODS = ['create', 'destroy', 'mount', 'unmount'];
 const OBSERVER_CONFIG = { childList: true, subtree: true };
 
+const VALUE_MAP = {
+  textcontent: 'textContent',
+  text: 'textContent',
+  innerhtml: 'innerHTML',
+  html: 'innerHTML',
+  innertext: 'innerText',
+  style: 'style',
+  children: 'children',
+};
+
 export {
   BOOLEAN_ATTRS,
   DEFAULT_PROPS,
@@ -53,4 +68,6 @@ export {
   IGNORE_UPDATE,
   LIFECYCLE_METHODS,
   OBSERVER_CONFIG,
+  REF,
+  VALUE_MAP,
 };

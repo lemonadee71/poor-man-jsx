@@ -4,13 +4,9 @@ import { getType } from './utils/type';
 import { modifyElement } from './utils/modify';
 import { generateHandlerAll } from './utils/handler';
 import { compose, rebuildString, resolve } from './utils/util';
+import { REF } from './constants';
 
 const Hooks = new WeakMap();
-
-// This is to hide the ref property an invoked hook returns
-// which is a reference to the original object
-// to make sure we won't be able to access it outside of its intended use
-const REF = Symbol('ref');
 
 /**
  * Creates a hook
