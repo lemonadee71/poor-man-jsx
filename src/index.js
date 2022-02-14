@@ -2,11 +2,13 @@ import Template from './Template';
 import { BOOLEAN_ATTRS, IGNORE_UPDATE, OBSERVER_CONFIG } from './constants';
 import { createHook, addHooks, text, generateHookHandler } from './hooks';
 import { mutationCallback, triggerLifecycle } from './lifecycle';
-import { generateHandlerAll } from './utils/handler';
+import { generateHandlerAll, reduceHandlers } from './utils/handler';
 import { hydrate } from './utils/hydrate';
 import { uid } from './utils/id';
 import {
   isArray,
+  isFunction,
+  isHook,
   isNode,
   isNullOrUndefined,
   isObject,
@@ -15,13 +17,9 @@ import {
 import {
   addPlaceholders,
   replacePlaceholderComments,
+  replacePlaceholderIds,
 } from './utils/placeholder';
-import {
-  compose,
-  getChildren,
-  rebuildString,
-  reduceHandlers,
-} from './utils/util';
+import { compose, getChildren, rebuildString } from './utils/util';
 import { batchTypes } from './utils/type';
 
 let preprocessors = [];
@@ -30,32 +28,34 @@ let preprocessors = [];
 const observer = new MutationObserver(mutationCallback);
 observer.observe(document.body, OBSERVER_CONFIG);
 
-const parse = (value, handlers = []) => {
-  if (isNullOrUndefined(value)) return { str: '', handlers };
+const parse = (value) => {
+  if (isNullOrUndefined(value)) return { str: '', handlers: [], dict: {} };
+
+  if (isTemplate(value)) return value;
+
+  if (isFunction(value) || isHook(value)) {
+    const id = uid();
+
+    return { str: `$$id:${id}`, handlers: [], dict: { [id]: value } };
+  }
 
   if (isNode(value)) {
     const id = uid();
 
     return {
       str: `<marker id="node-${id}" />`,
-      handlers: [
-        ...handlers.flat(),
-        { type: 'node', selector: `#node-${id}`, data: { value } },
-      ],
+      handlers: [{ type: 'node', selector: `#node-${id}`, data: { value } }],
+      dict: {},
     };
   }
 
-  if (isTemplate(value)) {
-    // Just add its string and handlers
-    return { str: value.str, handlers: [...handlers, ...value.handlers] };
-  }
-
   if (isArray(value)) {
-    const final = reduceHandlers(value.map((item) => parse(item, handlers)));
+    const final = reduceHandlers(value.map(parse));
 
     return {
       str: final.str.join(' '),
-      handlers: [...handlers, ...final.handlers],
+      handlers: final.handlers,
+      dict: final.dict,
     };
   }
 
@@ -63,30 +63,33 @@ const parse = (value, handlers = []) => {
     const { hook, ...otherTypes } = batchTypes(value);
     const blank = { str: [], handlers: [] };
 
-    // Will be parsed to { str: [], handlers: [] }
     const a = generateHandlerAll(otherTypes);
     const b = hook ? generateHookHandler(hook) : blank;
 
     return {
       str: [...a.str, ...b.str].join(' '),
-      handlers: [handlers, a.handlers, b.handlers].flat(2),
+      handlers: [a.handlers, b.handlers].flat(2),
+      dict: {},
     };
   }
 
-  return { str: `${value}`, handlers };
+  return { str: `${value}`, handlers: [], dict: {} };
 };
 
 /**
  * Creates a {@link Template} from a template literal. Must be used as a tag.
+ * @example
+ * html`<div>This is a div</div>`
+ *
  * @param {Array.<string>} fragments
  * @param  {...any} values
  * @returns {Template}
  */
 const html = (fragments, ...values) => {
-  const result = reduceHandlers(values.map((value) => parse(value)));
+  const result = reduceHandlers(values.map(parse));
   const htmlString = addPlaceholders(rebuildString(fragments, result.str));
 
-  return new Template(htmlString, result.handlers);
+  return new Template(htmlString, result.handlers, result.dict);
 };
 
 /**
@@ -125,14 +128,17 @@ const preprocess = (str) => {
  * @param {Array.<Handler>} handlers - array of handlers
  * @returns {DocumentFragment}
  */
-const createElementFromString = (str, handlers = []) => {
+const createElementFromString = (str, handlers = [], dict = {}) => {
   const [final, extraHandlers] = preprocess(str);
   const allHandlers = [...handlers, ...extraHandlers];
   const fragment = document.createRange().createContextualFragment(final);
 
   hydrate(fragment, allHandlers);
-  getChildren(fragment).forEach(replacePlaceholderComments);
-  getChildren(fragment).forEach((node) => triggerLifecycle('create', node));
+  getChildren(fragment).forEach((node) => {
+    replacePlaceholderComments(node);
+    replacePlaceholderIds(node, dict);
+    triggerLifecycle('create', node);
+  });
 
   return fragment;
 };

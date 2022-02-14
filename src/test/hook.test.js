@@ -104,7 +104,7 @@ describe('state', () => {
     expect(screen.getByTestId('list')).toContainHTML('<li>tag: bug</li>');
   });
 
-  describe('text tag works', () => {
+  it('text tag works', () => {
     const [hook] = createHook({ date: new Date() });
     const date = html`<h1
       data-testid="date"
@@ -117,7 +117,7 @@ describe('state', () => {
     );
   });
 
-  describe('`addHooks` works', () => {
+  it('`addHooks` works', () => {
     const [hook] = createHook('Test');
     const div = document.createElement('div');
     addHooks(div, { textContent: hook.$value });
@@ -126,6 +126,15 @@ describe('state', () => {
     hook.value = 'Another test';
 
     expect(div).toHaveTextContent('Another test');
+  });
+
+  it('can be passed directly', () => {
+    const [hook] = createHook('red');
+    const p = html`<p data-testid="test-p">The color is ${hook.$value}</p>`;
+    render(p, document.body);
+
+    hook.value = 'blue';
+    expect(screen.getByTestId('test-p')).toHaveTextContent('The color is blue');
   });
 
   describe('primitive', () => {

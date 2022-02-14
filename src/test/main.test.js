@@ -209,6 +209,22 @@ describe('html and render', () => {
     expect(screen.getByTestId('comment3')).not.toHaveTextContent();
   });
 
+  it('accepts functions directly', () => {
+    const button = html`<button
+      data-testid="button-1"
+      onClick=${mockClickCallback}
+    >
+      Click me
+    </button>`;
+    root.append(render(button));
+
+    fireEvent.click(screen.getByTestId('button-1'));
+    fireEvent.click(screen.getByTestId('button-1'));
+
+    expect(mockClickCallback).toBeCalledTimes(2);
+    expect(mockClickCallback.mock.results[0].value).toBe('I am clicked');
+  });
+
   it('accepts HTMLElement', () => {
     render(
       html`<div data-testid="htmlElement">

@@ -1,5 +1,4 @@
 import { uid } from './id';
-import { reduceHandlers } from './util';
 
 const generatePlaceholder = (type) => {
   const id = uid();
@@ -32,4 +31,16 @@ export const generateHandler = (type, obj) => {
 export const generateHandlerAll = (batched) =>
   reduceHandlers(
     Object.entries(batched).map((args) => generateHandler(...args))
+  );
+
+export const reduceHandlers = (arr) =>
+  arr.reduce(
+    (acc, item) => {
+      acc.str.push(item.str);
+      acc.handlers.push(...item.handlers);
+      acc.dict = { ...acc.dict, ...item.dict };
+
+      return acc;
+    },
+    { str: [], handlers: [], dict: {} }
   );
