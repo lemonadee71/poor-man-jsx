@@ -120,7 +120,7 @@ describe('state', () => {
   describe('`addHooks` works', () => {
     const [hook] = createHook('Test');
     const div = document.createElement('div');
-    addHooks(div, { $textContent: hook.$value });
+    addHooks(div, { textContent: hook.$value });
 
     document.body.append(div);
     hook.value = 'Another test';

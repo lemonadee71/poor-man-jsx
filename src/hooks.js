@@ -159,15 +159,9 @@ const addHooks = (target, hooks) => {
   target.dataset.proxyid = id;
 
   Object.entries(hooks).forEach(([rawKey, hook]) => {
-    // check if hook
-    let [key, type] = getType(rawKey);
+    if (!hook[REF]) throw new TypeError('Value must be a hook');
 
-    if (type !== 'hook') {
-      throw new Error('Value must be a hook');
-    }
-
-    // then get the actual type
-    [key, type] = getType(key);
+    const [key, type] = getType(rawKey);
 
     const bindedElements = Hooks.get(hook[REF]);
     const handlers = bindedElements.get(id) || [];
