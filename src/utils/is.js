@@ -1,4 +1,9 @@
-import { BOOLEAN_ATTRS, DEFAULT_PROPS, LIFECYCLE_METHODS } from '../constants';
+import {
+  BOOLEAN_ATTRS,
+  DEFAULT_PROPS,
+  LIFECYCLE_METHODS,
+  REF,
+} from '../constants';
 import Template from '../Template';
 
 const mockEl = document.createElement('div');
@@ -9,13 +14,21 @@ export const isNullOrUndefined = (value) =>
 
 export const isObject = (value) => typeof value === 'object';
 
+export const isFunction = (value) => typeof value === 'function';
+
+export const isString = (value) => typeof value === 'string';
+
 export const isArray = (value) => Array.isArray(value);
 
 export const isTemplate = (value) => value instanceof Template;
 
 export const isNode = (value) => value instanceof Node;
 
-export const isHook = (key) => key.startsWith('$');
+export const isHook = (value) => {
+  if (isString(value)) return value.startsWith('$');
+  if (isObject(value) || isFunction(value)) return !!value[REF];
+  return false;
+};
 
 export const isEventListener = (key) => key.toLowerCase().startsWith('on');
 
