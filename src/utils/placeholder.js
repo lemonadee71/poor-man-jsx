@@ -61,27 +61,23 @@ export const replacePlaceholderComments = (root) => {
  * @param {Object} dict - key-value pair
  */
 export const replacePlaceholderIds = (root, dict) => {
-  const idPlaceholderRegex = /\s*(\$\$id:\w+)\s*/;
+  const idPlaceholderRegex = /\$\$id:\w+/;
 
   traverse(root, (node) => {
     // check if hook or function is passed in the attrs
     [...node.attributes].forEach((attr) => {
-      const match = attr.value.match(idPlaceholderRegex);
+      const match = attr.value.trim().match(idPlaceholderRegex);
 
-      if (match && match[1]) {
-        const id = match[1].split(':')[1];
+      if (match) {
+        const id = match[0].split(':')[1];
         let value = dict[id];
 
         if (isHook(value)) {
-          const [left, right] = attr.value.split(match[1]);
-          let name = attr.name;
-
-          if (attr in VALUE_MAP) {
-            name = VALUE_MAP[attr.name];
-          }
+          const name = VALUE_MAP[attr.name] || attr.name;
 
           // preserve the position of the hook in the string
-          if (left || right) {
+          if (match[0] !== attr.value.trim()) {
+            const [left, right] = attr.value.split(match[0]);
             value = textHook([left, right], value);
           }
 
@@ -96,21 +92,26 @@ export const replacePlaceholderIds = (root, dict) => {
     });
 
     // check if hook is passed in the body
-    const match = node.innerHTML.match(idPlaceholderRegex);
+    // as a general rule, there should be no other child
+    if (!node.children.length) {
+      const text = node.textContent.trim();
+      const match = text.match(idPlaceholderRegex);
 
-    if (match && match[1]) {
-      const [left, right] = node.innerHTML.split(match[1]);
-      const id = match[1].split(':')[1];
-      let value = dict[id];
+      if (match) {
+        const id = match[0].split(':')[1];
+        let value = dict[id];
 
-      if (!isHook(value))
-        throw new TypeError('You can only pass a hook to body');
+        if (!isHook(value)) {
+          throw new TypeError('You can only pass a hook to body');
+        }
 
-      if (left.trim() || right.trim()) {
-        value = textHook([left, right], value);
+        if (match[0] !== text) {
+          const [left, right] = text.split(match[0]);
+          value = textHook([left, right], value);
+        }
+
+        addHooks(node, { children: value });
       }
-
-      addHooks(node, { children: value });
     }
   });
 };
