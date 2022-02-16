@@ -2,7 +2,6 @@ import Template from './Template';
 import { BOOLEAN_ATTRS, IGNORE_UPDATE, OBSERVER_CONFIG } from './constants';
 import { createHook, addHooks, text, generateHookHandler } from './hooks';
 import { mutationCallback, triggerLifecycle } from './lifecycle';
-import { generateHandlerAll } from './utils/handler';
 import { hydrate } from './utils/hydrate';
 import {
   isArray,
@@ -25,7 +24,7 @@ import {
   rebuildString,
   reduceTemplates,
 } from './utils/util';
-import { batchTypes } from './utils/type';
+import { batchTypes, reduceBatchedObject } from './utils/type';
 
 let preprocessors = [];
 
@@ -68,7 +67,7 @@ const parse = (value) => {
     const { hook, ...otherTypes } = batchTypes(value);
     const blank = { str: [], handlers: [] };
 
-    const a = generateHandlerAll(otherTypes);
+    const a = reduceBatchedObject(otherTypes);
     const b = hook ? generateHookHandler(hook) : blank;
 
     return {

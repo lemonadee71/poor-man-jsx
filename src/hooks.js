@@ -1,7 +1,6 @@
 import { isObject } from './utils/is';
-import { getType } from './utils/type';
+import { getType, reduceBatchedObject } from './utils/type';
 import { modifyElement } from './utils/modify';
-import { generateHandlerAll } from './utils/handler';
 import { uid, compose, rebuildString, resolve } from './utils/util';
 import { REF } from './constants';
 
@@ -113,18 +112,18 @@ const setter = (target, prop, value, receiver) => {
 const generateHookHandler = (hook = {}) => {
   const id = uid();
   const proxyId = `data-proxyid="${id}"`;
-  const batchedObj = {};
+  const batched = {};
 
   Object.entries(hook).forEach(([type, batch]) => {
     Object.entries(batch).forEach(([key, info]) => {
       const bindedElements = Hooks.get(info[REF]);
       const handlers = bindedElements.get(id) || [];
 
-      if (!batchedObj[type]) {
-        batchedObj[type] = {};
+      if (!batched[type]) {
+        batched[type] = {};
       }
 
-      batchedObj[type][key] = resolve(info.data.value, info.data.trap);
+      batched[type][key] = resolve(info.data.value, info.data.trap);
 
       bindedElements.set(id, [
         ...handlers,
@@ -138,7 +137,7 @@ const generateHookHandler = (hook = {}) => {
     });
   });
 
-  const { str, handlers } = generateHandlerAll(batchedObj);
+  const { str, handlers } = reduceBatchedObject(batched);
 
   return { handlers, str: [...str, proxyId] };
 };

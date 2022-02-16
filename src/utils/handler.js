@@ -1,4 +1,4 @@
-import { reduceTemplates, uid } from './util';
+import { uid } from './util';
 
 const generatePlaceholder = (type) => {
   const id = uid();
@@ -27,8 +27,3 @@ export const generateHandler = (type, obj) => {
 
   return { str: dataAttr, handlers };
 };
-
-export const generateHandlerAll = (batched) =>
-  reduceTemplates(
-    Object.entries(batched).map((args) => generateHandler(...args))
-  );
