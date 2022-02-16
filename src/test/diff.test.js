@@ -7,7 +7,8 @@ const createTodoItem = (mountCallback, unmountCallback) => (data) =>
     <div class="todo" ${data.keyString}="${data.id}">
       <h2
         class="todo__title"
-        ${{ onMount: mountCallback, onUnmount: unmountCallback }}
+        onMount=${mountCallback}
+        onUnmount=${unmountCallback}
       >
         ${data.name}
       </h2>
@@ -18,16 +19,9 @@ const createTodoList = (defaultData, Todo, keyString = 'key') => {
   const [data] = createHook({ todos: defaultData });
   const component = html`
     <h2>This is my Todo</h2>
-    <div
-      is-list
-      data-testid="todo-list"
-      keystring="${keyString}"
-      ${{
-        $children: data.$todos.map((todo) =>
-          render(Todo({ ...todo, keyString }))
-        ),
-      }}
-    ></div>
+    <div is-list data-testid="todo-list" keystring="${keyString}">
+      ${data.$todos.map((todo) => render(Todo({ ...todo, keyString })))}
+    </div>
   `;
 
   return { data, component };
@@ -149,19 +143,17 @@ describe('diffing', () => {
           ignore="data-id"
           data-id="${current.value}"
           data-testid="test-child-${i}"
-          ${{ $textContent: current.$value }}
-        ></div>
+        >
+          ${current.$value}
+        </div>
       `;
     };
     const component = html`
-      <div
-        is-list
-        ${{
-          $children: data.$value((n) =>
-            new Array(n).fill().map((_, i) => render(child(i)))
-          ),
-        }}
-      ></div>
+      <div is-list>
+        ${data.$value((n) =>
+          new Array(n).fill().map((_, i) => render(child(i)))
+        )}
+      </div>
     `;
     render(component, 'body');
 
@@ -224,14 +216,11 @@ describe('diffing', () => {
       `;
     };
     const parent = html`
-      <div
-        is-list
-        ${{
-          $children: data.$value((n) =>
-            new Array(n).fill().map((_, i) => render(child(i)))
-          ),
-        }}
-      ></div>
+      <div is-list>
+        ${data.$value((n) =>
+          new Array(n).fill().map((_, i) => render(child(i)))
+        )}
+      </div>
     `;
     render(parent, 'body');
 
@@ -279,13 +268,13 @@ describe('diffing', () => {
               )}
             </ul>
           </div>
-          <div class="todo__body" ${{ onUnmount: unmount }}>
-            <h2 class="todo__title" ${{ onMount: mount, onUnmount: unmount }}>
+          <div class="todo__body" onUnmount=${unmount}>
+            <h2 class="todo__title" onMount=${mount} onUnmount=${unmount}>
               ${data.name}
             </h2>
             <span class="todo__id">${data.id}</span>
           </div>
-          <div is-text class="todo__date" ${{ onUnmount: unmount }}>
+          <div is-text class="todo__date" onUnmount=${unmount}>
             <span>Due date: </span>${data.dueDate}
           </div>
         </div>
