@@ -47,7 +47,6 @@ const ELEMENTS_TO_ALWAYS_RERENDER = [
   'kbd',
   'cite',
 ];
-const IGNORE_UPDATE = ['data-proxyid'];
 const LIFECYCLE_METHODS = ['create', 'destroy', 'mount', 'unmount'];
 const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -65,7 +64,6 @@ export {
   BOOLEAN_ATTRS,
   DEFAULT_PROPS,
   ELEMENTS_TO_ALWAYS_RERENDER,
-  IGNORE_UPDATE,
   LIFECYCLE_METHODS,
   OBSERVER_CONFIG,
   REF,

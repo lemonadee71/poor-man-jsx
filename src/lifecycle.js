@@ -1,4 +1,7 @@
+import { OBSERVER_CONFIG } from './constants';
 import { traverse } from './utils/util';
+
+let observer;
 
 /**
  * Trigger lifecycle from root to all elements in the subtree
@@ -26,3 +29,15 @@ export const mutationCallback = (mutations) => {
     }
   });
 };
+
+export const enableLifecycle = () => {
+  observer = new MutationObserver(mutationCallback);
+  observer.observe(document.body, OBSERVER_CONFIG);
+};
+
+/**
+ * Disconnect the MutationObserver. This will stop watching for added/removed nodes.
+ * This means that `@mount`, `@unmount`, and `@destroy` will no longer work.
+ * @returns
+ */
+export const disableObserver = () => observer.disconnect();

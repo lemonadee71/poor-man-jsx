@@ -1,20 +1,9 @@
-import { ELEMENTS_TO_ALWAYS_RERENDER, IGNORE_UPDATE } from './constants';
+import { ELEMENTS_TO_ALWAYS_RERENDER } from './constants';
 import { getChildren } from './utils/util';
 
+const IGNORE_UPDATE_GLOBAL = ['data-proxyid'];
+
 // Diffing utils
-
-const getBehavior = (node, type) =>
-  node.getAttribute(`is-${type}`) !== null ||
-  node.getAttribute('behavior') === type;
-
-const isText = (node) => getBehavior(node, 'text');
-
-/**
- * Checks if element needs to be diffed
- * @param {HTMLElement} node
- * @returns {Boolean}
- */
-const shouldDiffNode = (node) => getBehavior(node, 'list');
 
 const getKeyString = (node) => node.getAttribute('keystring') || 'key';
 
@@ -26,10 +15,46 @@ const getKey = (node, keyString) =>
 const hasNoKey = (nodes, keyString) =>
   nodes.some((node) => !getKey(node, keyString));
 
+const getBehavior = (node, type) =>
+  node.getAttribute(`is-${type}`) !== null ||
+  node.getAttribute('behavior') === type;
+
+/**
+ * Checks if element will be treated as 'text' element
+ * @param {HTMLElement} node
+ * @returns {Boolean}
+ */
+const isText = (node) => getBehavior(node, 'text');
+
+/**
+ * Checks if element needs to be diffed
+ * @param {HTMLElement} node
+ * @returns {Boolean}
+ */
+const shouldDiffNode = (node) => getBehavior(node, 'list');
+
+/**
+ * Check if element should ignore updates
+ * @param {HTMLElement} node
+ * @returns {Boolean}
+ */
 const shouldSkip = (node) => node.getAttribute('ignore-all') !== null;
 
+/**
+ * Check if element should only update attributes and not content
+ * @param {HTMLElement} node
+ * @returns {Boolean}
+ */
 const shouldIgnoreContent = (node) =>
   node.getAttribute('ignore-content') !== null;
+
+/**
+ * Add an attribute to be ignored by diffing. This will be applied to all elements.
+ * Use attribute `ignore` for localized ignored attributes.
+ * @param  {...string} attr - the attribute to be ignored
+ * @returns
+ */
+const addIgnoredAttribute = (...attr) => IGNORE_UPDATE_GLOBAL.push(...attr);
 
 // Main
 
@@ -82,7 +107,7 @@ const updateAttributes = (oldNode, newNode) => {
 
   const attributesToIgnore = [
     ...(oldNode.getAttribute('ignore') || '').split(','),
-    ...IGNORE_UPDATE,
+    ...IGNORE_UPDATE_GLOBAL,
   ];
   const attributesToRemove = oldAttributes
     .filter((attr) => !newAttributes.map((a) => a.name).includes(attr.name))
@@ -151,4 +176,4 @@ const naiveDiff = (parent, newNodes) => {
   getChildren(parent).forEach((child, i) => patchNodes(child, newNodes[i]));
 };
 
-export { shouldDiffNode, naiveDiff };
+export { addIgnoredAttribute, shouldDiffNode, naiveDiff };
