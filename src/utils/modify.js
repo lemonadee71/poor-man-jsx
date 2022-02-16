@@ -76,4 +76,6 @@ export const modifyElement = (target, type, data, context = document) => {
     default:
       throw new Error('Invalid type.');
   }
+
+  return node;
 };

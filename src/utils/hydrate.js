@@ -8,13 +8,12 @@ import { modifyElement } from './modify';
  */
 export const hydrate = (context, handlers = []) =>
   handlers.forEach((handler) => {
-    const el = context.querySelector(handler.selector);
+    const node = modifyElement(
+      handler.selector,
+      handler.type,
+      handler.data,
+      context
+    );
 
-    if (!el) {
-      throw new Error(`Can't find node using selector ${handler.selector}.`);
-    }
-
-    modifyElement(handler.selector, handler.type, handler.data, context);
-
-    if (handler.remove) el.removeAttribute(handler.attr);
+    if (handler.remove) node.removeAttribute(handler.attr);
   });
