@@ -72,3 +72,15 @@ export const rebuildString = (fragments, values) =>
     (full, str, i) => `${full}${str}${fragments[i + 1]}`,
     fragments[0]
   );
+
+export const reduceTemplates = (arr) =>
+  arr.reduce(
+    (acc, item) => {
+      acc.str.push(item.str);
+      acc.handlers.push(...item.handlers);
+      acc.dict = { ...acc.dict, ...item.dict };
+
+      return acc;
+    },
+    { str: [], handlers: [], dict: {} }
+  );

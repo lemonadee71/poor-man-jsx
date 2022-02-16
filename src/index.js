@@ -2,7 +2,7 @@ import Template from './Template';
 import { BOOLEAN_ATTRS, IGNORE_UPDATE, OBSERVER_CONFIG } from './constants';
 import { createHook, addHooks, text, generateHookHandler } from './hooks';
 import { mutationCallback, triggerLifecycle } from './lifecycle';
-import { generateHandlerAll, reduceHandlers } from './utils/handler';
+import { generateHandlerAll } from './utils/handler';
 import { hydrate } from './utils/hydrate';
 import {
   isArray,
@@ -18,7 +18,13 @@ import {
   replacePlaceholderComments,
   replacePlaceholderIds,
 } from './utils/placeholder';
-import { uid, compose, getChildren, rebuildString } from './utils/util';
+import {
+  uid,
+  compose,
+  getChildren,
+  rebuildString,
+  reduceTemplates,
+} from './utils/util';
 import { batchTypes } from './utils/type';
 
 let preprocessors = [];
@@ -49,7 +55,7 @@ const parse = (value) => {
   }
 
   if (isArray(value)) {
-    const final = reduceHandlers(value.map(parse));
+    const final = reduceTemplates(value.map(parse));
 
     return {
       str: final.str.join(' '),
@@ -85,7 +91,7 @@ const parse = (value) => {
  * @returns {Template}
  */
 const html = (fragments, ...values) => {
-  const result = reduceHandlers(values.map(parse));
+  const result = reduceTemplates(values.map(parse));
   const htmlString = addPlaceholders(rebuildString(fragments, result.str));
 
   return new Template(htmlString, result.handlers, result.dict);
