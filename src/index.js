@@ -43,7 +43,7 @@ const parse = (value) => {
     const id = uid();
 
     return {
-      str: `<marker id="node-${id}" />`,
+      str: `<my-marker id="node-${id}"></my-marker>`,
       handlers: [{ type: 'node', selector: `#node-${id}`, data: { value } }],
       dict: {},
     };
