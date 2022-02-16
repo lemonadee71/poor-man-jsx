@@ -1,9 +1,8 @@
-import { uid } from './utils/id';
 import { isObject } from './utils/is';
 import { getType } from './utils/type';
 import { modifyElement } from './utils/modify';
 import { generateHandlerAll } from './utils/handler';
-import { compose, rebuildString, resolve } from './utils/util';
+import { uid, compose, rebuildString, resolve } from './utils/util';
 import { REF } from './constants';
 
 const Hooks = new WeakMap();

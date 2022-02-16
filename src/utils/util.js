@@ -1,4 +1,11 @@
 /**
+ * Creates a unique id
+ * @param {number} length
+ * @returns {string}
+ */
+export const uid = (length = 8) => Math.random().toString(36).slice(2, length);
+
+/**
  * Compose functions. Executes from left to right.
  * @param  {...Function} fns
  * @returns

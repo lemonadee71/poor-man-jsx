@@ -1,4 +1,4 @@
-import { uid } from './id';
+import { uid } from './util';
 
 const generatePlaceholder = (type) => {
   const id = uid();

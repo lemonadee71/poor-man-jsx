@@ -4,7 +4,6 @@ import { createHook, addHooks, text, generateHookHandler } from './hooks';
 import { mutationCallback, triggerLifecycle } from './lifecycle';
 import { generateHandlerAll, reduceHandlers } from './utils/handler';
 import { hydrate } from './utils/hydrate';
-import { uid } from './utils/id';
 import {
   isArray,
   isFunction,
@@ -19,7 +18,7 @@ import {
   replacePlaceholderComments,
   replacePlaceholderIds,
 } from './utils/placeholder';
-import { compose, getChildren, rebuildString } from './utils/util';
+import { uid, compose, getChildren, rebuildString } from './utils/util';
 import { batchTypes } from './utils/type';
 
 let preprocessors = [];
