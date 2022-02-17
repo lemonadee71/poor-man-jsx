@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/dom';
-import { createHook, html, render } from '..';
+import { createHook, html, render, renderArray } from '..';
 import '@testing-library/jest-dom/extend-expect';
 
 const createTodoItem = (mountCallback, unmountCallback) => (data) =>
@@ -20,7 +20,7 @@ const createTodoList = (defaultData, Todo, keyString = 'key') => {
   const component = html`
     <h2>This is my Todo</h2>
     <div is-list data-testid="todo-list" keystring="${keyString}">
-      ${data.$todos.map((todo) => render(Todo({ ...todo, keyString })))}
+      ${renderArray(data.$todos, (todo) => Todo({ ...todo, keyString }))}
     </div>
   `;
 
