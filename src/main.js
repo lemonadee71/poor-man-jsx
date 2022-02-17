@@ -8,6 +8,7 @@ import {
   isNode,
   isNullOrUndefined,
   isObject,
+  isString,
   isTemplate,
 } from './utils/is';
 import {
@@ -118,8 +119,9 @@ const render = (template, element) => {
   const fragment = createElementFromString(...Object.values(template));
 
   if (element) {
-    const parent =
-      typeof element === 'string' ? document.querySelector(element) : element;
+    const parent = isString(element)
+      ? document.querySelector(element)
+      : element;
 
     parent.append(fragment);
 

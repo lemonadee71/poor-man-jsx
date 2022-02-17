@@ -1,7 +1,7 @@
-import { isObject } from './utils/is';
+import { isHook, isObject } from './utils/is';
 import { getType, reduceBatchedObject } from './utils/type';
 import { modifyElement } from './utils/modify';
-import { uid, compose, rebuildString, resolve } from './utils/util';
+import { uid, compose, resolve } from './utils/util';
 import { REF } from './constants';
 
 const Hooks = new WeakMap();
@@ -36,6 +36,13 @@ const createHook = (value, seal = true) => {
   return [proxy, deleteHook];
 };
 
+/**
+ * Create a hook function
+ * @param {any} ref - the reference to the original object
+ * @param {string} prop - the prop to be observed
+ * @param {*} value - current value of ref[prop]
+ * @returns {HookFunction}
+ */
 const createHookFunction =
   (ref, prop, value) =>
   (trap = null) => ({
@@ -152,18 +159,18 @@ const addHooks = (target, hooks) => {
   const id = target.dataset.proxyid || uid();
   target.dataset.proxyid = id;
 
-  Object.entries(hooks).forEach(([rawKey, hook]) => {
-    if (!hook[REF]) throw new TypeError('Value must be a hook');
+  Object.entries(hooks).forEach(([rawKey, value]) => {
+    if (!isHook(value)) throw new TypeError('Value must be a hook');
 
     const [key, type] = getType(rawKey);
 
-    const bindedElements = Hooks.get(hook[REF]);
+    const bindedElements = Hooks.get(value[REF]);
     const handlers = bindedElements.get(id) || [];
     const handler = {
       type,
       target: key,
-      prop: hook.data.prop,
-      trap: hook.data.trap,
+      prop: value.data.prop,
+      trap: value.data.trap,
     };
 
     // store handler
@@ -172,39 +179,11 @@ const addHooks = (target, hooks) => {
     // init values
     modifyElement(target, handler.type, {
       name: handler.target,
-      value: resolve(hook.data.value, handler.trap),
+      value: resolve(value.data.value, handler.trap),
     });
   });
 
   return target;
 };
 
-/**
- * Helper for hooks. Only one hook can be passed.
- * @example
- * // To format a string, we will do
- * html`<h1 ${{ $textContent: hook.$str((value) => `The string is ${value}`) }}></h1>`
- * // but with `text`, we can instead do this to make it more concise
- * html`<h1 ${{ $textContent: text`The string is ${hook.$str}` }}></h1>`;
- *
- * @param {Array.<string>} fragments
- * @param  {...any} values
- * @returns
- */
-const text = (fragments, ...values) => {
-  const pos = values.findIndex((value) => value[REF]);
-  if (pos < 0) throw new Error('A hook is expected');
-
-  const left = values.slice(0, pos);
-  const right = values.slice(pos + 1);
-  const hook = values[pos];
-  const previousTrap = hook.data.trap;
-
-  const regen = (value) => rebuildString(fragments, [...left, value, ...right]);
-
-  hook.data.trap = previousTrap ? compose(previousTrap, regen) : regen;
-
-  return hook;
-};
-
-export { createHook, addHooks, generateHookHandler, text };
+export { createHook, addHooks, generateHookHandler };
