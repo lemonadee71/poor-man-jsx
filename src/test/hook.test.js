@@ -59,10 +59,10 @@ describe('state', () => {
       <ul
         data-testid="list"
         ${{
-          $children: state.$tags.map((tag) => render(html`<li>${tag}</li>`)),
+          children: state.$tags.map((tag) => render(html`<li>${tag}</li>`)),
         }}
       ></ul>
-      <p data-testid="paragraph" ${{ $textContent: state.$tags.join(' ') }}></p>
+      <p data-testid="paragraph" ${{ textContent: state.$tags.join(' ') }}></p>
     `;
     render(list, 'body');
     state.tags = ['bug', 'enhancement'];
@@ -81,7 +81,7 @@ describe('state', () => {
       <ul
         data-testid="list"
         ${{
-          $children: state.$tags
+          children: state.$tags
             .filter((tag) => tag.length < 5)
             .map((tag) => `tag: ${tag}`)
             .map((tag) => render(html`<li>${tag}</li>`)),
@@ -90,7 +90,7 @@ describe('state', () => {
       <p
         data-testid="paragraph"
         ${{
-          $textContent: state.$tags
+          textContent: state.$tags
             .reverse()
             .join(' ')
             .replace('enhancement', 'feature'),
@@ -108,7 +108,7 @@ describe('state', () => {
     const [hook] = createHook({ date: new Date() });
     const date = html`<h1
       data-testid="date"
-      ${{ $textContent: text`The time is ${hook.$date.toLocaleTimeString()}` }}
+      ${{ textContent: text`The time is ${hook.$date.toLocaleTimeString()}` }}
     ></h1>`;
 
     render(date, document.body);
@@ -148,7 +148,7 @@ describe('state', () => {
           mockCallback();
           obj.state.value = e.target.value;
         })}
-        <p data-testid="state text" ${{ $textContent: obj.state.$value }}></p>
+        <p data-testid="state text" ${{ textContent: obj.state.$value }}></p>
       `;
       root.append(render(input));
 
@@ -178,7 +178,7 @@ describe('state', () => {
         <p
           data-testid="age text"
           ${{
-            $textContent: obj.state.$age((age) => {
+            textContent: obj.state.$age((age) => {
               mockCallback();
               return `Your age is an ${age % 2 === 0 ? 'even' : 'odd'} number`;
             }),
