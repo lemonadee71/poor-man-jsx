@@ -34,9 +34,9 @@ export const getType = (key) => {
   return [k.replace(/^(\$|@|on|style_)/gi, ''), type];
 };
 
-export const batchTypes = (obj) => {
+export const batchByType = (obj, criteria) => {
   const batched = Object.entries(obj).reduce((acc, [rawKey, value]) => {
-    const [key, type] = getType(rawKey);
+    const [key, type] = criteria({ key: rawKey, value });
 
     if (!acc[type]) acc[type] = {};
     acc[type][key] = value;
@@ -44,7 +44,18 @@ export const batchTypes = (obj) => {
     return acc;
   }, {});
 
-  if (batched.hook) batched.hook = batchTypes(batched.hook);
+  return batched;
+};
+
+export const batchTypes = (obj) => {
+  const batched = batchByType(obj, ({ key, value }) =>
+    isHook(value) ? [key.replace('$', ''), 'hook'] : getType(key)
+  );
+
+  if (batched.hook) {
+    // remove prefix since we already determined that items are of type 'hook'
+    batched.hook = batchByType(obj, ({ key }) => getType(key.replace('$', '')));
+  }
 
   return batched;
 };
