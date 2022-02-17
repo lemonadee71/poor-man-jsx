@@ -118,6 +118,8 @@ export const replacePlaceholderIds = (root, dict) => {
           );
         }
 
+        // clear id
+        node.textContent = '';
         addHooks(node, { children: value });
       }
     }
