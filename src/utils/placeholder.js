@@ -1,9 +1,9 @@
-import { addHooks, text as textHook } from '../hooks';
+import { addHooks } from '../hooks';
 import { VALUE_MAP } from '../constants';
 import { isHook } from './is';
 import { modifyElement } from './modify';
 import { getType } from './type';
-import { traverse } from './util';
+import { compose, rebuildString, resolve, traverse } from './util';
 
 const PLACEHOLDER_PREFIX = 'placeholder-';
 
@@ -70,15 +70,19 @@ export const replacePlaceholderIds = (root, dict) => {
 
       if (match) {
         const id = match[0].split(':')[1];
-        let value = dict[id];
+        const value = dict[id];
 
         if (isHook(value)) {
           const name = VALUE_MAP[attr.name] || attr.name;
 
           // preserve the position of the hook in the string
           if (match[0] !== attr.value.trim()) {
-            const [left, right] = attr.value.split(match[0]);
-            value = textHook([left, right], value);
+            const previousTrap = value.data.trap;
+
+            value.data.trap = compose(
+              (x) => resolve(x, previousTrap),
+              (x) => rebuildString(attr.value.split(match[0]), [x])
+            );
           }
 
           addHooks(node, { [name]: value });
@@ -99,15 +103,19 @@ export const replacePlaceholderIds = (root, dict) => {
 
       if (match) {
         const id = match[0].split(':')[1];
-        let value = dict[id];
+        const value = dict[id];
 
         if (!isHook(value)) {
           throw new TypeError('You can only pass a hook to body');
         }
 
         if (match[0] !== text) {
-          const [left, right] = text.split(match[0]);
-          value = textHook([left, right], value);
+          const previousTrap = value.data.trap;
+
+          value.data.trap = compose(
+            (x) => resolve(x, previousTrap),
+            (x) => rebuildString(text.split(match[0]), [x])
+          );
         }
 
         addHooks(node, { children: value });
