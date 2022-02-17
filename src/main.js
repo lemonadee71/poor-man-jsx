@@ -1,5 +1,8 @@
-import { generateHookHandler } from './hooks';
+import Template from './Template';
+import { addHooks } from './hooks';
 import { triggerLifecycle } from './lifecycle';
+import { preprocess } from './preprocess';
+import { generateHandler } from './utils/handler';
 import { hydrate } from './utils/hydrate';
 import {
   isArray,
@@ -18,8 +21,6 @@ import {
 } from './utils/placeholder';
 import { uid, getChildren, rebuildString, reduceTemplates } from './utils/util';
 import { batchTypes, reduceBatchedObject } from './utils/type';
-import Template from './Template';
-import { preprocess } from './preprocess';
 
 // the main parser
 const parse = (value) => {
@@ -55,13 +56,19 @@ const parse = (value) => {
 
   if (isObject(value)) {
     const { hook, ...otherTypes } = batchTypes(value);
-    const blank = { str: [], handlers: [] };
+    const blank = { str: '', handlers: [] };
 
     const a = reduceBatchedObject(otherTypes);
-    const b = hook ? generateHookHandler(hook) : blank;
+
+    const b = hook
+      ? // add hooks at creation
+        generateHandler('lifecycle', {
+          create: (e) => addHooks(e.target, hook),
+        })
+      : blank;
 
     return {
-      str: [...a.str, ...b.str].join(' '),
+      str: [...a.str, b.str].join(' '),
       handlers: [a.handlers, b.handlers].flat(2),
       dict: {},
     };
