@@ -3,7 +3,6 @@ import { addHooks } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { preprocess } from './preprocess';
 import { generateHandler } from './utils/handler';
-import { hydrate } from './utils/hydrate';
 import {
   isArray,
   isFunction,
@@ -21,6 +20,7 @@ import {
 } from './utils/placeholder';
 import { uid, getChildren, rebuildString, reduceTemplates } from './utils/util';
 import { batchTypes, reduceBatchedObject } from './utils/type';
+import { modifyElement } from './utils/modify';
 
 // the main parser
 const parse = (value) => {
@@ -104,7 +104,17 @@ const createElementFromString = (str, handlers = [], dict = {}) => {
   const allHandlers = [...handlers, ...extraHandlers];
   const fragment = document.createRange().createContextualFragment(final);
 
-  hydrate(fragment, allHandlers);
+  allHandlers.forEach((handler) => {
+    const node = modifyElement(
+      handler.selector,
+      handler.type,
+      handler.data,
+      fragment
+    );
+
+    if (handler.remove) node.removeAttribute(handler.attr);
+  });
+
   getChildren(fragment).forEach((node) => {
     replacePlaceholderComments(node);
     replacePlaceholderIds(node, dict);
