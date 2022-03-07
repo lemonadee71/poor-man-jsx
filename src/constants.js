@@ -48,7 +48,6 @@ const ELEMENTS_TO_ALWAYS_RERENDER = [
   'cite',
 ];
 const LIFECYCLE_METHODS = ['create', 'destroy', 'mount', 'unmount'];
-const OBSERVER_CONFIG = { childList: true, subtree: true };
 
 const VALUE_MAP = {
   textcontent: 'textContent',
@@ -65,7 +64,6 @@ export {
   DEFAULT_PROPS,
   ELEMENTS_TO_ALWAYS_RERENDER,
   LIFECYCLE_METHODS,
-  OBSERVER_CONFIG,
   REF,
   VALUE_MAP,
 };

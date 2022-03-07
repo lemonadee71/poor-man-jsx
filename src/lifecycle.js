@@ -1,7 +1,7 @@
-import { OBSERVER_CONFIG } from './constants';
 import { traverse } from './utils/util';
 
 let observer;
+const OBSERVER_CONFIG = { childList: true, subtree: true };
 
 /**
  * Trigger lifecycle from root to all elements in the subtree
