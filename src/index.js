@@ -1,6 +1,6 @@
 import { addIgnoredAttribute } from './diffing';
 import { createHook, addHooks } from './hooks';
-import { enableLifecycle, disableObserver } from './lifecycle';
+import { enableLifecycle, disableLifecycle } from './lifecycle';
 import { html, render } from './main';
 import { addPreprocessor, removePreprocessor } from './preprocess';
 
@@ -11,7 +11,7 @@ const settings = {
   addIgnoredAttribute,
   addPreprocessor,
   removePreprocessor,
-  disableObserver,
+  disableLifecycle,
 };
 
 export { html, render, createHook, addHooks };

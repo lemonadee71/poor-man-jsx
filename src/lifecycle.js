@@ -40,4 +40,4 @@ export const enableLifecycle = () => {
  * This means that `@mount`, `@unmount`, and `@destroy` will no longer work.
  * @returns
  */
-export const disableObserver = () => observer.disconnect();
+export const disableLifecycle = () => observer.disconnect();
