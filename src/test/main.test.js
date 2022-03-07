@@ -261,48 +261,23 @@ describe('html and render', () => {
     );
   });
 
-  describe('supports preprocessors', () => {
-    const preprocessor1 = (str) => str.replace(/x-/g, 'data-');
-    const preprocessor2 = (str) => {
-      const text = str.match(/data-text="(\w+)"/)[1];
+  it('supports preprocessors', () => {
+    const preprocessor = (str) => str.replace(/x-/g, 'data-');
 
-      return [
-        str,
-        [
-          {
-            type: 'prop',
-            selector: '[data-text]',
-            data: { name: 'textContent', value: text },
-          },
-        ],
-      ];
+    PoorManJSX.onBeforeCreation(preprocessor);
+    render(html`<div x-testid="preprocessed"></div>`, root);
+
+    expect(screen.getByTestId('preprocessed')).toBeInTheDocument();
+  });
+
+  it('supports postprocessors', () => {
+    const postprocessor = (el) => {
+      el.textContent = 'Hello, World!';
     };
-    const preprocessor3 = (str) => str.replace(/div/g, 'main');
 
-    it('that returns a string', () => {
-      PoorManJSX.addPreprocessor(preprocessor1);
-      render(html`<div x-testid="preprocessed1"></div>`, root);
+    PoorManJSX.onAfterCreation(postprocessor);
+    render(html`<div data-testid="postprocessed"></div>`, root);
 
-      expect(screen.getByTestId('preprocessed1')).toMatchSnapshot();
-    });
-
-    it('with extra handlers', () => {
-      PoorManJSX.addPreprocessor(preprocessor2);
-
-      render(
-        html`<div data-text="test" data-testid="preprocessed2"></div>`,
-        root
-      );
-
-      expect(screen.getByTestId('preprocessed2')).toMatchSnapshot();
-    });
-
-    it('supports multiple preprocessors', () => {
-      PoorManJSX.addPreprocessor([preprocessor1, preprocessor3], preprocessor2);
-
-      render(html`<div x-text="test" x-testid="preprocessed3"></div>`, root);
-
-      expect(screen.getByTestId('preprocessed3')).toMatchSnapshot();
-    });
+    expect(screen.getByText('Hello, World!')).toBeInTheDocument();
   });
 });

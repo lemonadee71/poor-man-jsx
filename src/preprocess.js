@@ -1,51 +1,42 @@
 import { isArray } from './utils/is';
 import { compose } from './utils/util';
 
-let preprocessors = [];
+const beforeCreate = [];
+const afterCreate = [];
 
 /**
- * Adds a preprocessor. Preprocessors are used to process the html string
- * before rendering it.
- * @param  {...Function|Array.<Function>} processors
+ * Add a callback that will process the html string before creation
+ * @param  {...Function|Array.<Function>} callback
  * @returns
  */
-export const addPreprocessor = (...processors) =>
-  preprocessors.push(...processors);
+export const onBeforeCreation = (...callback) => beforeCreate.push(...callback);
 
 /**
- * Removes a preprocessor
- * @param {Function} processor - the function to remove
+ * Add a callback that will be called after `template` is turned to an element.
+ * Callback will be called only for the direct children of the created DocumentFragment
+ * @param  {...Function|Array.<Function>} callback
+ * @returns
  */
-export const removePreprocessor = (processor) => {
-  preprocessors = preprocessors.filter((fn) => fn !== processor);
-};
+export const onAfterCreation = (...callback) => afterCreate.push(...callback);
 
 /**
  * Process an html string
- * @param {string} str
+ * @param {string} htmlString
  * @returns {[string, Array.<Handler>]}
  */
-export const preprocess = (str) => {
-  const handlers = [];
-  let htmlString = str;
+export const preprocess = (htmlString) =>
+  beforeCreate.reduce(
+    (result, fn) => (isArray(fn) ? compose(...fn)(result) : fn(result)),
+    htmlString
+  );
 
-  preprocessors.forEach((processor) => {
-    let result;
-    if (isArray(processor)) {
-      result = compose(...processor)(htmlString);
-    } else {
-      result = processor(htmlString);
-    }
-
-    if (isArray(result)) {
-      htmlString = result[0];
-      handlers.push(...(result[1] || []));
-    } else if (typeof result === 'string') {
-      htmlString = result;
-    } else {
-      throw new Error('Preprocessor must return a string or an array');
-    }
+/**
+ * Run after-creation callbacks on an element
+ * @param {HTMLElement} element
+ */
+export const postprocess = (element) => {
+  afterCreate.forEach((fn) => {
+    if (isArray(fn)) compose(...fn)(element);
+    else fn(element);
   });
-
-  return [htmlString, handlers];
 };

@@ -1,7 +1,7 @@
 import Template from './Template';
 import { addHooks } from './hooks';
 import { triggerLifecycle } from './lifecycle';
-import { preprocess } from './preprocess';
+import { postprocess, preprocess } from './preprocess';
 import { generateHandler } from './utils/handler';
 import {
   isArray,
@@ -102,11 +102,12 @@ const html = (fragments, ...values) => {
  * @returns {DocumentFragment}
  */
 const createElementFromString = (str, handlers = [], dict = {}) => {
-  const [final, extraHandlers] = preprocess(str);
-  const allHandlers = [...handlers, ...extraHandlers];
-  const fragment = document.createRange().createContextualFragment(final);
+  const fragment = document
+    .createRange()
+    .createContextualFragment(preprocess(str));
 
-  allHandlers.forEach((handler) => {
+  // hydrate the created element based on data from handlers
+  handlers.forEach((handler) => {
     const node = modifyElement(
       handler.selector,
       handler.type,
@@ -118,9 +119,14 @@ const createElementFromString = (str, handlers = [], dict = {}) => {
   });
 
   getChildren(fragment).forEach((node) => {
+    // remove placeholders and add actual text
     replacePlaceholderComments(node);
+    // process all placeholder ids and hydrate with respective values
     replacePlaceholderIds(node, dict);
+    // trigger `create`
     triggerLifecycle('create', node);
+    // run afterCreation callbacks
+    postprocess(node);
   });
 
   return fragment;
