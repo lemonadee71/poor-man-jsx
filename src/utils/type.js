@@ -1,4 +1,3 @@
-import { generateHandler } from './handler';
 import {
   isDefaultProp,
   isEventListener,
@@ -6,7 +5,6 @@ import {
   isLifecycleMethod,
   isStyleAttribute,
 } from './is';
-import { reduceTemplates } from './util';
 
 export const getType = (key) => {
   // Any unrecognizable key will be treated as attr
@@ -48,8 +46,3 @@ export const batchTypes = (obj) => {
 
   return batched;
 };
-
-export const reduceBatchedObject = (batched) =>
-  reduceTemplates(
-    Object.entries(batched).map((args) => generateHandler(...args))
-  );

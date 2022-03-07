@@ -19,7 +19,7 @@ import {
   replacePlaceholderIds,
 } from './utils/placeholder';
 import { uid, getChildren, rebuildString, reduceTemplates } from './utils/util';
-import { batchTypes, reduceBatchedObject } from './utils/type';
+import { batchTypes } from './utils/type';
 import { modifyElement } from './utils/modify';
 
 // the main parser
@@ -58,7 +58,9 @@ const parse = (value) => {
     const { hook, ...otherTypes } = batchTypes(value);
     const blank = { str: '', handlers: [] };
 
-    const a = reduceBatchedObject(otherTypes);
+    const a = reduceTemplates(
+      Object.entries(otherTypes).map((args) => generateHandler(...args))
+    );
 
     const b = hook
       ? // add hooks at creation
