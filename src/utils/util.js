@@ -84,3 +84,16 @@ export const reduceTemplates = (arr) =>
     },
     { str: [], handlers: [], dict: {} }
   );
+
+/**
+ * Adds another trap to the hook
+ * @param {Hook} hook
+ * @param {Function} callback
+ * @returns {Hook}
+ */
+export const addTrap = (hook, callback) => {
+  const previousTrap = hook.data.trap;
+  hook.data.trap = compose((value) => resolve(value, previousTrap), callback);
+
+  return hook;
+};

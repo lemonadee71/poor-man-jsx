@@ -3,7 +3,7 @@ import { VALUE_MAP } from '../constants';
 import { isHook } from './is';
 import { modifyElement } from './modify';
 import { getType } from './type';
-import { compose, rebuildString, resolve, traverse } from './util';
+import { addTrap, rebuildString, traverse } from './util';
 
 const PLACEHOLDER_PREFIX = 'placeholder-';
 
@@ -77,11 +77,8 @@ export const replacePlaceholderIds = (root, dict) => {
 
           // preserve the position of the hook in the string
           if (match[0] !== attr.value.trim()) {
-            const previousTrap = value.data.trap;
-
-            value.data.trap = compose(
-              (x) => resolve(x, previousTrap),
-              (x) => rebuildString(attr.value.split(match[0]), [x])
+            addTrap(value, (x) =>
+              rebuildString(attr.value.split(match[0]), [x])
             );
           }
 
@@ -110,12 +107,7 @@ export const replacePlaceholderIds = (root, dict) => {
         }
 
         if (match[0] !== text) {
-          const previousTrap = value.data.trap;
-
-          value.data.trap = compose(
-            (x) => resolve(x, previousTrap),
-            (x) => rebuildString(text.split(match[0]), [x])
-          );
+          addTrap(value, (x) => rebuildString(text.split(match[0]), [x]));
         }
 
         // clear id
