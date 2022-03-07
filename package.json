@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "prepublish": "npm run build & git commit -am \"chore: Update build file\"",
+    "prepublish": "npm run build",
     "test": "jest --env=jsdom",
     "watch": "jest --watch --env=jsdom",
     "build": "webpack --mode production"
