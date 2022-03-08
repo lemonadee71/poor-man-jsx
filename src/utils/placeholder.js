@@ -69,11 +69,12 @@ export const replacePlaceholderIds = (root, dict) => {
       const match = attr.value.trim().match(idPlaceholderRegex);
 
       if (match) {
+        let [name, type] = getType(attr.name); //eslint-disable-line
         const id = match[0].split(':')[1];
         const value = dict[id];
 
         if (isHook(value)) {
-          const name = VALUE_MAP[attr.name] || attr.name;
+          name = VALUE_MAP[attr.name] || attr.name;
 
           // preserve the position of the hook in the string
           if (match[0] !== attr.value.trim()) {
@@ -84,11 +85,12 @@ export const replacePlaceholderIds = (root, dict) => {
 
           addHooks(node, { [name]: value });
         } else {
-          const [name, type] = getType(attr.name);
           modifyElement(node, type, { name, value });
         }
 
-        node.removeAttribute(attr.name);
+        if (type !== 'attr' && name !== 'style') {
+          node.removeAttribute(attr.name);
+        }
       }
     });
 
