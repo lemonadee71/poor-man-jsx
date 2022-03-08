@@ -69,13 +69,11 @@ export const replacePlaceholderIds = (root, dict) => {
       const match = attr.value.trim().match(idPlaceholderRegex);
 
       if (match) {
-        let [name, type] = getType(attr.name); //eslint-disable-line
+        const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
         const id = match[0].split(':')[1];
         const value = dict[id];
 
         if (isHook(value)) {
-          name = VALUE_MAP[attr.name] || attr.name;
-
           // preserve the position of the hook in the string
           if (match[0] !== attr.value.trim()) {
             addTrap(value, (x) =>
