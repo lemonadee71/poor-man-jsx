@@ -95,12 +95,6 @@ const html = (fragments, ...values) => {
   return new Template(htmlString, result.handlers, result.dict);
 };
 
-/**
- * Creates an element from string with `createContextualFragment`
- * @param {String} str - the html string to be rendered
- * @param {Array.<Handler>} handlers - array of handlers
- * @returns {DocumentFragment}
- */
 const createElementFromString = (str, handlers = [], dict = {}) => {
   const fragment = document
     .createRange()

@@ -6,7 +6,9 @@ import { removeChildren } from './util';
  * Modify an element
  * @param {string|HTMLElement} target - an element or a selector
  * @param {string} type - the modification type
- * @param {DataObject} data
+ * @param {Object} data - the data to be hydrated
+ * @param {string} data.name - property name
+ * @param {any} data.value - property value
  * @param {HTMLElement} context - the context where querySelector will be called
  * @returns
  */

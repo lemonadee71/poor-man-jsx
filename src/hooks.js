@@ -36,13 +36,6 @@ const createHook = (value, seal = true) => {
   return [proxy, deleteHook];
 };
 
-/**
- * Create a hook function
- * @param {any} ref - the reference to the original object
- * @param {string} prop - the prop to be observed
- * @param {*} value - current value of ref[prop]
- * @returns {HookFunction}
- */
 const createHookFunction =
   (ref, prop, value) =>
   (trap = null) => ({

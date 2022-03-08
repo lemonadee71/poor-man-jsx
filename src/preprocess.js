@@ -22,7 +22,7 @@ export const onAfterCreation = (...callback) => afterCreate.push(...callback);
 /**
  * Process an html string
  * @param {string} htmlString
- * @returns {[string, Array.<Handler>]}
+ * @returns {string}
  */
 export const preprocess = (htmlString) =>
   beforeCreate.reduce(
