@@ -41,9 +41,22 @@ export const modifyElement = (target, type, data, context = document) => {
         once: data.name === 'create',
       });
       break;
-    case 'listener':
-      node.addEventListener(data.name, data.value);
+    case 'listener': {
+      const [eventName, ...options] = data.name.split('.');
+      const callback = options.includes('prevent')
+        ? (e) => {
+            data.value(e);
+            e.preventDefault();
+          }
+        : data.value;
+
+      node.addEventListener(eventName, callback, {
+        once: options.includes('once'),
+        capture: options.includes('capture'),
+      });
+
       break;
+    }
     case 'node':
       node.replaceWith(data.value);
       break;
