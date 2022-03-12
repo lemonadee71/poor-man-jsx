@@ -7,7 +7,6 @@ import {
 import Template from '../Template';
 
 const mockEl = document.createElement('div');
-const customAttributes = [];
 
 export const isNullOrUndefined = (value) =>
   value === null || value === undefined;
@@ -41,7 +40,6 @@ export const isLifecycleMethod = (key) => {
 export const isDefaultProp = (key) => DEFAULT_PROPS.includes(key);
 
 export const isStyleAttribute = (key) =>
-  !customAttributes.includes(key) &&
-  (key in mockEl.style || key.startsWith('style_'));
+  key in mockEl.style || key.startsWith('style_');
 
 export const isBooleanAttribute = (attr) => BOOLEAN_ATTRS.includes(attr);
