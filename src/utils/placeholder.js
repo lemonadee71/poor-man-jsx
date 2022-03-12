@@ -67,17 +67,19 @@ export const replacePlaceholderIds = (root, dict) => {
     // check if hook or function is passed in the attrs
     [...node.attributes].forEach((attr) => {
       const match = attr.value.trim().match(idPlaceholderRegex);
+      const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
 
       if (match) {
-        const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
         const id = match[0].split(':')[1];
         const value = dict[id];
 
         if (isHook(value)) {
+          const attrValue = attr.value.trim();
+
           // preserve the position of the hook in the string
-          if (match[0] !== attr.value.trim()) {
+          if (match[0] !== attrValue) {
             addTrap(value, (x) =>
-              rebuildString(attr.value.split(match[0]), [x])
+              rebuildString(attrValue.split(match[0]), [x])
             );
           }
 
@@ -85,10 +87,12 @@ export const replacePlaceholderIds = (root, dict) => {
         } else {
           modifyElement(node, type, { name, value });
         }
+      } else if (type === 'style' || type === 'prop') {
+        modifyElement(node, type, { name, value: attr.value });
+      }
 
-        if (type !== 'attr' && name !== 'style') {
-          node.removeAttribute(attr.name);
-        }
+      if (type !== 'attr' && name !== 'style') {
+        node.removeAttribute(attr.name);
       }
     });
 
