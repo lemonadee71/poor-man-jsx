@@ -1,6 +1,6 @@
 import { addHooks } from '../hooks';
 import { VALUE_MAP } from '../constants';
-import { isHook } from './is';
+import { isBooleanAttribute, isHook } from './is';
 import { modifyElement } from './modify';
 import { getType } from './type';
 import { addTrap, rebuildString, traverse } from './util';
@@ -66,7 +66,8 @@ export const replacePlaceholderIds = (root, dict) => {
   traverse(root, (node) => {
     // check if hook or function is passed in the attrs
     [...node.attributes].forEach((attr) => {
-      const match = attr.value.trim().match(idPlaceholderRegex);
+      const attrValue = attr.value.trim();
+      const match = attrValue.match(idPlaceholderRegex);
       const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
 
       if (match) {
@@ -74,8 +75,6 @@ export const replacePlaceholderIds = (root, dict) => {
         const value = dict[id];
 
         if (isHook(value)) {
-          const attrValue = attr.value.trim();
-
           // preserve the position of the hook in the string
           if (match[0] !== attrValue) {
             addTrap(value, (x) =>
@@ -87,12 +86,10 @@ export const replacePlaceholderIds = (root, dict) => {
         } else {
           modifyElement(node, type, { name, value });
         }
-      } else if (type === 'style' || type === 'prop') {
-        modifyElement(node, type, { name, value: attr.value });
-      }
 
-      if (type !== 'attr' && name !== 'style') {
-        node.removeAttribute(attr.name);
+        if (type !== 'attr' && name !== 'style') {
+          node.removeAttribute(attr.name);
+        }
       }
     });
 
@@ -119,5 +116,31 @@ export const replacePlaceholderIds = (root, dict) => {
         addHooks(node, { children: value });
       }
     }
+  });
+};
+
+/**
+ * Process all special attributes like `style_` and props like `html` and `text`.
+ * Will also process boolean attributes
+ * @param {HTMLElement} root
+ */
+export const processSpecialAttributes = (root) => {
+  traverse(root, (node) => {
+    [...node.attributes].forEach((attr) => {
+      const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
+
+      // process shortened properties
+      if (type === 'style' || (type === 'prop' && name !== 'style')) {
+        modifyElement(node, type, { name, value: attr.value });
+        node.removeAttribute(attr.name);
+
+        // process boolean attributes
+      } else if (type === 'attr' && isBooleanAttribute(attr.name)) {
+        // From MDN, 'the values "true" and "false" are not allowed on boolean attributes'
+        // but we don't check for other truthy values, just "true"
+        if (attr.value === 'true') node.setAttribute(attr.name, '');
+        else if (attr.value === 'false') node.removeAttribute(attr.name);
+      }
+    });
   });
 };

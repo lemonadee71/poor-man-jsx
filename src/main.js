@@ -15,6 +15,7 @@ import {
 } from './utils/is';
 import {
   addPlaceholders,
+  processSpecialAttributes,
   replacePlaceholderComments,
   replacePlaceholderIds,
 } from './utils/placeholder';
@@ -113,13 +114,10 @@ const createElementFromString = (str, handlers = [], dict = {}) => {
   });
 
   getChildren(fragment).forEach((node) => {
-    // remove placeholders and add actual text
     replacePlaceholderComments(node);
-    // process all placeholder ids and hydrate with respective values
     replacePlaceholderIds(node, dict);
-    // trigger `create`
+    processSpecialAttributes(node);
     triggerLifecycle('create', node);
-    // run afterCreation callbacks
     postprocess(node);
   });
 
