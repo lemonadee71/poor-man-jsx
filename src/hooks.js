@@ -88,22 +88,14 @@ const setter = (target, prop, value, receiver) => {
   const bindedElements = Hooks.get(target);
 
   bindedElements.forEach((handlers, id) => {
-    const selector = `[data-proxyid="${id}"]`;
-    const el = document.querySelector(selector);
-
-    if (el) {
-      handlers
-        .filter((handler) => handler.prop === prop)
-        .forEach((handler) => {
-          modifyElement(selector, handler.type, {
-            name: handler.target,
-            value: resolve(value, handler.trap),
-          });
+    handlers
+      .filter((handler) => handler.prop === prop)
+      .forEach((handler) => {
+        modifyElement(`[data-proxyid="${id}"]`, handler.type, {
+          name: handler.target,
+          value: resolve(value, handler.trap),
         });
-    } else {
-      // delete handler when the target is unreachable (most likely deleted)
-      bindedElements.delete(id);
-    }
+      });
   });
 
   return Reflect.set(target, prop, value, receiver);
@@ -135,6 +127,9 @@ const addHooks = (target, hooks) => {
 
     // store handler
     bindedElements.set(id, [...handlers, handler]);
+
+    // delete handlers when deleted
+    target.addEventListener('@destroy', () => bindedElements.delete(id));
 
     // init values
     modifyElement(target, handler.type, {
