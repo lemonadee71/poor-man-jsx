@@ -17,6 +17,8 @@ describe('html and render', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    PoorManJSX.removeBeforeCreation();
+    PoorManJSX.removeAfterCreation();
   });
 
   it('renders an element', () => {
