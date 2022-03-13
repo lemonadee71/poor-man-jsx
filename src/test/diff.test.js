@@ -298,10 +298,7 @@ describe('diffing', () => {
 
       setTimeout(() => {
         try {
-          expect(screen.getByTestId('todo-eat')).toHaveAttribute(
-            'checked',
-            'true'
-          );
+          expect(screen.getByTestId('todo-eat')).toHaveAttribute('checked');
           expect(getTitle(screen.getByTestId('todo-list'))).toBe(
             data.todos.map((todo) => todo.name).join()
           );
