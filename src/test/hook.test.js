@@ -1,188 +1,119 @@
-import { fireEvent, screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
+import { screen } from '@testing-library/dom';
 import { addHooks, createHook, html, render } from '..';
 
-/**
- * @jest-environment jsdom
- */
-
-// TODO: Refactor this for v3.0.0
-describe('state', () => {
-  // eslint-disable-next-line one-var
-  let root, mockCallback;
-  beforeEach(() => {
-    mockCallback = jest.fn(() => 'I am called');
-    root = document.createElement('div');
-    document.body.append(root);
-  });
-
+describe('hook', () => {
   afterEach(() => {
     document.body.innerHTML = '';
   });
 
-  const setup = (value, obj) => () => {
-    const [state, revoke] = createHook(value);
-    obj.state = state;
-    obj.revoke = revoke;
-  };
-
-  const teardown = (obj) => () => {
-    obj.revoke();
-    obj.state = null;
-    obj.revoke = null;
-  };
-
-  const createInput = (testid, callback) =>
-    html`
-      <input
-        type="text"
-        name="test"
-        data-testid="${testid}"
-        ${{
-          onInput: callback,
-        }}
-      />
-    `;
-
   it('is sealed', () => {
     const [state] = createHook({ test: 1 });
 
-    expect(state.$test.ref).toBe(undefined);
     expect(() => {
       state.prop = 'test';
     }).toThrowError();
   });
 
-  it('forwards first level methods', () => {
-    const [state] = createHook({ tags: [] });
-    const list = html`
-      <ul
-        data-testid="list"
-        ${{
-          children: state.$tags.map((tag) => render(html`<li>${tag}</li>`)),
-        }}
-      ></ul>
-      <p data-testid="paragraph" ${{ textContent: state.$tags.join(' ') }}></p>
-    `;
-    render(list, 'body');
-    state.tags = ['bug', 'enhancement'];
+  it('turns primitive to object', () => {
+    const [state] = createHook('test');
 
+    expect(state.value).toBe('test');
+  });
+
+  it('updates elements when watched value changed', () => {
+    const [state] = createHook('');
+    render(
+      html`<div data-testid="foo" ${{ textContent: state.$value }}></div>`,
+      'body'
+    );
+    state.value = 'Hello, World!';
+
+    expect(screen.getByTestId('foo')).toHaveTextContent('Hello, World!');
+  });
+
+  it('can be passed a callback', () => {
+    const [state] = createHook('');
+    const mockTrap = jest.fn((str) => str.split('').reverse().join(''));
+    render(
+      html`<div ${{ textContent: state.$value(mockTrap) }}></div>`,
+      'body'
+    );
+    state.value = 'test';
+
+    expect(screen.getByText('tset')).toBeInTheDocument();
+  });
+
+  it('allows calling of method directly', () => {
+    const [state] = createHook({ tags: '' });
+
+    render(
+      html`
+        <ul
+          data-testid="list"
+          ${{
+            children: state.$tags
+              .split(' ')
+              .map((tag) => `tag: ${tag}`)
+              .map((tag) => render(html`<li>${tag}</li>`))
+              .reverse(),
+          }}
+        ></ul>
+      `,
+      'body'
+    );
+    state.tags = ['bug', 'enhancement'].join(' ');
+
+    expect(screen.getByTestId('list').children.length).toBe(2);
     expect(screen.getByTestId('list')).toContainHTML(
-      '<li>bug</li><li>enhancement</li>'
-    );
-    expect(screen.getByTestId('paragraph')).toHaveTextContent(
-      'bug enhancement'
+      '<li>tag: enhancement</li><li>tag: bug</li>'
     );
   });
 
-  it('forwards method chains', () => {
-    const [state] = createHook({ tags: [] });
-    const list = html`
-      <ul
-        data-testid="list"
-        ${{
-          children: state.$tags
-            .filter((tag) => tag.length < 5)
-            .map((tag) => `tag: ${tag}`)
-            .map((tag) => render(html`<li>${tag}</li>`)),
-        }}
-      ></ul>
-      <p
-        data-testid="paragraph"
-        ${{
-          textContent: state.$tags
-            .reverse()
-            .join(' ')
-            .replace('enhancement', 'feature'),
-        }}
-      ></p>
-    `;
-    render(list, 'body');
-    state.tags = ['bug', 'enhancement'];
-
-    expect(screen.getByTestId('paragraph')).toHaveTextContent('feature bug');
-    expect(screen.getByTestId('list')).toContainHTML('<li>tag: bug</li>');
-  });
-
-  it('`addHooks` works', () => {
-    const [hook] = createHook('Test');
+  it('can be added using `addHooks`', () => {
+    const [hook] = createHook('test');
     const div = document.createElement('div');
     addHooks(div, { textContent: hook.$value });
 
     document.body.append(div);
-    hook.value = 'Another test';
+    hook.value = 'another test';
 
-    expect(div).toHaveTextContent('Another test');
+    expect(div).toHaveTextContent('another test');
   });
 
-  it('can be passed directly', () => {
-    const [hook] = createHook('red');
-    const p = html`<p data-testid="test-p">The color is ${hook.$value}</p>`;
-    render(p, document.body);
-
-    hook.value = 'blue';
-    expect(screen.getByTestId('test-p')).toHaveTextContent('The color is blue');
-  });
-
-  describe('primitive', () => {
-    const obj = {};
-    beforeEach(setup('test', obj));
-    afterEach(teardown(obj));
-
-    it('works', () => {
-      const input = html`
-        ${createInput('state input', (e) => {
-          mockCallback();
-          obj.state.value = e.target.value;
-        })}
-        <p data-testid="state text" ${{ textContent: obj.state.$value }}></p>
-      `;
-      root.append(render(input));
-
-      fireEvent.input(screen.getByTestId('state input'), {
-        target: { value: 'Hello, World!' },
-      });
-
-      expect(screen.getByTestId('state text')).toHaveAttribute('data-proxyid');
-      expect(screen.getByTestId('state input')).toHaveValue('Hello, World!');
-      expect(mockCallback).toHaveBeenCalled();
-      expect(screen.getByTestId('state text')).toHaveTextContent(
-        'Hello, World!'
+  describe('can be passed directly', () => {
+    it('to body', () => {
+      const [state] = createHook('world');
+      render(
+        html`<div data-testid="bar">Hello, ${state.$value}!</div>`,
+        'body'
       );
+      state.value = 'Shin';
+
+      expect(screen.getByTestId('bar')).toHaveTextContent('Hello, Shin!');
     });
-  });
 
-  describe('object', () => {
-    const obj = {};
-    beforeEach(setup({ name: 'Shin', age: 0 }, obj));
-    afterEach(teardown(obj));
-
-    it('works', () => {
-      const el = html`${createInput('name input', (e) => {
-          obj.state.name = e.target.value;
-        })}
-        <p data-testid="name text" ${{ $textContent: obj.state.$name }}></p>
-        <p
-          data-testid="age text"
-          ${{
-            textContent: obj.state.$age((age) => {
-              mockCallback();
-              return `Your age is an ${age % 2 === 0 ? 'even' : 'odd'} number`;
-            }),
-          }}
-        ></p> `;
-      root.append(render(el));
-
-      obj.state.age = 21;
-      fireEvent.input(screen.getByTestId('name input'), {
-        target: { value: 'Andrei' },
-      });
-
-      expect(mockCallback).toHaveBeenCalled();
-      expect(screen.getByTestId('age text')).toHaveTextContent(
-        'Your age is an odd number'
+    it('as attribute value', () => {
+      const [state] = createHook({ class: 'foo' });
+      render(
+        html`<div data-testid="test" class="myclass ${state.$class}"></div>`,
+        'body'
       );
-      expect(screen.getByTestId('name text')).toHaveTextContent('Andrei');
+      state.class = 'bar';
+
+      expect(screen.getByTestId('test')).toHaveClass('myclass', 'bar');
+    });
+
+    it('as value for special attributes', () => {
+      const [state] = createHook({ child: [] });
+      render(
+        html`<div data-testid="parent" children=${state.$child}></div>`,
+        'body'
+      );
+      state.child = render(html`<div data-testid="child"></div>`);
+
+      expect(screen.getByTestId('parent').children.length).toBe(1);
+      expect(screen.getByTestId('child')).toBeInTheDocument();
     });
   });
 });
