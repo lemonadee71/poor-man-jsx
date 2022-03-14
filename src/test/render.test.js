@@ -1,5 +1,5 @@
-import { screen } from '@testing-library/dom';
 import '@testing-library/jest-dom/extend-expect';
+import { screen } from '@testing-library/dom';
 import { html, render } from '..';
 
 describe('render', () => {
