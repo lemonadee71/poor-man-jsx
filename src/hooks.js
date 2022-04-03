@@ -88,14 +88,22 @@ const setter = (target, prop, value, receiver) => {
   const bindedElements = Hooks.get(target);
 
   bindedElements.forEach((handlers, id) => {
-    handlers
-      .filter((handler) => handler.prop === prop)
-      .forEach((handler) => {
-        modifyElement(`[data-proxyid="${id}"]`, handler.type, {
-          name: handler.target,
-          value: resolve(value, handler.trap),
+    const el = document.querySelector(`[data-proxyid="${id}"]`);
+
+    // check if element exists
+    // otherwise remove handlers
+    if (el) {
+      handlers
+        .filter((handler) => handler.prop === prop)
+        .forEach((handler) => {
+          modifyElement(el, handler.type, {
+            name: handler.target,
+            value: resolve(value, handler.trap),
+          });
         });
-      });
+    } else {
+      bindedElements.delete(id);
+    }
   });
 
   return Reflect.set(target, prop, value, receiver);
