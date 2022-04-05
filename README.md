@@ -160,6 +160,20 @@ or you could just pass a text node to achieve the same result
 const p = html`<p id="test">${document.createTextNode(str)}</p>`;
 ```
 
+#### Event listener options
+
+You can also specify event listener options when writing your elements. At the moment you can use `prevent`, `once`, and `capture`.
+
+```js
+// prevent is the same as calling e.preventDefault()
+html`<form onSubmit.prevent=${callback}>...</form>`;
+
+// you can also add multiple options
+html`<form onSubmit.prevent.once=${callback}>...</form>`;
+```
+
+> `once` and `capture` are the same options you would pass to `addEventListener`
+
 ### Special Attributes
 
 There are what we call special attributes: `text`, `html`, `children`, and `style_`. `text` and `html` are basically just shortened names for `textContent` and `innerHTML`. `children` is like what it is in React, the children of the element.
@@ -292,7 +306,7 @@ render(Clock(), document.body);
 
 Let's take a look at the code more closely. _**Hooking**_ an object to element happens in this line
 
-```html
+```js
 <h2>It is ${state.$date.toLocaleTimeString()}</h2>
 ```
 
