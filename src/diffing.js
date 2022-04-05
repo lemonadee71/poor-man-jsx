@@ -1,4 +1,5 @@
 import { ELEMENTS_TO_ALWAYS_RERENDER } from './constants';
+import { triggerLifecycle } from './lifecycle';
 import { getChildren } from './utils/util';
 
 const IGNORE_UPDATE_GLOBAL = ['data-proxyid'];
@@ -153,6 +154,11 @@ const patchNodes = (oldNode, newNode) => {
       patchNodes(child, newNode.children[i])
     );
   }
+
+  // dispose of the new node
+  // this is to remove subscriptions created on creation
+  // it is advisable though that subscriptions be made on mount
+  triggerLifecycle('destroy', newNode);
 };
 
 /**
