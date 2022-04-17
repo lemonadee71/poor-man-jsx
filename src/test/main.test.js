@@ -127,15 +127,21 @@ describe('html and render', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('style attributes can be a direct key in objects', () => {
+  it('style attributes needs to be prefixed with `style_` when used in objects', () => {
     const style = {
-      height: '20px',
-      width: '300px',
+      style_height: '20px',
+      style_width: '300px',
       border: '1px solid black',
     };
     render(html`<div data-testid="style-object" ${style}></div>`, 'body');
 
-    expect(screen.getByTestId('style-object')).toHaveStyle(style);
+    expect(screen.getByTestId('style-object')).not.toHaveStyle({
+      border: '1px solid black',
+    });
+    expect(screen.getByTestId('style-object')).toHaveStyle({
+      height: style.style_height,
+      width: style.style_width,
+    });
   });
 
   it('process special prop `children`', () => {
