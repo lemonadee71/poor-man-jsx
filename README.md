@@ -53,6 +53,7 @@ Aside from the usual way of writing attributes like in the examples above, you c
 const props = {
   class: 'my-header',
   innerHTML: '<h1>Title</h1>',
+  style: 'height: 30px; width: 100%;',
   onClick: () => alert('Header clicked!'),
 };
 const header = html`<header ${props}></header>`;
@@ -63,17 +64,19 @@ render(header, document.body);
 Will result in
 
 ```html
-<header class="my-header"><h1>Title</h1></header>
+<header style="height: 30px; width: 100%;" class="my-header">
+  <h1>Title</h1>
+</header>
 ```
 
 > The object should be within the opening tag of the element
 
-Note that when using an object, keys that are CSS properties will be treated as inline style not as an attribute. So this
+When using an object, you can set style attributes individually by prefixing the names with `style_`. So this
 
 ```js
 const style = {
-  height: '30px',
-  width: '100%',
+  style_height: '30px',
+  style_width: '100%',
   display: 'flex',
   innerHTML: '<h1>Title</h1>',
 };
@@ -85,20 +88,10 @@ render(header, document.body);
 will result in
 
 ```html
-<header style="height: 30px; width: 100%; display: flex;">
+<header style="height: 30px; width: 100%;" display="flex">
   <h1>Title</h1>
 </header>
 ```
-
-instead of
-
-```html
-<header height="30px" width="100%" display="flex">
-  <h1>Title</h1>
-</header>
-```
-
-So if there's a naming conflict, use `data-` attributes instead.
 
 > Use camelCase for CSS properties
 
@@ -190,7 +183,7 @@ console.log(document.getElementById('test').textContent); // <strong>This will r
 
 > Using the non-shortened name e.g. `textContent` would also work.
 
-`style_` attributes are useful when dealing with hooks which will be discussed later.
+As discussed earlier, if you want to set a style attribute individually using an object, you need to use `style_`. This is also applicable for attribute names. This is useful when dealing with hooks which will be discussed later.
 
 ```js
 const header = html`
