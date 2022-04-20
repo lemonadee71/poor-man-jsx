@@ -82,7 +82,9 @@ export const replacePlaceholderIds = (root, dict) => {
             );
           }
 
-          addHooks(node, { [name]: value });
+          // preserve name for style_ attrs
+          // since it's going for another round of getType
+          addHooks(node, { [type === 'style' ? attr.name : name]: value });
         } else {
           modifyElement(node, type, { name, value });
         }
