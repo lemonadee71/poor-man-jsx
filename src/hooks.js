@@ -124,6 +124,11 @@ const addHooks = (target, hooks) => {
 
     const [key, type] = getType(rawKey);
 
+    if (['listener', 'lifecycle'].includes(type))
+      throw new Error(
+        "You can't dynamically set lifecycle methods or event listeners"
+      );
+
     const bindedElements = Hooks.get(value[REF]);
     const handlers = bindedElements.get(id) || [];
     const handler = {
