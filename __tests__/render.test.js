@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { html, render } from '..';
+import { html, render } from '../src';
 
 describe('render', () => {
   afterEach(() => {

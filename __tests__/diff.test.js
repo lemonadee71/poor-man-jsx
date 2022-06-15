@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { createHook, html, render } from '..';
+import { createHook, html, render } from '../src';
 
 const getKeys = (node) =>
   [...node.children]

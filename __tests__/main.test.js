@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, screen } from '@testing-library/dom';
-import PoorManJSX, { html, render } from '..';
+import PoorManJSX, { html, render } from '../src';
 
 describe('html and render', () => {
   const mockCallback = jest.fn(() => true);

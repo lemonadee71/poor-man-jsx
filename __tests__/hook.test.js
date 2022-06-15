@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { addHooks, createHook, html, render } from '..';
+import { addHooks, createHook, html, render } from '../src';
 
 describe('hook', () => {
   afterEach(() => {

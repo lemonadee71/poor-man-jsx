@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/extend-expect';
-import { html, render } from '..';
+import { html, render } from '../src';
 
 /**
  * Notes:
