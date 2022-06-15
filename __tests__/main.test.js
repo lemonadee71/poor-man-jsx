@@ -203,24 +203,4 @@ describe('html and render', () => {
     );
     expect(screen.getByTestId('option-3')).not.toHaveTextContent();
   });
-
-  it('supports preprocessors', () => {
-    const preprocessor = (str) => str.replace(/x-/g, 'data-');
-
-    PoorManJSX.onBeforeCreation(preprocessor);
-    render(html`<div x-testid="preprocessed"></div>`, 'body');
-
-    expect(screen.getByTestId('preprocessed')).toBeInTheDocument();
-  });
-
-  it('supports postprocessors', () => {
-    const postprocessor = (el) => {
-      el.textContent = 'Hello, World!';
-    };
-
-    PoorManJSX.onAfterCreation(postprocessor);
-    render(html`<div data-testid="postprocessed"></div>`, 'body');
-
-    expect(screen.getByText('Hello, World!')).toBeInTheDocument();
-  });
 });
