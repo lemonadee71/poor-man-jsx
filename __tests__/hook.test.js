@@ -46,24 +46,24 @@ describe('hook', () => {
 
   it('allows calling of method directly', () => {
     const [state] = createHook({ tags: '' });
+    const onCreate = jest.fn();
 
     render(
       html`
-        <ul
-          data-testid="list"
-          ${{
-            children: state.$tags
-              .split(' ')
-              .map((tag) => `tag: ${tag}`)
-              .map((tag) => render(html`<li>${tag}</li>`))
-              .reverse(),
-          }}
-        ></ul>
+        <ul data-testid="list">
+          ${state.$tags
+            .split(' ')
+            .reverse()
+            .map((tag) => `tag: ${tag}`)
+            .map((tag) => html`<li onCreate=${onCreate}>${tag}</li>`)
+            .map((tag) => render(tag))}
+        </ul>
       `,
       'body'
     );
     state.tags = ['bug', 'enhancement'].join(' ');
 
+    expect(onCreate).toBeCalledTimes(3);
     expect(screen.getByTestId('list').children.length).toBe(2);
     expect(screen.getByTestId('list')).toContainHTML(
       '<li>tag: enhancement</li><li>tag: bug</li>'

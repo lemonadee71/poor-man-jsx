@@ -18,6 +18,8 @@ const ListItem = (data, props = {}) =>
   `);
 
 describe('diffing', () => {
+  const onCreate = jest.fn();
+  const onDestroy = jest.fn();
   const onMount = jest.fn();
   const onUnmount = jest.fn();
 
@@ -42,9 +44,15 @@ describe('diffing', () => {
   it('reflect changes in order', (done) => {
     const [hook] = createHook({ list: defaultData });
     render(
-      html`<ul is-list data-testid="shuffled">
-        ${hook.$list.map((data) => ListItem(data, { onUnmount }))}
-      </ul>`,
+      html`<ul
+        is-list
+        data-testid="shuffled"
+        ${{
+          children: hook.$list.map((data) =>
+            ListItem(data, { onCreate, onDestroy, onMount, onUnmount })
+          ),
+        }}
+      ></ul>`,
       'body'
     );
 
@@ -61,6 +69,9 @@ describe('diffing', () => {
         expect(getKeys(screen.getByTestId('shuffled'))).toBe(
           hook.list.map((item) => item.id).join()
         );
+        expect(onCreate).toBeCalledTimes(6);
+        expect(onDestroy).not.toBeCalled();
+        expect(onMount).toBeCalledTimes(4);
         expect(onUnmount).toBeCalledTimes(1);
         done();
       } catch (error) {
@@ -73,7 +84,9 @@ describe('diffing', () => {
     const [hook] = createHook({ list: defaultData });
     render(
       html`<ul is-list data-testid="added">
-        ${hook.$list.map((data) => ListItem(data, { onMount, onUnmount }))}
+        ${hook.$list.map((data) =>
+          ListItem(data, { onCreate, onMount, onUnmount })
+        )}
       </ul>`,
       'body'
     );
@@ -93,8 +106,9 @@ describe('diffing', () => {
         expect(getKeys(screen.getByTestId('added'))).toBe(
           hook.list.map((item) => item.id).join()
         );
-        expect(onUnmount).not.toBeCalled();
+        expect(onCreate).toBeCalledTimes(8);
         expect(onMount).toBeCalledTimes(5);
+        expect(onUnmount).not.toBeCalled();
         done();
       } catch (error) {
         done(error);
@@ -152,7 +166,12 @@ describe('diffing', () => {
         <ul is-list data-testid="nested-list">
           ${(data.tags || []).map(
             (item) =>
-              html`<li key="${item}" onMount=${onMount} onUnmount=${onUnmount}>
+              html`<li
+                key="${item}"
+                onCreate=${onCreate}
+                onMount=${onMount}
+                onUnmount=${onUnmount}
+              >
                 ${item}
               </li>`
           )}
@@ -163,7 +182,12 @@ describe('diffing', () => {
     render(
       html`<ul is-list>
         ${hook.$list.map((data) =>
-          ListItem(data, { onMount, onUnmount, children: createContent(data) })
+          ListItem(data, {
+            onCreate,
+            onMount,
+            onUnmount,
+            children: createContent(data),
+          })
         )}
       </ul>`,
       'body'
@@ -178,8 +202,10 @@ describe('diffing', () => {
         expect(getInnerText(screen.getByTestId('nested-list'))).toBe(
           hook.list[0].tags.join()
         );
-        expect(onUnmount).toBeCalledTimes(1);
+        // called twice for ListItem; thrice on first tags render, twice on second
+        expect(onCreate).toBeCalledTimes(7);
         expect(onMount).toBeCalledTimes(4);
+        expect(onUnmount).toBeCalledTimes(1);
         done();
       } catch (error) {
         done(error);
