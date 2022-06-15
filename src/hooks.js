@@ -1,4 +1,4 @@
-import { isHook, isObject } from './utils/is';
+import { isFunction, isHook, isObject } from './utils/is';
 import { getType } from './utils/type';
 import { modifyElement } from './utils/modify';
 import { uid, compose, resolve } from './utils/util';
@@ -47,6 +47,9 @@ const createHookFunction =
     },
   });
 
+// TODO: Find a way to avoid invoking callbacks
+//       for every new callback along the chain
+//       to determine the next value
 const methodForwarder = (target, prop) => {
   const dummyFn = (value) => value;
   const previousTrap = target.data.trap || dummyFn;
@@ -64,21 +67,25 @@ const methodForwarder = (target, prop) => {
     return new Proxy(copy, { get: methodForwarder });
   };
 
-  // run previousTrap against previousValue to determine
-  // what the latest value should be
-  // This can cause weird behaviors if methods mutates the value
-  // like `reverse` in array
+  // methodForwarder is only for hook/hookFn
+  // so we're either getting a function or the REF or data
+  if ([REF, 'data'].includes(prop)) return target[prop];
+  // run previousTrap against previousValue to determine what the latest value should be
+  // this can cause weird behaviors if methods mutates the value
   // in general, mutations should be discouraged inside traps
-  if (typeof previousTrap(previousValue)[prop] === 'function') return callback;
+  // and this wil also cause additional invokes
+  // so that should be factored when passing a callback
+  if (isFunction(previousTrap(previousValue)[prop])) return callback;
   return Reflect.get(target, prop);
 };
 
 const getter = (target, rawProp, receiver) => {
   const [prop, type] = getType(rawProp);
-  const hook = createHookFunction(target, prop, target[prop]);
+  let hook = createHookFunction(target, prop, target[prop]);
+  hook = Object.assign(hook, hook());
 
   if (type === 'hook' && prop in target) {
-    return Object.assign(new Proxy(hook, { get: methodForwarder }), hook());
+    return new Proxy(hook, { get: methodForwarder });
   }
 
   return Reflect.get(target, prop, receiver);
