@@ -1,4 +1,4 @@
-import { isFunction, isHook, isObject } from './utils/is';
+import { isHook, isObject } from './utils/is';
 import { getType } from './utils/type';
 import { modifyElement } from './utils/modify';
 import { uid, compose, resolve } from './utils/util';
@@ -47,13 +47,9 @@ const createHookFunction =
     },
   });
 
-// TODO: Find a way to avoid invoking callbacks
-//       for every new callback along the chain
-//       to determine the next value
 const methodForwarder = (target, prop) => {
   const dummyFn = (value) => value;
   const previousTrap = target.data.trap || dummyFn;
-  const previousValue = target.data.value;
 
   const callback = (...args) => {
     const copy = {
@@ -69,14 +65,11 @@ const methodForwarder = (target, prop) => {
 
   // methodForwarder is only for hook/hookFn
   // so we're either getting a function or the REF or data
+  // and for user's part, if they are accessing something out of a hook
+  // we assume that they're getting a function
+  // this is to avoid invoking the callbacks passed
   if ([REF, 'data'].includes(prop)) return target[prop];
-  // run previousTrap against previousValue to determine what the latest value should be
-  // this can cause weird behaviors if methods mutates the value
-  // in general, mutations should be discouraged inside traps
-  // and this wil also cause additional invokes
-  // so that should be factored when passing a callback
-  if (isFunction(previousTrap(previousValue)[prop])) return callback;
-  return Reflect.get(target, prop);
+  return callback;
 };
 
 const getter = (target, rawProp, receiver) => {
