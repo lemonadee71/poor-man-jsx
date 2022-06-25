@@ -76,6 +76,8 @@ const VALUE_MAP = {
   children: 'children',
 };
 
+const addBooleanAttribute = (...attr) => BOOLEAN_ATTRS.push(...attr);
+
 export {
   BOOLEAN_ATTRS,
   DEFAULT_PROPS,
@@ -83,4 +85,5 @@ export {
   LIFECYCLE_METHODS,
   REF,
   VALUE_MAP,
+  addBooleanAttribute,
 };

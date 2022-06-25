@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, screen } from '@testing-library/dom';
-import PoorManJSX, { html, render } from '../src';
+import PoorManJSX, { createHook, html, render } from '../src';
 
 describe('html and render', () => {
   const mockCallback = jest.fn(() => true);
@@ -202,5 +202,25 @@ describe('html and render', () => {
       "<p>This won't render</p>"
     );
     expect(screen.getByTestId('option-3')).not.toHaveTextContent();
+  });
+});
+
+describe('settings', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('can add additional `boolean` attributes', () => {
+    PoorManJSX.addBooleanAttribute('data-pressed');
+
+    const [hook] = createHook({ pressed: true });
+    const btn = html`<button data-testid="toggle" data-pressed=${hook.$pressed}>
+      Toggle
+    </button>`;
+    render(btn, 'body');
+
+    hook.pressed = false;
+
+    expect(screen.getByTestId('toggle')).not.toHaveAttribute('data-pressed');
   });
 });

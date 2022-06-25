@@ -1,3 +1,4 @@
+import { addBooleanAttribute } from './constants';
 import { addIgnoredAttribute } from './diffing';
 import { createHook, addHooks } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
@@ -13,6 +14,7 @@ import {
 enableLifecycle();
 
 const settings = {
+  addBooleanAttribute,
   addIgnoredAttribute,
   onBeforeCreation,
   onAfterCreation,
