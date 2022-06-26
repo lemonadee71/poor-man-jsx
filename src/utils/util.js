@@ -1,3 +1,5 @@
+import { __DATA__ } from '../constants';
+
 /**
  * Creates a unique id
  * @param {number} length
@@ -90,4 +92,18 @@ export const addTrap = (hook, callback) => {
   hook.data.trap = compose((value) => resolve(value, previousTrap), callback);
 
   return hook;
+};
+
+/**
+ * Set hidden data on element
+ * @param {HTMLElement} element
+ * @param {string} key
+ * @param {any} value
+ * @returns
+ */
+export const setData = (element, key, value) => {
+  if (!element[__DATA__]) element[__DATA__] = {};
+  element[__DATA__][key] = value;
+
+  return element;
 };

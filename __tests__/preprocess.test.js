@@ -34,6 +34,25 @@ describe('processors', () => {
     expect(screen.getByText('Hello, World!')).toBeInTheDocument();
   });
 
+  it('onAfterCreation runs recursively for each child in the tree', () => {
+    let i = 0;
+    const fn = jest.fn((el) => {
+      el.dataset.testid = i++;
+    });
+
+    PoorManJSX.onAfterCreation(fn);
+    render(
+      html`<div>
+        <div><div></div></div>
+      </div>`,
+      'body'
+    );
+
+    // check if we can target the nested divs
+    expect(screen.getByTestId('1')).toBeInTheDocument();
+    expect(screen.getByTestId('2')).toBeInTheDocument();
+  });
+
   describe('runs once per render only', () => {
     const [state] = createHook({ nums: [1, 2, 3] });
     const List = (keyString = 'key') => html`
@@ -62,17 +81,9 @@ describe('processors', () => {
       PoorManJSX.onAfterCreation(onAfterCreation);
       render(List(), 'body');
 
-      const ul = document.body.firstElementChild;
-      const firstChildren = [...ul.children].map((item) =>
-        item.cloneNode(true)
-      );
       state.nums = [3, 2, 1];
 
-      // called from inside to outside
-      const elements = [...firstChildren, ul, ...ul.children];
-
       expect(onAfterCreation).toBeCalledTimes(7);
-      expect(onAfterCreation.mock.calls.flat()).toEqual(elements);
     });
   });
 });

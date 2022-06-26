@@ -1,5 +1,6 @@
+import { __DATA__ } from './constants';
 import { isArray } from './utils/is';
-import { compose } from './utils/util';
+import { compose, setData, traverse } from './utils/util';
 
 let beforeCreate = [];
 let afterCreate = [];
@@ -49,12 +50,18 @@ export const preprocess = (htmlString) =>
   );
 
 /**
- * Run after-creation callbacks on an element
+ * Run after-creation callbacks on an element and its children
  * @param {HTMLElement} element
  */
 export const postprocess = (element) => {
-  afterCreate.forEach((fn) => {
-    if (isArray(fn)) compose(...fn)(element);
-    else fn(element);
+  traverse(element, (node) => {
+    if (node[__DATA__] && node[__DATA__].initialized) return;
+
+    afterCreate.forEach((fn) => {
+      if (isArray(fn)) compose(...fn)(node);
+      else fn(node);
+    });
+
+    setData(node, 'initialized', true);
   });
 };
