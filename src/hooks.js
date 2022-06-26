@@ -2,7 +2,7 @@ import { isHook, isObject } from './utils/is';
 import { getType } from './utils/type';
 import { modifyElement } from './utils/modify';
 import { uid, compose, resolve } from './utils/util';
-import { REF } from './constants';
+import { REF_OBJ } from './constants';
 
 const Hooks = new WeakMap();
 
@@ -39,7 +39,7 @@ const createHook = (value, seal = true) => {
 const createHookFunction =
   (ref, prop, value) =>
   (trap = null) => ({
-    [REF]: ref,
+    [REF_OBJ]: ref,
     data: {
       prop,
       trap,
@@ -53,7 +53,7 @@ const methodForwarder = (target, prop) => {
 
   const callback = (...args) => {
     const copy = {
-      [REF]: target[REF],
+      [REF_OBJ]: target[REF_OBJ],
       data: {
         ...target.data,
         trap: compose(previousTrap, (value) => value[prop](...args)),
@@ -64,11 +64,11 @@ const methodForwarder = (target, prop) => {
   };
 
   // methodForwarder is only for hook/hookFn
-  // so we're either getting a function or the REF or data
+  // so we're either getting a function or the REF_OBJ or data
   // and for user's part, if they are accessing something out of a hook
   // we assume that they're getting a function
   // this is to avoid invoking the callbacks passed
-  if ([REF, 'data'].includes(prop)) return target[prop];
+  if ([REF_OBJ, 'data'].includes(prop)) return target[prop];
   return callback;
 };
 
@@ -129,7 +129,7 @@ const addHooks = (target, hooks) => {
         "You can't dynamically set lifecycle methods or event listeners"
       );
 
-    const bindedElements = Hooks.get(value[REF]);
+    const bindedElements = Hooks.get(value[REF_OBJ]);
     const handlers = bindedElements.get(id) || [];
     const handler = {
       type,

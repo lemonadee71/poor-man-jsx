@@ -2,7 +2,7 @@ import {
   BOOLEAN_ATTRS,
   DEFAULT_PROPS,
   LIFECYCLE_METHODS,
-  REF,
+  REF_OBJ,
 } from '../constants';
 import Template from '../Template';
 
@@ -23,7 +23,7 @@ export const isNode = (value) => value instanceof Node;
 
 export const isHook = (value) => {
   if (isString(value)) return value.startsWith('$');
-  if (isObject(value) || isFunction(value)) return !!value[REF];
+  if (isObject(value) || isFunction(value)) return !!value[REF_OBJ];
   return false;
 };
 

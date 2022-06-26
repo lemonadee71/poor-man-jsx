@@ -1,5 +1,5 @@
 import { addHooks } from '../hooks';
-import { VALUE_MAP } from '../constants';
+import { SPECIAL_ATTRS } from '../constants';
 import { isBooleanAttribute, isHook } from './is';
 import { modifyElement } from './modify';
 import { getType } from './type';
@@ -68,7 +68,7 @@ export const replacePlaceholderIds = (root, dict) => {
     [...node.attributes].forEach((attr) => {
       const attrValue = attr.value.trim();
       const match = attrValue.match(idPlaceholderRegex);
-      const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
+      const [name, type] = getType(SPECIAL_ATTRS[attr.name] || attr.name);
 
       if (match) {
         const id = match[0].split(':')[1];
@@ -129,7 +129,7 @@ export const replacePlaceholderIds = (root, dict) => {
 export const processSpecialAttributes = (root) => {
   traverse(root, (node) => {
     [...node.attributes].forEach((attr) => {
-      const [name, type] = getType(VALUE_MAP[attr.name] || attr.name);
+      const [name, type] = getType(SPECIAL_ATTRS[attr.name] || attr.name);
 
       // process shortened properties
       if (type === 'style' || (type === 'prop' && name !== 'style')) {

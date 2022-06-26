@@ -1,7 +1,7 @@
-// This is to hide the ref property an invoked hook returns
+// This is to hide the REF_OBJ property an invoked hook returns
 // which is a reference to the original object
 // to make sure we won't be able to access it outside of its intended use
-const REF = Symbol('ref');
+const REF_OBJ = Symbol('original-object');
 
 const DEFAULT_PROPS = [
   'textContent',
@@ -66,7 +66,7 @@ const ELEMENTS_TO_ALWAYS_RERENDER = [
 ];
 const LIFECYCLE_METHODS = ['create', 'destroy', 'mount', 'unmount'];
 
-const VALUE_MAP = {
+const SPECIAL_ATTRS = {
   textcontent: 'textContent',
   text: 'textContent',
   innerhtml: 'innerHTML',
@@ -83,7 +83,7 @@ export {
   DEFAULT_PROPS,
   ELEMENTS_TO_ALWAYS_RERENDER,
   LIFECYCLE_METHODS,
-  REF,
-  VALUE_MAP,
+  REF_OBJ,
+  SPECIAL_ATTRS,
   addBooleanAttribute,
 };
