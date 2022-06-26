@@ -20,6 +20,7 @@ const settings = {
   onAfterCreation,
   removeBeforeCreation,
   removeAfterCreation,
+  enableLifecycle,
   disableLifecycle,
 };
 
