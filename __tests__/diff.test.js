@@ -138,6 +138,31 @@ describe('diffing', () => {
     );
   });
 
+  it('restore focus to previous active element', () => {
+    const [hook] = createHook({ list: defaultData });
+    render(
+      html`<div is-list data-testid="focus">
+        ${hook.$list.map((data) =>
+          render(html`<button key="${data.id}">${data.text}</button>`)
+        )}
+      </div>`,
+      'body'
+    );
+
+    document.querySelector('[key="2"]').focus();
+    const previousActiveElement = document.activeElement;
+
+    // for some reason focus is lost when item is moved upwards
+    // so use this case for testing and for good measure, edit the text too
+    hook.list = [
+      { id: '2', text: 'showering' },
+      { id: '1', text: 'eat' },
+      { id: '3', text: 'sleep' },
+    ];
+
+    expect(document.activeElement).toEqual(previousActiveElement);
+  });
+
   it('updates "non-text" elements if it has attribute `is-text`', () => {
     const [hook] = createHook({ list: defaultData });
     render(

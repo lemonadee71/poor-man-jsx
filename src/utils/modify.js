@@ -1,6 +1,6 @@
 import { naiveDiff, shouldDiffNode } from '../diffing';
 import { isBooleanAttribute, isNode } from './is';
-import { removeChildren } from './util';
+import { getChildren, removeChildren } from './util';
 
 /**
  * Modify an element
@@ -10,7 +10,7 @@ import { removeChildren } from './util';
  * @param {string} data.name - property name
  * @param {any} data.value - property value
  * @param {HTMLElement} context - the context where querySelector will be called
- * @returns
+ * @returns {HTMLElement}
  */
 export const modifyElement = (target, type, data, context = document) => {
   const node = isNode(target) ? target : context.querySelector(target);
@@ -62,6 +62,7 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     case 'children': {
       const children = [data.value].flat();
+      const previousActiveElement = document.activeElement;
 
       if (shouldDiffNode(node)) {
         const newNodes = children.map((el) => {
@@ -76,6 +77,9 @@ export const modifyElement = (target, type, data, context = document) => {
         });
 
         naiveDiff(node, newNodes);
+        // after diffing, simply restore focus
+        // since we simply updated the existing elements
+        previousActiveElement.focus();
       } else {
         removeChildren(node);
 
@@ -83,6 +87,14 @@ export const modifyElement = (target, type, data, context = document) => {
 
         fragment.append(...children);
         node.append(fragment);
+
+        // since all children are rerendered
+        // we look for the 'equal' node instead and restore focus to it
+        // so if there's any change to previous active, we will lose focus
+        const matchingElement = getChildren(node).find((child) =>
+          child.isEqualNode(previousActiveElement)
+        );
+        if (matchingElement) matchingElement.focus();
       }
 
       break;

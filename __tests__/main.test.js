@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, screen } from '@testing-library/dom';
 import PoorManJSX, { createHook, html, render } from '../src';
+import { modifyElement } from '../src/utils/modify';
 
 describe('html and render', () => {
   const mockCallback = jest.fn(() => true);
@@ -153,6 +154,30 @@ describe('html and render', () => {
     render(html`<ul data-testid="list" ${{ children: items }}></ul>`, 'body');
 
     expect(screen.getByTestId('list').children.length).toBe(3);
+  });
+
+  it('restore focus to matching element when children are rerendered', () => {
+    const createButtons = () =>
+      new Array(3)
+        .fill('test')
+        .map(
+          (str, i) => html`<button data-testid="btn-${i + 1}">${str}</button>`
+        )
+        .map((item) => render(item));
+
+    render(
+      html`<div data-testid="buttons" ${{ children: createButtons() }}></div>`,
+      'body'
+    );
+
+    const thirdButton = screen.getByTestId('btn-3');
+    thirdButton.focus();
+
+    modifyElement(screen.getByTestId('buttons'), 'children', {
+      value: createButtons(),
+    });
+
+    expect(document.activeElement).toEqual(screen.getByTestId('btn-3'));
   });
 
   describe('multiple attr-value objects can be passed', () => {
