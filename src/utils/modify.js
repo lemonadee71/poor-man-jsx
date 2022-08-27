@@ -43,16 +43,18 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     case 'listener': {
       const [eventName, ...options] = data.name.split('.');
-      const callback = options.includes('prevent')
-        ? (e) => {
-            data.value(e);
-            e.preventDefault();
-          }
-        : data.value;
+      const callback = (e) => {
+        if (options.includes('self') && e.target !== e.currentTarget) return;
+        data.value(e);
+        if (options.includes('prevent')) e.preventDefault();
+        if (options.includes('only')) e.stopImmediatePropagation();
+        else if (options.includes('stop')) e.stopPropagation();
+      };
 
       node.addEventListener(eventName, callback, {
         once: options.includes('once'),
         capture: options.includes('capture'),
+        passive: options.includes('passive'),
       });
 
       break;
