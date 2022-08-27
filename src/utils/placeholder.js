@@ -138,10 +138,12 @@ export const processSpecialAttributes = (root) => {
 
         // process boolean attributes
       } else if (type === 'attr' && isBooleanAttribute(attr.name)) {
-        // From MDN, 'the values "true" and "false" are not allowed on boolean attributes'
-        // but we don't check for other truthy values, just "true"
-        if (attr.value === 'true') node.setAttribute(attr.name, '');
-        else if (attr.value === 'false') node.removeAttribute(attr.name);
+        if (
+          attr.value !== null &&
+          !['0', 'false', 'null', 'undefined', 'NaN'].includes(attr.value)
+        )
+          node.setAttribute(attr.name, '');
+        else node.removeAttribute(attr.name);
       }
     });
   });
