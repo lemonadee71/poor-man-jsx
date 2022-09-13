@@ -4,8 +4,8 @@ module.exports = {
   mode: 'production',
   entry: './src/index.js',
   output: {
-    path: path.resolve('dist'),
-    filename: 'index.js',
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'poor-man-jsx.js',
     libraryTarget: 'commonjs2',
   },
   module: {
