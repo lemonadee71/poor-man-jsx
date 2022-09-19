@@ -200,6 +200,13 @@ export const modifyElement = (target, type, data, context = document) => {
 
       break;
     }
+    case 'ref':
+      if (!isPlainObject(data.value)) {
+        throw new TypeError('Ref only accepts plain object');
+      }
+      data.value.current = element;
+
+      break;
 
     default:
   }

@@ -220,6 +220,13 @@ describe('core', () => {
         'background-color': 'blue',
       });
     });
+
+    it(':ref - stores a reference to the element', () => {
+      const ref = {};
+      render(html`<div :ref=${ref} data-testid="ref">Test</div>`, 'body');
+
+      expect(screen.getByTestId('ref')).toEqual(ref.current);
+    });
   });
 
   describe('special attributes', () => {
