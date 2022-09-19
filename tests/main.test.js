@@ -1,16 +1,13 @@
 import '@testing-library/jest-dom/extend-expect';
-import { fireEvent, screen } from '@testing-library/dom';
-import PoorManJSX, { createHook, html, render } from '../src';
-import { modifyElement } from '../src/utils/modify';
+import { createEvent, fireEvent, screen } from '@testing-library/dom';
+import { apply, html, render } from '../src';
 
-describe('html and render', () => {
+describe('core', () => {
   const mockCallback = jest.fn(() => true);
 
   afterEach(() => {
     document.body.innerHTML = '';
     jest.clearAllMocks();
-    PoorManJSX.removeBeforeCreation();
-    PoorManJSX.removeAfterCreation();
   });
 
   it('creates an element', () => {
@@ -19,233 +16,356 @@ describe('html and render', () => {
     expect(screen.getByText('Test')).toBeInTheDocument();
   });
 
-  describe('attaches event listeners', () => {
-    it('without options', () => {
-      render(html`<button onClick=${mockCallback}>Click</button>`, 'body');
-      fireEvent.click(screen.getByText('Click'));
-
-      expect(mockCallback).toBeCalledTimes(1);
-    });
-
-    it('with options', () => {
-      render(html`<button onClick.once=${mockCallback}>Click</button>`, 'body');
-      fireEvent.click(screen.getByText('Click'));
-      fireEvent.click(screen.getByText('Click'));
-
-      expect(mockCallback).toBeCalledTimes(1);
-    });
-  });
-
-  describe('accepts', () => {
-    it('Template', () => {
-      const div = html`<div></div>`;
-      render(html`<main data-testid="main">${div}</main>`, 'body');
-
-      expect(screen.getByTestId('main')).toContainHTML('<div></div>');
-    });
-
-    it('HTMLElement', () => {
-      render(
-        html`<div data-testid="html">${document.createElement('div')}</div>`,
-        'body'
-      );
-
-      expect(screen.getByTestId('html')).toContainHTML('<div></div>');
-    });
-
-    it('Text Node', () => {
-      render(html`<div>${document.createTextNode('Text')}</div>`, 'body');
-
-      expect(screen.getByText('Text')).toBeInTheDocument();
-    });
-
-    it('DocumentFragment', () => {
-      const fragment = new DocumentFragment();
-      fragment.append(document.createElement('div'));
-      fragment.append(document.createElement('div'));
-
-      render(html`<div data-testid="fragment">${fragment}</div>`, 'body');
-
-      expect(screen.getByTestId('fragment')).toContainHTML(
-        '<div></div><div></div>'
-      );
-    });
-
-    it('arrays', () => {
-      render(
-        html`
-          <ul data-testid="list">
-            ${new Array(3).fill('test').map((str) => html`<li>${str}</li>`)}
-          </ul>
-        `,
-        'body'
-      );
-
-      expect(screen.getByTestId('list').children.length).toBe(3);
-    });
-  });
-
-  it('process attributes prefixed with `style_`', () => {
+  it('escapes all strings passed', () => {
     render(
-      html`<div
-        data-testid="style"
-        style_display="none"
-        style_color="blue"
-      ></div>`,
+      html`<div data-testid="escaped">
+        <p>Test</p>
+        ${'<p>if this works</p>'}
+      </div>`,
       'body'
     );
 
-    expect(screen.getByTestId('style')).toHaveStyle({
-      color: 'blue',
-      display: 'none',
-    });
+    expect(screen.getByTestId('escaped').children.length).toBe(1);
+    expect(screen.getByTestId('escaped')).toHaveTextContent(
+      'Test <p>if this works</p>'
+    );
   });
 
-  it('process props like textContent', () => {
-    render(html`<div textContent="textContent"></div>`, 'body');
-
-    expect(screen.getByText('textContent')).toBeInTheDocument();
-  });
-
-  it('process shortened attributes e.g. `html`, `text`', () => {
-    render(html`<div text="text"></div>`, 'body');
-
-    expect(screen.getByText('text')).toBeInTheDocument();
-  });
-
-  it('process objects with attribute-value pairs', () => {
+  it('apply - make changes based on object', () => {
     const props = {
-      'data-testid': 'attr-object',
+      'data-testid': 'apply',
       class: 'my-class',
       onClick: mockCallback,
       innerHTML: '<p data-testid="child">Hello, World!</p>',
     };
-    render(html`<div ${props}></div>`, 'body');
-    fireEvent.click(screen.getByTestId('attr-object'));
+    const div = document.createElement('div');
+    apply(div, props);
+    document.body.append(div);
+
+    fireEvent.click(screen.getByTestId('apply'));
 
     expect(mockCallback).toBeCalled();
-    expect(screen.getByTestId('attr-object')).toHaveClass('my-class');
+    expect(screen.getByTestId('apply')).toHaveClass('my-class');
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });
 
-  it('style attributes needs to be prefixed with `style_` when used in objects', () => {
-    const style = {
-      style_height: '20px',
-      style_width: '300px',
-      border: '1px solid black',
-    };
-    render(html`<div data-testid="style-object" ${style}></div>`, 'body');
-
-    expect(screen.getByTestId('style-object')).not.toHaveStyle({
-      border: '1px solid black',
-    });
-    expect(screen.getByTestId('style-object')).toHaveStyle({
-      height: style.style_height,
-      width: style.style_width,
-    });
-  });
-
-  it('process special prop `children`', () => {
-    const items = new Array(3)
-      .fill('test')
-      .map((str) => html`<li>${str}</li>`)
-      .map((item) => render(item));
-
-    render(html`<ul data-testid="list" ${{ children: items }}></ul>`, 'body');
-
-    expect(screen.getByTestId('list').children.length).toBe(3);
-  });
-
-  it('restore focus to matching element when children are rerendered', () => {
-    const createButtons = () =>
-      new Array(3)
-        .fill('test')
-        .map(
-          (str, i) => html`<button data-testid="btn-${i + 1}">${str}</button>`
-        )
-        .map((item) => render(item));
-
-    render(
-      html`<div data-testid="buttons" ${{ children: createButtons() }}></div>`,
-      'body'
-    );
-
-    const thirdButton = screen.getByTestId('btn-3');
-    thirdButton.focus();
-
-    modifyElement(screen.getByTestId('buttons'), 'children', {
-      value: createButtons(),
-    });
-
-    expect(document.activeElement).toEqual(screen.getByTestId('btn-3'));
-  });
-
-  describe('multiple attr-value objects can be passed', () => {
-    const attr = {
-      'data-testid': 'multiple',
-      id: 'test',
-    };
-    const child = html`<div data-testid="child"></div>`;
-
-    it('directly', () => {
-      render(html`<div ${attr} ${{ children: render(child) }}></div>`, 'body');
-
-      expect(screen.getByTestId('multiple').id).toBe('test');
-      expect(screen.getByTestId('child')).toBeInTheDocument();
-    });
-
-    it('with an array', () => {
-      render(html`<div ${[attr, { children: render(child) }]}></div>`, 'body');
-
-      expect(screen.getByTestId('multiple').id).toBe('test');
-      expect(screen.getByTestId('child')).toBeInTheDocument();
-    });
-  });
-
-  it("won't render strings as html if enclosed with `{%%}`", () => {
-    const select = html`
-      <select name="test">
-        <option value="1st" data-testid="option-1">
-          <!-- placeholder- This will render too -->
-        </option>
-        <option value="2nd" data-testid="option-2">
-          {%
-          <p>This won't render</p>
-          %}
-        </option>
-        <option value="3rd" data-testid="option-3">
-          <!-- I Should not be rendered -->
-        </option>
-      </select>
+  describe('event listeners', () => {
+    const anotherMock = jest.fn();
+    const Button = (callback, options = '') => html`
+      <button data-testid="btn" onClick${options}=${callback}>Click me!</button>
     `;
-    render(select, 'body');
 
-    expect(screen.getByTestId('option-1')).toHaveTextContent(
-      'This will render too'
-    );
-    expect(screen.getByTestId('option-2')).toHaveTextContent(
-      "<p>This won't render</p>"
-    );
-    expect(screen.getByTestId('option-3')).not.toHaveTextContent();
+    it('can be attached with on[eventName] syntax', () => {
+      render(Button(mockCallback), 'body');
+      fireEvent.click(screen.getByTestId('btn'));
+
+      expect(mockCallback).toBeCalledTimes(1);
+    });
+
+    it('can be attached with multiple callbacks', () => {
+      render(Button([mockCallback, anotherMock]), 'body');
+      fireEvent.click(screen.getByTestId('btn'));
+      fireEvent.click(screen.getByTestId('btn'));
+
+      expect(mockCallback).toBeCalledTimes(2);
+      expect(anotherMock).toBeCalledTimes(2);
+    });
+
+    it('can be attached with option/s', () => {
+      render(Button(mockCallback, '.once.prevent'), 'body');
+
+      const myEvent = createEvent.click(screen.getByTestId('btn'));
+      myEvent.preventDefault = jest.fn();
+
+      fireEvent(screen.getByTestId('btn'), myEvent);
+      fireEvent(screen.getByTestId('btn'), myEvent);
+
+      expect(mockCallback).toBeCalledTimes(1);
+      expect(myEvent.preventDefault).toBeCalledTimes(1);
+    });
+
+    it('can be attached with multiple callbacks with option/s', () => {
+      render(Button([mockCallback, anotherMock], '.once'), 'body');
+      fireEvent.click(screen.getByTestId('btn'));
+      fireEvent.click(screen.getByTestId('btn'));
+
+      expect(mockCallback).toBeCalledTimes(1);
+      expect(anotherMock).toBeCalledTimes(1);
+    });
   });
-});
 
-describe('settings', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
+  describe('directives', () => {
+    it(':text - sets the textContent', () => {
+      render(html`<div :text="Test"></div>`, 'body');
+
+      expect(screen.getByText('Test')).toBeInTheDocument();
+    });
+
+    it(':html - sets the innerHTML', () => {
+      const str = '<p data-testid="p">Test</p>';
+      render(html`<div :html="${str}"></div>`, 'body');
+
+      expect(screen.getByTestId('p')).toHaveTextContent('Test');
+    });
+
+    it(':children - accepts a node', () => {
+      render(
+        html`<div
+          :children=${render(html`<p data-testid="p">Test</p>`)}
+        ></div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('p')).toHaveTextContent('Test');
+    });
+
+    it(':children - accepts an array of string, node, and Template', () => {
+      const div = document.createElement('div');
+      const children = [
+        'This is ',
+        html`<span data-testid="span">my component</span>`,
+        div,
+      ];
+
+      render(
+        html`<div data-testid="children" :children=${children}></div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('children')).toContainElement(div);
+      expect(screen.getByTestId('span')).toBeInTheDocument();
+    });
+
+    it('bool:attr - shows/hides an attribute depending on value', () => {
+      render(
+        html`<div data-testid="bool" bool:data-div="undefined">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('bool')).not.toHaveAttribute('data-div');
+    });
+
+    it('bool:attr.preserve - make the attr value same as passed value', () => {
+      render(
+        html`<div data-testid="bool" bool:data-div.preserve="true">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('bool')).toHaveAttribute('data-div', 'true');
+    });
+
+    it('bool:attr.mirror - make the attr value same as attr name', () => {
+      render(
+        html`<div data-testid="bool" readonly.mirror="test">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('bool')).toHaveAttribute(
+        'readonly',
+        'readonly'
+      );
+    });
+
+    it('bool:[attr,] - show/hide multiple attributes at once', () => {
+      render(
+        html`<div data-testid="bool" bool:[hidden,visible]="false">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('bool')).not.toHaveAttribute('hidden');
+      expect(screen.getByTestId('bool')).not.toHaveAttribute('visible');
+    });
+
+    it('class:name - toggles a className individually', () => {
+      render(
+        html`<div
+          class:hidden="true"
+          class:visible="false"
+          data-testid="class:"
+        >
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('class:')).toHaveClass('hidden');
+      expect(screen.getByTestId('class:')).not.toHaveClass('visible');
+    });
+
+    it('class:[name,] - set multiple class names at once', () => {
+      render(
+        html`<div class:[hidden,visible]="true" data-testid="class:">
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('class:')).toHaveClass('hidden visible');
+    });
+
+    it('style:prop - sets a style property individually', () => {
+      render(
+        html`<div
+          style:color="red"
+          style:background-color="blue"
+          data-testid="style:"
+        >
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('style:')).toHaveStyle({
+        color: 'red',
+        'background-color': 'blue',
+      });
+    });
   });
 
-  it('can add additional `boolean` attributes', () => {
-    PoorManJSX.addBooleanAttribute('data-pressed');
+  describe('special attributes', () => {
+    it('on - accepts an object of { eventName: fn | fn[] }', () => {
+      const fns = {
+        click: jest.fn(),
+        keydown: jest.fn(),
+      };
 
-    const [hook] = createHook({ pressed: true });
-    const btn = html`<button data-testid="toggle" data-pressed=${hook.$pressed}>
-      Toggle
-    </button>`;
-    render(btn, 'body');
+      render(html`<div data-testid="on" on=${fns}>Test</div>`, 'body');
+      fireEvent.click(screen.getByTestId('on'));
+      fireEvent.keyDown(screen.getByTestId('on'));
 
-    hook.pressed = false;
+      expect(fns.click).toBeCalledTimes(1);
+      expect(fns.keydown).toBeCalledTimes(1);
+    });
 
-    expect(screen.getByTestId('toggle')).not.toHaveAttribute('data-pressed');
+    it('class - accepts an object (shortcut for multiple class:name)', () => {
+      render(
+        html`<div
+          class=${{ hidden: true, visible: false }}
+          data-testid="classObject"
+        >
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('classObject')).toHaveClass('hidden');
+      expect(screen.getByTestId('classObject')).not.toHaveClass('visible');
+    });
+
+    it('class - accepts an array of strings', () => {
+      render(
+        html`<div class=${['hidden', 'visible']} data-testid="classArray">
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('classArray')).toHaveClass('hidden visible');
+    });
+
+    it('style - accepts an object (shortcut for multiple style:prop)', () => {
+      const style = {
+        color: 'red',
+        'background-color': 'blue',
+      };
+
+      render(
+        html`<div style=${style} data-testid="styleObject">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('styleObject')).toHaveStyle(style);
+    });
+  });
+
+  describe('acceptable values', () => {
+    describe('inside the body:', () => {
+      it('Template', () => {
+        const div = html`<div></div>`;
+        render(html`<main data-testid="main">${div}</main>`, 'body');
+
+        expect(screen.getByTestId('main')).toContainHTML('<div></div>');
+      });
+
+      it('HTMLElement', () => {
+        render(
+          html`<div data-testid="html">${document.createElement('div')}</div>`,
+          'body'
+        );
+
+        expect(screen.getByTestId('html')).toContainHTML('<div></div>');
+      });
+
+      it('Text Node', () => {
+        render(
+          html`<div data-testid="text">
+            <span>Some </span>
+            ${document.createTextNode('text')} and etc.
+          </div>`,
+          'body'
+        );
+
+        expect(screen.getByTestId('text')).toHaveTextContent(
+          'Some text and etc.'
+        );
+      });
+
+      it('DocumentFragment', () => {
+        const fragment = new DocumentFragment();
+        fragment.append(document.createElement('div'));
+        fragment.append(document.createElement('div'));
+
+        render(html`<div data-testid="fragment">${fragment}</div>`, 'body');
+
+        expect(screen.getByTestId('fragment')).toContainHTML(
+          '<div></div><div></div>'
+        );
+      });
+
+      it('arrays', () => {
+        render(
+          html`
+            <ul data-testid="list">
+              ${new Array(3)
+                .fill('test')
+                .map((str, i) => html`<li>${str} ${i}</li>`)}
+            </ul>
+          `,
+          'body'
+        );
+
+        expect(screen.getByTestId('list').children.length).toBe(3);
+      });
+    });
+
+    describe('inside opening tag:', () => {
+      it('object/s', () => {
+        const props1 = {
+          'data-testid': 'attr-object',
+          class: 'my-class',
+          onClick: mockCallback,
+        };
+        const props2 = {
+          innerHTML: '<p data-testid="child">Hello, World!</p>',
+        };
+
+        render(html`<div ${props1} ${props2}></div>`, 'body');
+        fireEvent.click(screen.getByTestId('attr-object'));
+
+        expect(mockCallback).toBeCalled();
+        expect(screen.getByTestId('attr-object')).toHaveClass('my-class');
+        expect(screen.getByTestId('child')).toBeInTheDocument();
+      });
+
+      it('array/s of string and/or objects', () => {
+        const attrs = ['class="visible"', 'data-testid="multiple"'];
+        const props = { children: html`<div data-testid="child"></div>` };
+
+        render(html`<div ${[...attrs, props]}></div>`, 'body');
+
+        expect(screen.getByTestId('multiple')).toHaveClass('visible');
+        expect(screen.getByTestId('child')).toBeInTheDocument();
+      });
+    });
   });
 });

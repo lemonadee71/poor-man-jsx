@@ -152,17 +152,16 @@ describe('lifecycle methods', () => {
   });
 
   it('can have multiple callbacks for a type', (done) => {
-    const div = html`<div onDestroy=${onDestroy}>Hello, World!</div>`;
-    const el = render(div, 'body').firstElementChild;
     const mock = jest.fn();
+    const div = html`<div onDestroy=${[onDestroy, mock]}>Hello, World!</div>`;
 
-    el.addEventListener('@destroy', mock);
-    el.remove();
+    render(div, 'body');
+    document.body.innerHTML = '';
 
     setTimeout(() => {
       try {
-        expect(onDestroy).toHaveBeenCalledTimes(1);
         expect(mock).toHaveBeenCalledTimes(1);
+        expect(onDestroy).toHaveBeenCalledTimes(1);
         done();
       } catch (error) {
         done(error);
