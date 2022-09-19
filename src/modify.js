@@ -207,6 +207,21 @@ export const modifyElement = (target, type, data, context = document) => {
       data.value.current = element;
 
       break;
+    case 'show': {
+      const originalDisplay = element.__meta?.og_display;
+      let display = originalDisplay;
+
+      if (!originalDisplay) {
+        // NOTE: This might be an expensive operation
+        display = window.getComputedStyle(element).display;
+        setMetadata(element, 'og_display', display);
+      }
+
+      if (isTruthy(data.value)) element.style.display = display;
+      else element.style.display = 'none';
+
+      break;
+    }
 
     default:
   }

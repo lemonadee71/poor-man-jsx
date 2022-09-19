@@ -227,6 +227,17 @@ describe('core', () => {
 
       expect(screen.getByTestId('ref')).toEqual(ref.current);
     });
+
+    it(':show - shows/hides element based on attribute value', () => {
+      render(
+        html`<div style="display: block" :show=${false} data-testid="show">
+          Test
+        </div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('show')).toHaveStyle({ display: 'none' });
+    });
   });
 
   describe('special attributes', () => {
