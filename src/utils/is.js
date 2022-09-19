@@ -1,4 +1,5 @@
 import { PLACEHOLDER_REGEX } from '../../rewrite/constants';
+import { HOOK_REF } from '../constants';
 import Template from './Template';
 
 export const isNullOrUndefined = (value) =>
@@ -31,3 +32,8 @@ export const isTruthy = (value) =>
   value &&
   // handles strings
   !['0', 'false', 'null', 'undefined', 'NaN'].includes(value);
+
+export const isHook = (value) => {
+  if (isObject(value) || isFunction(value)) return !!value[HOOK_REF];
+  return false;
+};

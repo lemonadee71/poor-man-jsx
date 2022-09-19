@@ -102,23 +102,3 @@ export const venn = (first, second, transform = null) => {
     right,
   };
 };
-
-/**
- * Split the string into left and right side.
- * Only splits on the first match.
- * @param {string} str
- * @param {string|RegExp} delimiter
- * @returns {string[]}
- */
-export const split = (str, delimiter) => {
-  const match = str.match(delimiter);
-  let left = str;
-  let right = '';
-
-  if (match) {
-    left = str.slice(0, match.index);
-    right = str.slice(match.index + match[0].length);
-  }
-
-  return [left, right];
-};

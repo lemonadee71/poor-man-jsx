@@ -1,59 +1,37 @@
-import { isHook, isObject } from './utils/is';
-import { getType } from './utils/type';
-import { modifyElement } from './utils/modify';
-import { uid, compose, resolve } from './utils/util';
-import { REF_OBJ } from './constants';
+import { modifyElement } from './modify';
+import { HOOK_REF } from './constants';
+import { isHook } from './utils/is';
+import { compose, resolve } from './utils/general';
+import { uid } from './utils/id';
+import isPlainObject from './utils/is-plain-obj';
 
-const Hooks = new WeakMap();
+const HooksRegistry = new WeakMap();
 
 /**
  * Creates a hook
  * @param {any} value - the initial value of the hook
  * @param {Boolean} [seal=true] - seal the object with Object.seal
- * @returns {[Object, function]}
+ * @returns {any}
  */
 const createHook = (value, seal = true) => {
-  let obj = isObject(value) ? value : { value };
+  let obj = isPlainObject(value) ? value : { value };
   obj = seal ? Object.seal(obj) : obj;
-  Hooks.set(obj, new Map());
+  HooksRegistry.set(obj, new Map());
 
-  const { proxy, revoke } = Proxy.revocable(obj, {
+  const proxy = new Proxy(obj, {
     get: getter,
     set: setter,
   });
 
-  /**
-   * Delete the hook object and returns the original value
-   * @returns {any}
-   */
-  const deleteHook = () => {
-    revoke();
-    Hooks.delete(obj);
-
-    return value;
-  };
-
-  return [proxy, deleteHook];
+  return proxy;
 };
 
-const createHookFunction =
-  (ref, prop, value) =>
-  (trap = null) => ({
-    [REF_OBJ]: ref,
-    data: {
-      prop,
-      trap,
-      value,
-    },
-  });
-
 const methodForwarder = (target, prop) => {
-  const dummyFn = (value) => value;
-  const previousTrap = target.data.trap || dummyFn;
+  const previousTrap = target.data.trap || ((value) => value);
 
   const callback = (...args) => {
     const copy = {
-      [REF_OBJ]: target[REF_OBJ],
+      [HOOK_REF]: target[HOOK_REF],
       data: {
         ...target.data,
         trap: compose(previousTrap, (value) => value[prop](...args)),
@@ -64,41 +42,51 @@ const methodForwarder = (target, prop) => {
   };
 
   // methodForwarder is only for hook/hookFn
-  // so we're either getting a function or the REF_OBJ or data
+  // so we're either getting a function or the HOOK_REF or data
   // and for user's part, if they are accessing something out of a hook
   // we assume that they're getting a function
   // this is to avoid invoking the callbacks passed
-  if ([REF_OBJ, 'data'].includes(prop)) return target[prop];
+  if ([HOOK_REF, 'data'].includes(prop)) return target[prop];
   return callback;
 };
 
-const getter = (target, rawProp, receiver) => {
-  const [prop, type] = getType(rawProp);
-  let hook = createHookFunction(target, prop, target[prop]);
-  hook = Object.assign(hook, hook());
+const createHookFunction = (ref, prop, value) => {
+  const fn = (trap = null) => ({
+    [HOOK_REF]: ref,
+    data: {
+      prop,
+      trap,
+      value,
+    },
+  });
 
-  if (type === 'hook' && prop in target) {
-    return new Proxy(hook, { get: methodForwarder });
+  return new Proxy(Object.assign(fn, fn()), { get: methodForwarder });
+};
+
+const getter = (target, rawProp, receiver) => {
+  const prop = rawProp.replace(/^\$/, '');
+
+  if (rawProp.startsWith('$') && prop in target) {
+    return createHookFunction(target, prop, target[prop]);
   }
 
   return Reflect.get(target, prop, receiver);
 };
 
 const setter = (target, prop, value, receiver) => {
-  const bindedElements = Hooks.get(target);
+  const bindedElements = HooksRegistry.get(target);
 
   bindedElements.forEach((handlers, id) => {
-    const el = document.querySelector(`[data-proxyid="${id}"]`);
+    const element = document.querySelector(`[data-proxyid="${id}"]`);
 
-    // check if element exists
-    // otherwise remove handlers
-    if (el) {
+    // check if element exists otherwise remove handlers
+    if (element) {
       handlers
-        .filter((handler) => handler.prop === prop)
+        .filter((handler) => handler.linkedProp === prop)
         .forEach((handler) => {
-          modifyElement(el, handler.type, {
-            name: handler.target,
-            value: resolve(value, handler.trap),
+          modifyElement(element, handler.type, {
+            key: handler.targetAttr,
+            value: resolve(value, handler.action),
           });
         });
     } else {
@@ -110,48 +98,41 @@ const setter = (target, prop, value, receiver) => {
 };
 
 /**
- * Add hooks to a DOM element
- * @param {HTMLElement} target - the element to add hooks to
- * @param {Object} hooks - object that has hooks as values
- * @returns {HTMLElement}
+ * Register the value if hook. Returns resolved value.
+ * @param {any} value
+ * @param {Object} options
+ * @param {HTMLElement} options.element - the element to bind to
+ * @param {string} options.type - type of modification to make
+ * @param {string} options.target - the attribute or prop to modify
+ * @returns {any}
  */
-const addHooks = (target, hooks) => {
-  const id = target.dataset.proxyid || uid();
-  target.dataset.proxyid = id;
+const registerIfHook = (value, options) => {
+  if (!isHook(value)) return value;
 
-  Object.entries(hooks).forEach(([rawKey, value]) => {
-    if (!isHook(value)) throw new TypeError('Value must be a hook');
+  const hook = value;
+  const id = options.element.dataset.proxyid || uid();
+  options.element.dataset.proxyid = id;
 
-    const [key, type] = getType(rawKey);
+  if (['listener', 'lifecycle'].includes(options.type))
+    throw new Error(
+      "You can't dynamically set lifecycle methods or event listeners"
+    );
 
-    if (['listener', 'lifecycle'].includes(type))
-      throw new Error(
-        "You can't dynamically set lifecycle methods or event listeners"
-      );
+  const bindedElements = HooksRegistry.get(hook[HOOK_REF]);
+  const handler = {
+    type: options.type,
+    linkedProp: hook.data.prop,
+    targetAttr: options.target,
+    action: hook.data.trap,
+  };
 
-    const bindedElements = Hooks.get(value[REF_OBJ]);
-    const handlers = bindedElements.get(id) || [];
-    const handler = {
-      type,
-      target: key,
-      prop: value.data.prop,
-      trap: value.data.trap,
-    };
+  // store handler
+  bindedElements.set(id, [...(bindedElements.get(id) || []), handler]);
 
-    // store handler
-    bindedElements.set(id, [...handlers, handler]);
+  // delete handlers when deleted
+  options.element.addEventListener('@destroy', () => bindedElements.delete(id));
 
-    // delete handlers when deleted
-    target.addEventListener('@destroy', () => bindedElements.delete(id));
-
-    // init values
-    modifyElement(target, handler.type, {
-      name: handler.target,
-      value: resolve(value.data.value, handler.trap),
-    });
-  });
-
-  return target;
+  return resolve(hook.data.value, hook.data.trap);
 };
 
-export { createHook, addHooks };
+export { createHook, registerIfHook };

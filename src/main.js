@@ -2,13 +2,20 @@ import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
 import { registerIfHook } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
-import { getChildNodes, getChildren, traverse } from './utils/dom';
-import { escapeHTML, getPlaceholderId, split } from './utils/general';
+import {
+  getChildNodes,
+  getChildren,
+  splitTextNodes,
+  traverse,
+} from './utils/dom';
+import { escapeHTML, getPlaceholderId } from './utils/general';
+import { addTrap, createMarkers, getBoundary } from './utils/hooks';
 import { uid } from './utils/id';
 import {
   isArray,
   isFragment,
   isFunction,
+  isHook,
   isNullOrUndefined,
   isObject,
   isPlaceholder,
@@ -134,17 +141,45 @@ const createElementFromTemplate = (template) => {
           }
         }
       }
+      // Split all placeholders into its separate text node
+      splitTextNodes(element);
 
+      // then replace the placeholder text nodes
       const textNodes = getChildNodes(element).filter(isTextNode);
       for (const node of textNodes) {
         const text = node.textContent.trim();
 
         if (isPlaceholder(text)) {
-          const match = text.match(PLACEHOLDER_REGEX);
-          const [left, right] = split(text, match[0]);
-          const value = template.values[getPlaceholderId(match[0])];
+          let value = template.values[getPlaceholderId(text)];
 
-          node.replaceWith(left, ...normalizeChildren(value), right);
+          // COMMIT: Hooks
+          if (isHook(value)) {
+            const [head, tail, marker] = createMarkers();
+
+            node.replaceWith(head, tail);
+
+            // Register the hook
+            let hook = value;
+            hook = addTrap(hook, (newValue) => {
+              const nodes = getChildNodes(element);
+              const [start, end] = getBoundary(marker, nodes);
+
+              return normalizeChildren(
+                [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
+              );
+            });
+
+            value = registerIfHook(hook, { element, type: 'children' });
+            value = value.slice(...getBoundary(marker, value));
+
+            // Then render initial value
+            tail.replaceWith(...value, tail);
+
+            continue;
+          }
+          // END
+
+          node.replaceWith(...normalizeChildren(value));
         }
       }
     });
@@ -174,7 +209,9 @@ const resolveValue = (value, options) => {
   let final = value;
 
   if (options.type === 'children') {
-    final = normalizeChildren(final);
+    final = isHook(final)
+      ? addTrap(final, normalizeChildren)
+      : normalizeChildren(final);
   }
 
   return registerIfHook(final, options);
