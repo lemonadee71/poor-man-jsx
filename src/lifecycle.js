@@ -1,4 +1,4 @@
-import { traverse } from './utils/util';
+import { traverse } from './utils/dom';
 
 let observer;
 const OBSERVER_CONFIG = { childList: true, subtree: true };

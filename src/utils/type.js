@@ -1,48 +1,35 @@
-import {
-  isDefaultProp,
-  isEventListener,
-  isHook,
-  isLifecycleMethod,
-  isStyleAttribute,
-} from './is';
+import { getAttrDirectives, getKeyDirectives } from '../directives';
 
-export const getType = (key) => {
+/**
+ * Get the type based on attribute name
+ * @param {string} attrName
+ * @returns {[string,string|null]}
+ */
+export const getTypeOfAttrName = (attrName) => {
+  const allDirectives = [...getAttrDirectives()];
+
+  for (const predicate of allDirectives) {
+    const result = predicate(attrName);
+    if (result) return result;
+  }
+
   // Any unrecognizable key will be treated as attr
-  let type = 'attr';
-  let k = key;
-
-  if (isHook(key)) {
-    type = 'hook';
-  } else if (isLifecycleMethod(key)) {
-    type = 'lifecycle';
-  } else if (isEventListener(key)) {
-    type = 'listener';
-  } else if (isDefaultProp(key)) {
-    type = 'prop';
-  } else if (isStyleAttribute(key)) {
-    type = 'style';
-  } else if (key === 'children') {
-    type = 'children';
-  }
-
-  if (type === 'listener' || type === 'lifecycle') {
-    k = key.toLowerCase();
-  }
-
-  return [k.replace(/^(\$|@|on|style_)/gi, ''), type];
+  return ['attr', attrName];
 };
 
-export const batchTypes = (obj) => {
-  const batched = Object.entries(obj).reduce((acc, [rawKey, value]) => {
-    const [key, type] = isHook(value)
-      ? [rawKey.replace('$', ''), 'hook']
-      : getType(rawKey);
+/**
+ * Get the type of object key
+ * @param {string} objKey
+ * @returns {[string,string|null]}
+ */
+export const getTypeOfKey = (objKey) => {
+  const allDirectives = [...getAttrDirectives(), ...getKeyDirectives()];
 
-    if (!acc[type]) acc[type] = {};
-    acc[type][key] = value;
+  for (const predicate of allDirectives) {
+    const result = predicate(objKey);
+    if (result) return result;
+  }
 
-    return acc;
-  }, {});
-
-  return batched;
+  // Any unrecognizable key will be treated as attr
+  return ['attr', objKey];
 };

@@ -1,10 +1,5 @@
-import {
-  BOOLEAN_ATTRS,
-  DEFAULT_PROPS,
-  LIFECYCLE_METHODS,
-  REF_OBJ,
-} from '../constants';
-import Template from '../Template';
+import { PLACEHOLDER_REGEX } from '../../rewrite/constants';
+import Template from './Template';
 
 export const isNullOrUndefined = (value) =>
   value === null || value === undefined;
@@ -15,30 +10,24 @@ export const isFunction = (value) => typeof value === 'function';
 
 export const isString = (value) => typeof value === 'string';
 
-export const isArray = (value) => Array.isArray(value);
+export const isNumber = (value) =>
+  typeof value === 'number' && !Number.isNaN(value);
 
-export const isTemplate = (value) => value instanceof Template;
+export const isArray = (value) => Array.isArray(value);
 
 export const isNode = (value) => value instanceof Node;
 
-export const isHook = (value) => {
-  if (isString(value)) return value.startsWith('$');
-  if (isObject(value) || isFunction(value)) return !!value[REF_OBJ];
-  return false;
-};
+export const isTextNode = (value) => value instanceof Text;
 
-export const isEventListener = (key) => key.toLowerCase().startsWith('on');
+export const isElement = (value) => value instanceof HTMLElement;
 
-export const isLifecycleMethod = (key) => {
-  const name = key.replace('on', '').toLowerCase();
+export const isFragment = (value) => value instanceof DocumentFragment;
 
-  return isEventListener(key) && LIFECYCLE_METHODS.includes(name);
-};
+export const isTemplate = (value) => value instanceof Template;
 
-export const isDefaultProp = (key) => DEFAULT_PROPS.includes(key);
+export const isPlaceholder = (string) => PLACEHOLDER_REGEX.test(string);
 
-// all names prefixed with `style_` will be assumed as style attr
-// this is to avoid naming conflicts
-export const isStyleAttribute = (key) => key.startsWith('style_');
-
-export const isBooleanAttribute = (attr) => BOOLEAN_ATTRS.includes(attr);
+export const isTruthy = (value) =>
+  value &&
+  // handles strings
+  !['0', 'false', 'null', 'undefined', 'NaN'].includes(value);

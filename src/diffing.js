@@ -1,179 +1,123 @@
-import { ELEMENTS_TO_ALWAYS_RERENDER } from './constants';
-import { getChildren } from './utils/util';
-
-const IGNORE_UPDATE_GLOBAL = ['data-proxyid'];
-
-// Diffing utils
-
-const getKeyString = (node) => node.getAttribute('keystring') || 'key';
-
-const getKey = (node, keyString) =>
-  node.getAttribute(keyString) ||
-  node.getAttribute('key') ||
-  node.getAttribute('data-key');
-
-const hasNoKey = (nodes, keyString) =>
-  nodes.some((node) => !getKey(node, keyString));
-
-const getBehavior = (node, type) =>
-  node.getAttribute(`is-${type}`) !== null ||
-  node.getAttribute('behavior') === type;
+import { getChildNodes, getChildren } from './utils/dom';
+import { venn } from './utils/general';
+import { getKey, setMetadata } from './utils/meta';
 
 /**
- * Checks if element will be treated as 'text' element
- * @param {HTMLElement} node
- * @returns {Boolean}
- */
-const isText = (node) => getBehavior(node, 'text');
-
-/**
- * Checks if element needs to be diffed
- * @param {HTMLElement} node
- * @returns {Boolean}
- */
-const shouldDiffNode = (node) => getBehavior(node, 'list');
-
-/**
- * Check if element should ignore updates
- * @param {HTMLElement} node
- * @returns {Boolean}
- */
-const shouldSkip = (node) => node.getAttribute('ignore-all') !== null;
-
-/**
- * Check if element should only update attributes and not content
- * @param {HTMLElement} node
- * @returns {Boolean}
- */
-const shouldIgnoreContent = (node) =>
-  node.getAttribute('ignore-content') !== null;
-
-/**
- * Add an attribute to be ignored by diffing. This will be applied to all elements.
- * Use attribute `ignore` for localized ignored attributes.
- * @param  {...string} attr - the attribute to be ignored
+ * Transfers the changes in the updated element
+ * to the original element
+ * @param {HTMLElement} oldEl - the original element
+ * @param {HTMLElement} newEl - the updated element
  * @returns
  */
-const addIgnoredAttribute = (...attr) => IGNORE_UPDATE_GLOBAL.push(...attr);
+export const patchElement = (oldEl, newEl) => {
+  const meta = oldEl.__meta;
 
-// Main
+  if (meta?.skip?.all) return;
+  if (!meta?.skip?.attr && !meta?.isNew) updateAttributes(oldEl, newEl);
 
-const rearrangeNodes = (parent, newNodes, keyString) => {
-  const oldNodes = getChildren(parent);
-  const oldKeys = oldNodes.map((node) => getKey(node, keyString));
-  const newKeys = newNodes.map((node) => getKey(node, keyString));
-  const toAdd = newKeys.filter((key) => !oldKeys.includes(key));
-
-  // remove nodes
-  oldKeys
-    .filter((key) => !newKeys.includes(key))
-    .forEach((key) =>
-      oldNodes.find((node) => getKey(node, keyString) === key).remove()
+  if (oldEl.innerHTML !== newEl.innerHTML) {
+    rearrangeNodes(oldEl, getChildNodes(newEl));
+    getChildren(oldEl).forEach((child, i) =>
+      patchElement(child, newEl.children[i])
     );
+  }
 
+  setMetadata(oldEl, 'isNew', false);
+};
+
+// NOTE: There are some empty text nodes in between elements
+//       which can cause additional mount/unmount
+//       consider ignoring/removing them for block level elements
+/**
+ * Rearrange nodes if there is change. Relies on `key`.
+ * @param {HTMLElement} parent - the original element
+ * @param {Node[]} newNodes - the updated child nodes
+ */
+export const rearrangeNodes = (parent, newNodes) => {
+  const oldNodes = getChildNodes(parent);
+  const oldKeys = oldNodes.map(getKey);
+  const newKeys = newNodes.map(getKey);
+
+  if (oldKeys.join() === newKeys.join()) return;
+
+  const { left: toRemove, right: toAdd, intersection } = venn(oldKeys, newKeys);
   // at this point, currentKeys should have the same items as newKeys
-  // but with differing order (if there was change)
-  const currentKeys = oldKeys.filter((key) => newKeys.includes(key));
-  currentKeys.push(...toAdd);
+  // but with different order (if there was change)
+  const currentKeys = [...intersection, ...toAdd];
 
-  let prevElement;
+  // to avoid unnecessary call of `updateAttribute` on first patch
+  for (const key of toAdd) {
+    setMetadata(newNodes.find(fromKey(key)), 'isNew', true);
+  }
 
+  for (const key of toRemove) {
+    parent.removeChild(oldNodes.find(fromKey(key)));
+  }
+
+  let previousNode;
   newKeys.forEach((key, newIndex) => {
-    const oldIndex = currentKeys.indexOf(key);
-
-    // if adding for the first time, get the new element
-    // otherwise get the current element from parent
-    const currentElement = toAdd.includes(key)
+    const currentNode = toAdd.includes(key)
       ? newNodes[newIndex]
-      : getChildren(parent).find((node) => getKey(node, keyString) === key);
+      : oldNodes.find(fromKey(key));
+
+    const oldIndex = currentKeys.indexOf(key);
 
     // check if node is moved to a new place
     // or if it's a new one
-    if (oldIndex !== newIndex || !parent.contains(currentElement)) {
-      if (!prevElement) {
-        parent.prepend(currentElement);
-      } else if (currentElement.previousElementSibling !== prevElement) {
-        prevElement.after(currentElement);
+    if (oldIndex !== newIndex || !parent.contains(currentNode)) {
+      if (!previousNode) {
+        parent.insertBefore(currentNode, parent.firstChild);
+      } else if (currentNode.previousSibling !== previousNode) {
+        parent.insertBefore(currentNode, previousNode.nextSibling);
       }
     }
 
-    prevElement = currentElement;
+    previousNode = currentNode;
   });
 };
 
-const updateAttributes = (oldNode, newNode) => {
-  const oldAttributes = [...oldNode.attributes];
-  const newAttributes = [...newNode.attributes];
-
-  const attributesToIgnore = [
-    ...(oldNode.getAttribute('ignore') || '').split(','),
-    ...IGNORE_UPDATE_GLOBAL,
-  ];
-  const attributesToRemove = oldAttributes
-    .filter((attr) => !newAttributes.map((a) => a.name).includes(attr.name))
-    .filter((attr) => !attributesToIgnore.includes(attr.name));
-
-  // remove attrs
-  attributesToRemove.forEach((attr) => oldNode.removeAttribute(attr.name));
-
-  // add new and update existing
-  newAttributes
-    .filter((attr) => !attributesToIgnore.includes(attr.name))
-    .forEach((attr) => oldNode.setAttribute(attr.name, attr.value));
-};
-
-const patchNodes = (oldNode, newNode) => {
-  if (shouldSkip(oldNode)) return;
-
-  updateAttributes(oldNode, newNode);
-
-  // we assume that the number of children is still the same
-  // and that changes are limited to "content"
-  // and are enclosed in an inline text element (see ELEMENT_TO_ALWAYS_RERENDER)
-  if (
-    !shouldIgnoreContent(oldNode) &&
-    (isText(oldNode) ||
-      ELEMENTS_TO_ALWAYS_RERENDER.includes(oldNode.nodeName.toLowerCase()))
-  ) {
-    if (oldNode.innerHTML !== newNode.innerHTML) {
-      oldNode.innerHTML = newNode.innerHTML;
-    }
-
-    // diff
-  } else if (shouldDiffNode(oldNode)) {
-    // this won't check for items that don't have a key
-    // since we're not using naiveDiff to avoid circular dependency
-    const nodes = getChildren(newNode);
-    rearrangeNodes(oldNode, nodes, getKeyString(oldNode));
-    getChildren(oldNode).forEach((child, i) => patchNodes(child, nodes[i]));
-
-    // recursively update
-  } else if (oldNode.children.length) {
-    getChildren(oldNode).forEach((child, i) =>
-      patchNodes(child, newNode.children[i])
-    );
-  }
-};
-
 /**
- * Applies naive diffing to an element
- * @param {HTMLElement} parent
- * @param {Array.<HTMLElement>} newNodes
+ * Update attributes of element by comparing changes
+ * between the old and updated element
+ * @param {HTMLElement} oldEl - the original element
+ * @param {HTMLElement} newEl - the updated element
  */
-const naiveDiff = (parent, newNodes) => {
-  const keyString = getKeyString(parent);
+const updateAttributes = (oldEl, newEl) => {
+  const data = oldEl.__meta;
+  const attrsToIgnore = ['data-proxyid'];
 
-  // every item should have a key
-  if (hasNoKey(newNodes, keyString)) {
-    throw new Error(
-      'every children should have a key if parent is of type list'
-    );
+  if (data?.skip?.others) {
+    attrsToIgnore.push(...data.skip.others);
   }
 
-  // rearrange first
-  rearrangeNodes(parent, newNodes, keyString);
-  // then update each element
-  getChildren(parent).forEach((child, i) => patchNodes(child, newNodes[i]));
+  const oldAttrs = [...oldEl.attributes].filter(
+    (attr) => !attrsToIgnore.includes(attr.name)
+  );
+  const newAttrs = [...newEl.attributes].filter(
+    (attr) => !attrsToIgnore.includes(attr.name)
+  );
+
+  const {
+    left: toRemove,
+    intersection,
+    right: toAdd,
+  } = venn(oldAttrs, newAttrs, (attr) => attr.name);
+
+  for (const attr of toRemove) {
+    oldEl.removeAttribute(attr.name);
+  }
+
+  for (const attr of toAdd) {
+    oldEl.setAttribute(attr.name, attr.value);
+  }
+
+  for (const attr of intersection) {
+    const old = oldAttrs.find((a) => a.name === attr.name);
+
+    if (old.value !== attr.value) {
+      oldEl.setAttribute(attr.name, attr.value);
+    }
+  }
 };
 
-export { addIgnoredAttribute, shouldDiffNode, naiveDiff };
+const fromKey = (key) => (node) => getKey(node) === key;
