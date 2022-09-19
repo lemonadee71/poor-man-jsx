@@ -48,10 +48,18 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     }
     case 'class:name': {
-      const classNames = data.key.replace(WRAPPING_BRACKETS, '').split(',');
+      const [ifTrue, ifFalse] = data.key
+        .replace(WRAPPING_BRACKETS, '')
+        .split('|')
+        .map((str) => str.split(','));
 
-      if (isTruthy(data.value)) element.classList.add(...classNames);
-      else element.classList.remove(...classNames);
+      if (isTruthy(data.value)) {
+        element.classList.remove(...(ifFalse || []));
+        element.classList.add(...ifTrue);
+      } else {
+        element.classList.remove(...ifTrue);
+        element.classList.add(...(ifFalse || []));
+      }
       break;
     }
     case 'class':

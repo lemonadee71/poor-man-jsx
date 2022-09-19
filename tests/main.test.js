@@ -203,6 +203,22 @@ describe('core', () => {
       expect(screen.getByTestId('class:')).toHaveClass('hidden visible');
     });
 
+    it('class:[name1|name2] - switches class/es', () => {
+      render(
+        html`<div class:[hidden|visible]="true" data-testid="class:">
+          Test
+        </div>`,
+        'body'
+      );
+
+      const element = screen.getByTestId('class:');
+      const firstState = screen.getByTestId('class:').cloneNode();
+      apply(element, { 'class:[hidden|visible]': false });
+
+      expect(firstState).toHaveClass('hidden');
+      expect(screen.getByTestId('class:')).toHaveClass('visible');
+    });
+
     it('style:prop - sets a style property individually', () => {
       render(
         html`<div
