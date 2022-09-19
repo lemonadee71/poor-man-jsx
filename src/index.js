@@ -1,28 +1,7 @@
-import { addBooleanAttribute } from './constants';
-import { addIgnoredAttribute } from './diffing';
-import { createHook, addHooks } from './hooks';
-import { enableLifecycle, disableLifecycle } from './lifecycle';
-import { html, render } from './main';
-import {
-  onBeforeCreation,
-  onAfterCreation,
-  removeAfterCreation,
-  removeBeforeCreation,
-} from './preprocess';
+import { html, render, apply } from './main';
+import { createHook } from './hooks';
+import { enableLifecycle } from './lifecycle';
 
-// lifecycle is enabled by default
 enableLifecycle();
 
-const settings = {
-  addBooleanAttribute,
-  addIgnoredAttribute,
-  onBeforeCreation,
-  onAfterCreation,
-  removeBeforeCreation,
-  removeAfterCreation,
-  enableLifecycle,
-  disableLifecycle,
-};
-
-export { html, render, createHook, addHooks };
-export default settings;
+export { html, render, apply, createHook };
