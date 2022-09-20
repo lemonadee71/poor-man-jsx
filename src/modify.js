@@ -1,12 +1,18 @@
 import { LIFECYCLE_METHODS, WRAPPING_BRACKETS } from './constants';
 import { patchElement, rearrangeNodes } from './diffing';
 import { getPlugins } from './directives';
-import { cloneNode, getChildNodes, getChildren } from './utils/dom';
+import {
+  cloneNode,
+  getChildNodes,
+  getChildren,
+  removeChildren,
+} from './utils/dom';
 import { unescapeHTML } from './utils/general';
 import {
   isArray,
   isElement,
   isFunction,
+  isNullOrUndefined,
   isString,
   isSVG,
   isTruthy,
@@ -165,33 +171,49 @@ export const modifyElement = (target, type, data, context = document) => {
     case 'children': {
       const previousActiveElement = document.activeElement;
       const fragment = document.createDocumentFragment();
-      let nodes = data.value.map((node) =>
-        document.body.contains(node) ? cloneNode(node) : node
-      );
 
-      fragment.append(...nodes);
-      fragment.normalize();
+      if (isNullOrUndefined(element.getAttribute('no-diff'))) {
+        let nodes = data.value.map((node) =>
+          document.body.contains(node) ? cloneNode(node) : node
+        );
 
-      nodes = getChildNodes(fragment);
+        fragment.append(...nodes);
+        fragment.normalize();
 
-      // we do this since we only need to do this on first patch
-      if (!element.__meta?.already_keyed) {
-        addKeyRecursive(getChildNodes(element));
+        nodes = getChildNodes(fragment);
+
+        // we do this since we only need to do this on first patch
+        if (!element.__meta?.already_keyed) {
+          addKeyRecursive(getChildNodes(element));
+        }
+        setMetadata(element, 'already_keyed', true);
+
+        // add, remove, rearrange top-level first
+        rearrangeNodes(element, nodes);
+
+        // then update each element
+        const children = nodes.filter(isElement);
+        getChildren(element).forEach((child, i) =>
+          patchElement(child, children[i])
+        );
+
+        // after diffing, simply restore focus
+        // since we simply updated the existing elements
+        previousActiveElement?.focus();
+      } else {
+        removeChildren(element);
+
+        fragment.append(...[data.value].flat());
+        element.append(fragment);
+
+        // since all children are rerendered
+        // we look for the 'equal' node instead and restore focus to it
+        // so if there's any change to previous active, we will lose focus
+        const matchingElement = getChildren(element).find((child) =>
+          child.isEqualNode(previousActiveElement)
+        );
+        matchingElement?.focus();
       }
-      setMetadata(element, 'already_keyed', true);
-
-      // add, remove, rearrange top-level first
-      rearrangeNodes(element, nodes);
-
-      // then update each element
-      const children = nodes.filter(isElement);
-      getChildren(element).forEach((child, i) =>
-        patchElement(child, children[i])
-      );
-
-      // after diffing, simply restore focus
-      // since we simply updated the existing elements
-      previousActiveElement?.focus();
 
       break;
     }

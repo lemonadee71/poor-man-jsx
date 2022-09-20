@@ -339,4 +339,40 @@ describe('diffing', () => {
     expect(screen.getByTestId('skip')).toHaveTextContent('eat');
     expect(screen.getByTestId('skip')).toHaveAttribute('data-num', rand);
   });
+
+  it('can be opt out of with `no-diff` attribute on parent', (done) => {
+    const hook = createHook({ list: defaultData });
+    render(
+      html`<div no-diff data-testid="no-diff">
+        ${hook.$list.map((data) =>
+          ListItem(data, { onCreate, onDestroy, onMount, onUnmount })
+        )}
+      </div>`,
+      'body'
+    );
+
+    hook.list = [
+      { id: '2', text: 'shower' },
+      { id: '4', text: 'exercise' },
+      { id: '1', text: 'eating' },
+    ];
+
+    setTimeout(() => {
+      try {
+        expect(onCreate).toBeCalledTimes(6);
+        expect(onDestroy).toBeCalledTimes(3);
+        expect(onMount).toBeCalledTimes(6);
+        expect(onUnmount).toBeCalledTimes(3);
+        expect(getKeys(screen.getByTestId('no-diff'))).toBe(
+          hook.list.map((item) => item.id).join()
+        );
+        expect(getInnerText(screen.getByTestId('no-diff'))).toBe(
+          hook.list.map((item) => item.text).join()
+        );
+        done();
+      } catch (error) {
+        done(error);
+      }
+    }, 0);
+  });
 });
