@@ -11,13 +11,11 @@ let processors = [];
 export const addPreprocessor = (...callback) => processors.push(...callback);
 
 /**
- * Remove a processor callback. If callback is omitted,
- * all processors are removed
- * @param {?Function} callback
+ * Remove a processor callback
+ * @param {Function} callback
  */
-export const removePreprocessor = (callback = null) => {
-  if (callback) processors = processors.filter((fn) => fn !== callback);
-  else processors = [];
+export const removePreprocessor = (callback) => {
+  processors = processors.filter((fn) => fn !== callback);
 };
 
 export const preprocess = (htmlString) =>
