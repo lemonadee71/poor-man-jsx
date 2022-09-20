@@ -1,4 +1,5 @@
 import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
+import { replaceCustomComponents } from './custom-components';
 import { registerIfHook } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
@@ -6,12 +7,13 @@ import { preprocess } from './preprocess';
 import {
   getChildNodes,
   getChildren,
+  getElementsWithPlaceholder,
   splitTextNodes,
   traverse,
 } from './utils/dom';
 import { escapeHTML, getPlaceholderId } from './utils/general';
-import { addTrap, createMarkers, getBoundary } from './utils/hooks';
 import { uid } from './utils/id';
+import { addTrap, createMarkers, getBoundary } from './utils/hooks';
 import {
   isArray,
   isFragment,
@@ -87,6 +89,49 @@ const createElementFromTemplate = (template) => {
   const str = preprocess(template.template);
   const fragment = document.createRange().createContextualFragment(str);
 
+  const withPlaceholder = getElementsWithPlaceholder(fragment);
+  for (const element of withPlaceholder) {
+    splitTextNodes(element);
+
+    // then replace the placeholder text nodes
+    const textNodes = getChildNodes(element).filter(isTextNode);
+    for (const node of textNodes) {
+      const text = node.textContent.trim();
+
+      if (isPlaceholder(text)) {
+        let value = template.values[getPlaceholderId(text)];
+
+        if (isHook(value)) {
+          const [head, tail, marker] = createMarkers();
+          node.replaceWith(head, tail);
+
+          // Register the hook
+          let hook = value;
+          hook = addTrap(hook, (newValue) => {
+            const nodes = getChildNodes(element);
+            const [start, end] = getBoundary(marker, nodes);
+
+            return normalizeChildren(
+              [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
+            );
+          });
+
+          value = registerIfHook(hook, { element, type: 'children' });
+          value = value.slice(...getBoundary(marker, value));
+
+          // Then render initial value
+          tail.replaceWith(...value, tail);
+
+          continue;
+        }
+
+        node.replaceWith(...normalizeChildren(value));
+      }
+    }
+  }
+
+  replaceCustomComponents(fragment, template.values, createElementFromTemplate);
+
   for (const child of getChildren(fragment)) {
     traverse(child, (element) => {
       for (const attr of [...element.attributes]) {
@@ -140,47 +185,6 @@ const createElementFromTemplate = (template) => {
               }),
             });
           }
-        }
-      }
-      // Split all placeholders into its separate text node
-      splitTextNodes(element);
-
-      // then replace the placeholder text nodes
-      const textNodes = getChildNodes(element).filter(isTextNode);
-      for (const node of textNodes) {
-        const text = node.textContent.trim();
-
-        if (isPlaceholder(text)) {
-          let value = template.values[getPlaceholderId(text)];
-
-          // COMMIT: Hooks
-          if (isHook(value)) {
-            const [head, tail, marker] = createMarkers();
-
-            node.replaceWith(head, tail);
-
-            // Register the hook
-            let hook = value;
-            hook = addTrap(hook, (newValue) => {
-              const nodes = getChildNodes(element);
-              const [start, end] = getBoundary(marker, nodes);
-
-              return normalizeChildren(
-                [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
-              );
-            });
-
-            value = registerIfHook(hook, { element, type: 'children' });
-            value = value.slice(...getBoundary(marker, value));
-
-            // Then render initial value
-            tail.replaceWith(...value, tail);
-
-            continue;
-          }
-          // END
-
-          node.replaceWith(...normalizeChildren(value));
         }
       }
     });
