@@ -22,6 +22,8 @@ export const isTextNode = (value) => value instanceof Text;
 
 export const isElement = (value) => value instanceof HTMLElement;
 
+export const isSVG = (value) => value instanceof SVGElement;
+
 export const isFragment = (value) => value instanceof DocumentFragment;
 
 export const isTemplate = (value) => value instanceof Template;

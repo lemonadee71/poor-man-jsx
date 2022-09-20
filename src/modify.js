@@ -2,7 +2,14 @@ import { LIFECYCLE_METHODS, WRAPPING_BRACKETS } from './constants';
 import { patchElement, rearrangeNodes } from './diffing';
 import { cloneNode, getChildNodes, getChildren } from './utils/dom';
 import { unescapeHTML } from './utils/general';
-import { isArray, isElement, isFunction, isString, isTruthy } from './utils/is';
+import {
+  isArray,
+  isElement,
+  isFunction,
+  isString,
+  isSVG,
+  isTruthy,
+} from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
 import { addKeyRecursive, setMetadata } from './utils/meta';
 
@@ -17,7 +24,8 @@ import { addKeyRecursive, setMetadata } from './utils/meta';
  * @returns {HTMLElement}
  */
 export const modifyElement = (target, type, data, context = document) => {
-  const element = isElement(target) ? target : context.querySelector(target);
+  const element =
+    isElement(target) || isSVG(target) ? target : context.querySelector(target);
 
   switch (type) {
     case 'text':
