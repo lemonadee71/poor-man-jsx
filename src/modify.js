@@ -1,5 +1,6 @@
 import { LIFECYCLE_METHODS, WRAPPING_BRACKETS } from './constants';
 import { patchElement, rearrangeNodes } from './diffing';
+import { getPlugins } from './directives';
 import { cloneNode, getChildNodes, getChildren } from './utils/dom';
 import { unescapeHTML } from './utils/general';
 import {
@@ -24,6 +25,7 @@ import { addKeyRecursive, setMetadata } from './utils/meta';
  * @returns {HTMLElement}
  */
 export const modifyElement = (target, type, data, context = document) => {
+  const plugins = getPlugins();
   const element =
     isElement(target) || isSVG(target) ? target : context.querySelector(target);
 
@@ -240,6 +242,7 @@ export const modifyElement = (target, type, data, context = document) => {
     }
 
     default:
+      plugins[type]?.(element, data, modifyElement);
   }
 
   return element;

@@ -1,4 +1,9 @@
-import { getAttrDirectives, getKeyDirectives } from '../directives';
+import {
+  getAdditionalAttrDirectives,
+  getAdditionalKeyDirectives,
+  getAttrDirectives,
+  getKeyDirectives,
+} from '../directives';
 
 /**
  * Get the type based on attribute name
@@ -6,7 +11,10 @@ import { getAttrDirectives, getKeyDirectives } from '../directives';
  * @returns {[string,string|null]}
  */
 export const getTypeOfAttrName = (attrName) => {
-  const allDirectives = [...getAttrDirectives()];
+  const allDirectives = [
+    ...getAttrDirectives(),
+    ...getAdditionalAttrDirectives(),
+  ];
 
   for (const predicate of allDirectives) {
     const result = predicate(attrName);
@@ -23,7 +31,12 @@ export const getTypeOfAttrName = (attrName) => {
  * @returns {[string,string|null]}
  */
 export const getTypeOfKey = (objKey) => {
-  const allDirectives = [...getAttrDirectives(), ...getKeyDirectives()];
+  const allDirectives = [
+    ...getAttrDirectives(),
+    ...getAdditionalAttrDirectives(),
+    ...getKeyDirectives(),
+    ...getAdditionalKeyDirectives(),
+  ];
 
   for (const predicate of allDirectives) {
     const result = predicate(objKey);
