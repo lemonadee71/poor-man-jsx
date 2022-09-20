@@ -50,7 +50,6 @@ export const cloneNode = (node) => {
   return clone;
 };
 
-// COMMIT: Custom components
 /**
  * Get all elements with placeholder texts in their body
  * @param {HTMLElement|DocumentFragment} root
@@ -75,9 +74,7 @@ export const getElementsWithPlaceholder = (root) => {
 
   return elementsWithPlaceholder;
 };
-// END
 
-// COMMIT: Hooks
 /**
  * Split all placeholder texts into their own nodes
  * @param {HTMLElement} element
@@ -97,4 +94,3 @@ export const splitTextNodes = (element) => {
       node.replaceWith(...strings);
     });
 };
-// END
