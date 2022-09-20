@@ -1,5 +1,4 @@
-import { PLACEHOLDER_REGEX } from '../../rewrite/constants';
-import { HOOK_REF } from '../constants';
+import { HOOK_REF, PLACEHOLDER_REGEX } from '../constants';
 import Template from './Template';
 
 export const isNullOrUndefined = (value) =>
