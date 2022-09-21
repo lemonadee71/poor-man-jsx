@@ -246,10 +246,9 @@ export const modifyElement = (target, type, data, context = document) => {
 
       break;
     case 'show': {
-      const originalDisplay = element.__meta?.og_display;
-      let display = originalDisplay;
+      let display = element.__meta?.og_display;
 
-      if (!originalDisplay) {
+      if (!display) {
         // NOTE: This might be an expensive operation
         display = window.getComputedStyle(element).display;
         setMetadata(element, 'og_display', display);

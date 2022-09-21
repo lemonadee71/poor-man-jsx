@@ -64,7 +64,9 @@ const objKeyDirectives = [
   (key) => (key === 'innerHTML' ? ['html'] : null),
   (key) => (key === 'children' ? ['children'] : null),
   (key) => (key === 'key' ? ['key'] : null),
-  (key) => (key === 'skip' ? ['skip'] : null),
+  (key) => (key === '_skip' ? ['skip'] : null),
+  (key) => (key === '_ref' ? ['ref'] : null),
+  (key) => (key === '_show' ? ['show'] : null),
 ];
 
 const getAttrDirectives = () => [...attrNameDirectives];

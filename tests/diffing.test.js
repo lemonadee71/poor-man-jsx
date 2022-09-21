@@ -318,7 +318,7 @@ describe('diffing', () => {
             data,
             data.id === '1'
               ? {
-                  skip: 'all',
+                  _skip: 'all',
                   'data-testid': 'skip',
                   'data-num': Math.random(),
                 }
