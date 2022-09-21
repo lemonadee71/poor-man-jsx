@@ -94,4 +94,16 @@ describe('addDirective', () => {
       'true'
     );
   });
+
+  it('uses strict equality if `getType` is not provided', () => {
+    PoorManJSX.plugins.addDirective(directive);
+
+    render(html`<div autosize data-testid="autosize"></div>`, 'body');
+
+    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
+    expect(screen.getByTestId('autosize')).toHaveAttribute(
+      'data-autosize',
+      'true'
+    );
+  });
 });

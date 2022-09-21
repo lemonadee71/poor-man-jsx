@@ -108,7 +108,11 @@ const addDirective = ({ name, type, getType, callback }) => {
     objKey: null,
   };
 
-  if (isFunction(getType)) {
+  if (!getType) {
+    const check = (str) => (str === type ? [type, type] : null);
+    typeChecker.attrName = check;
+    typeChecker.objKey = check;
+  } else if (isFunction(getType)) {
     typeChecker.attrName = getType;
     typeChecker.objKey = getType;
   } else if (isArray(getType)) {
