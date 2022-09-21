@@ -11,7 +11,8 @@ export const getPlaceholderId = (str) => str.replaceAll('__', '');
  * @param {string} str
  * @returns {string}
  */
-export const camelize = (str) => str.replace(/-./g, (x) => x[1].toUpperCase());
+export const camelize = (str) =>
+  str.replace(/[-_]./g, (x) => x[1].toUpperCase());
 
 /**
  * Escape unsafe html entities from a string.

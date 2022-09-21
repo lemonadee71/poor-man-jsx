@@ -65,7 +65,7 @@ describe('custom components', () => {
     });
   });
 
-  it('all attributes names are converted to camelCase', () => {
+  it('all attributes names (kebab and snake case) are converted to camelCase', () => {
     let data;
     PoorManJSX.customComponents.define('Task', ({ props }) => {
       data = props;
@@ -79,7 +79,7 @@ describe('custom components', () => {
 
     expect(data).toStrictEqual({
       isCompleted: false,
-      on_complete: mockCallback,
+      onComplete: mockCallback,
     });
   });
 
