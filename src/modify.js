@@ -157,14 +157,12 @@ export const modifyElement = (target, type, data, context = document) => {
         );
       }
 
-      for (const [evt, callbacks] of Object.entries(data.value)) {
-        for (const fn of [callbacks].flat()) {
-          const evtType = LIFECYCLE_METHODS.includes(evt)
-            ? 'lifecycle'
-            : 'listener';
+      for (const [evt, fns] of Object.entries(data.value)) {
+        const evtType = LIFECYCLE_METHODS.includes(evt)
+          ? 'lifecycle'
+          : 'listener';
 
-          modifyElement(element, evtType, { key: evt, value: fn });
-        }
+        modifyElement(element, evtType, { key: evt, value: fns });
       }
 
       break;
