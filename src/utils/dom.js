@@ -1,5 +1,5 @@
 import { PLACEHOLDER_REGEX } from '../constants';
-import { isPlaceholder, isTextNode } from './is';
+import { isPlaceholder } from './is';
 
 /**
  * Returns children of element as array
@@ -51,46 +51,37 @@ export const cloneNode = (node) => {
 };
 
 /**
- * Get all elements with placeholder texts in their body
+ * Get all placeholder text nodes
  * @param {HTMLElement|DocumentFragment} root
- * @returns {HTMLElement[]}
+ * @returns {Text[]}
  */
-export const getElementsWithPlaceholder = (root) => {
-  const elementsWithPlaceholder = [];
+export const getPlaceholders = (root) => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, (node) =>
     isPlaceholder(node.textContent)
       ? NodeFilter.FILTER_ACCEPT
       : NodeFilter.FILTER_REJECT
   );
+  const oldNodes = [];
+  const newNodes = [];
 
   let current;
   // eslint-disable-next-line
-  while ((current = walker.nextNode())) {
-    const parent = current.parentElement;
-    if (!elementsWithPlaceholder.includes(parent)) {
-      elementsWithPlaceholder.push(parent);
-    }
-  }
+  while ((current = walker.nextNode())) oldNodes.push(current);
 
-  return elementsWithPlaceholder;
-};
-
-/**
- * Split all placeholder texts into their own nodes
- * @param {HTMLElement} element
- */
-export const splitTextNodes = (element) => {
-  getChildNodes(element)
-    .filter(isTextNode)
-    .forEach((node) => {
-      const text = node.textContent;
-      const matches = text.match(new RegExp(PLACEHOLDER_REGEX, 'g')) || [];
-      const fragments = text.split(PLACEHOLDER_REGEX);
-      const strings = matches.reduce(
+  for (const node of oldNodes) {
+    const text = node.textContent;
+    const matches = text.match(new RegExp(PLACEHOLDER_REGEX, 'g')) || [];
+    const fragments = text.split(PLACEHOLDER_REGEX);
+    const strings = matches
+      .reduce(
         (arr, value, i) => [...arr, value, fragments[i + 1]],
         [fragments[0]]
-      );
+      )
+      .map((str) => document.createTextNode(str));
 
-      node.replaceWith(...strings);
-    });
+    newNodes.push(...strings);
+    node.replaceWith(...strings);
+  }
+
+  return newNodes.filter((node) => isPlaceholder(node.textContent));
 };

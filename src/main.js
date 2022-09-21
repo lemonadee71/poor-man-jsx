@@ -7,8 +7,7 @@ import { preprocess } from './preprocess';
 import {
   getChildNodes,
   getChildren,
-  getElementsWithPlaceholder,
-  splitTextNodes,
+  getPlaceholders,
   traverse,
 } from './utils/dom';
 import { escapeHTML, getPlaceholderId } from './utils/general';
@@ -24,7 +23,6 @@ import {
   isPlaceholder,
   isString,
   isTemplate,
-  isTextNode,
 } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
 import { addKeyRecursive } from './utils/meta';
@@ -89,45 +87,37 @@ const createElementFromTemplate = (template) => {
   const str = preprocess(template.template);
   const fragment = document.createRange().createContextualFragment(str);
 
-  const withPlaceholder = getElementsWithPlaceholder(fragment);
-  for (const element of withPlaceholder) {
-    splitTextNodes(element);
+  for (const node of getPlaceholders(fragment)) {
+    const parent = node.parentElement;
+    const text = node.textContent.trim();
 
-    // then replace the placeholder text nodes
-    const textNodes = getChildNodes(element).filter(isTextNode);
-    for (const node of textNodes) {
-      const text = node.textContent.trim();
+    let value = template.values[getPlaceholderId(text)];
 
-      if (isPlaceholder(text)) {
-        let value = template.values[getPlaceholderId(text)];
+    if (isHook(value)) {
+      const [head, tail, marker] = createMarkers();
+      node.replaceWith(head, tail);
 
-        if (isHook(value)) {
-          const [head, tail, marker] = createMarkers();
-          node.replaceWith(head, tail);
+      // Register the hook
+      let hook = value;
+      hook = addTrap(hook, (newValue) => {
+        const nodes = getChildNodes(parent);
+        const [start, end] = getBoundary(marker, nodes);
 
-          // Register the hook
-          let hook = value;
-          hook = addTrap(hook, (newValue) => {
-            const nodes = getChildNodes(element);
-            const [start, end] = getBoundary(marker, nodes);
+        return normalizeChildren(
+          [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
+        );
+      });
 
-            return normalizeChildren(
-              [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
-            );
-          });
+      value = registerIfHook(hook, { element: parent, type: 'children' });
+      value = value.slice(...getBoundary(marker, value));
 
-          value = registerIfHook(hook, { element, type: 'children' });
-          value = value.slice(...getBoundary(marker, value));
+      // Then render initial value
+      tail.replaceWith(...value, tail);
 
-          // Then render initial value
-          tail.replaceWith(...value, tail);
-
-          continue;
-        }
-
-        node.replaceWith(...normalizeChildren(value));
-      }
+      continue;
     }
+
+    node.replaceWith(...normalizeChildren(value));
   }
 
   replaceCustomComponents(fragment, template.values, createElementFromTemplate);

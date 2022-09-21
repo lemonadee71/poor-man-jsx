@@ -1,5 +1,5 @@
 import { addPreprocessor } from './preprocess';
-import { getChildNodes, splitTextNodes } from './utils/dom';
+import { getChildNodes } from './utils/dom';
 import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
 import { isNode, isNumber, isPlaceholder, isTemplate } from './utils/is';
 
@@ -68,8 +68,6 @@ const attrsToProps = (attrs, values) => {
 };
 
 const processChildren = (parent) => {
-  splitTextNodes(parent);
-
   const children = getChildNodes(parent);
   const named = [...parent.querySelectorAll('[name]')];
 
