@@ -54,7 +54,8 @@ const attrNameDirectives = [
   (key) => (key.startsWith(':text') ? ['text'] : null),
   (key) => (key.startsWith(':html') ? ['html'] : null),
   (key) => (key.startsWith(':children') ? ['children'] : null),
-  (key) => (key.startsWith(':show') ? ['show'] : null),
+  (key) =>
+    key.startsWith(':show') ? ['show', key.replace(':show', '')] : null,
   (key) => (key.startsWith(':ref') ? ['ref'] : null),
 ];
 
@@ -66,7 +67,7 @@ const objKeyDirectives = [
   (key) => (key === 'key' ? ['key'] : null),
   (key) => (key === '_skip' ? ['skip'] : null),
   (key) => (key === '_ref' ? ['ref'] : null),
-  (key) => (key === '_show' ? ['show'] : null),
+  (key) => (key === '_show' ? ['show', key.replace('_show', '')] : null),
 ];
 
 const getAttrDirectives = () => [...attrNameDirectives];

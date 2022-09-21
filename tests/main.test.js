@@ -254,6 +254,17 @@ describe('core', () => {
 
       expect(screen.getByTestId('show')).toHaveStyle({ display: 'none' });
     });
+
+    it(':show.visibility - toggles visibility instead of display', () => {
+      render(
+        html`<div :show.visibility=${false} data-testid="show">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('show')).toHaveStyle({
+        visibility: 'hidden',
+      });
+    });
   });
 
   describe('special attributes', () => {
