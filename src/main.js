@@ -190,6 +190,7 @@ const createElementFromTemplate = (template) => {
 const normalizeChildren = (items) => {
   const normalized = [items]
     .flat()
+    .filter((item) => item !== true && item !== false)
     .filter((item) => !isNullOrUndefined(item))
     .map((item) => (isString(item) ? document.createTextNode(item) : item))
     .map((item) => (isTemplate(item) ? createElementFromTemplate(item) : item))
