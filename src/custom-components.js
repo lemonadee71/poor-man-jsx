@@ -1,17 +1,42 @@
 import { addPreprocessor } from './preprocess';
 import { getChildNodes } from './utils/dom';
 import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
-import { isNode, isNumber, isPlaceholder, isTemplate } from './utils/is';
+import {
+  isArray,
+  isFunction,
+  isNode,
+  isNumber,
+  isPlaceholder,
+  isString,
+  isTemplate,
+} from './utils/is';
+import isPlainObject from './utils/is-plain-obj';
 
 const CustomElements = new Map();
 const VALID_COMPONENT_NAME = /^[\w-]+$/;
 
 /**
- * Define a custom component
+ * Define one or more custom components.
+ * @param  {...any} data
+ */
+export const define = (...data) => {
+  if (data.length === 2 && isString(data[0]) && isFunction(data[1])) {
+    register(data[0], data[1]);
+  } else if (data.every(isPlainObject)) {
+    for (const value of data) {
+      Object.entries(value).forEach((x) => register(...x));
+    }
+  } else if (data.every(isArray)) {
+    for (const value of data) register(...value);
+  }
+};
+
+/**
+ * Register a custom component
  * @param {string} name - the name of the component; must be a valid html tag
  * @param {Function} component - the component function
  */
-export const define = (name, component) => {
+const register = (name, component) => {
   if (VALID_COMPONENT_NAME.test(name)) {
     CustomElements.set(name, component);
   } else {
@@ -21,10 +46,12 @@ export const define = (name, component) => {
 
 /**
  * Remove a custom component
- * @param {string} name - the name of the component to be removed
+ * @param {...string} names - the names of the component to be removed
  * @returns
  */
-export const remove = (name) => CustomElements.delete(name);
+export const remove = (...names) => {
+  for (const name of names) CustomElements.delete(name);
+};
 
 export const replaceCustomComponents = (parent, values, create) => {
   const custom = [...parent.querySelectorAll('custom-component')];
