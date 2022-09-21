@@ -3,6 +3,7 @@ import { getChildNodes } from './utils/dom';
 import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
 import {
   isArray,
+  isElement,
   isFunction,
   isNode,
   isNumber,
@@ -96,11 +97,18 @@ const attrsToProps = (attrs, values) => {
 
 const processChildren = (parent) => {
   const children = getChildNodes(parent);
-  const named = [...parent.querySelectorAll('[name]')];
+  children.named = [];
+  children.unnamed = [];
 
-  for (const child of named) {
-    const name = child.getAttribute('name');
-    children[name] = child;
+  for (const child of children.filter(isElement)) {
+    const name = child.getAttribute(':slot');
+
+    if (name) {
+      children[name] = child;
+      children.named.push(child);
+    } else {
+      children.unnamed.push(child);
+    }
   }
 
   return children;

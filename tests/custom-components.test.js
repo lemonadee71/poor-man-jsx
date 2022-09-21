@@ -117,7 +117,7 @@ describe('custom components', () => {
     );
   });
 
-  it('elements with name attribute can be accessed through children[name]', () => {
+  it('elements with :slot attribute can be accessed through children[slot]', () => {
     let data;
     PoorManJSX.customComponents.define('Router', ({ children }) => {
       data = {
@@ -131,8 +131,8 @@ describe('custom components', () => {
     render(
       html`<Router>
         <div>Test</div>
-        <div name="home" data-testid="home">Home</div>
-        <div name="about" data-testid="about">About</div>
+        <div :slot="home" data-testid="home">Home</div>
+        <div :slot="about" data-testid="about">About</div>
       </Router>`,
       'body'
     );
