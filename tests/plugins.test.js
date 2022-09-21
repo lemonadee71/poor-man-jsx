@@ -39,6 +39,14 @@ describe('addDirective', () => {
     },
   };
 
+  const runAssertions = () => {
+    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
+    expect(screen.getByTestId('autosize')).toHaveAttribute(
+      'data-autosize',
+      'true'
+    );
+  };
+
   afterEach(() => {
     document.body.innerHTML = '';
   });
@@ -49,11 +57,7 @@ describe('addDirective', () => {
 
     render(html`<div :autosize data-testid="autosize"></div>`, 'body');
 
-    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
-    expect(screen.getByTestId('autosize')).toHaveAttribute(
-      'data-autosize',
-      'true'
-    );
+    runAssertions();
   });
 
   it('allow different keys for attrName and objKey with array', () => {
@@ -69,11 +73,7 @@ describe('addDirective', () => {
     render(html`<div data-testid="autosize"></div>`, 'body');
     apply(screen.getByTestId('autosize'), { autosize: true });
 
-    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
-    expect(screen.getByTestId('autosize')).toHaveAttribute(
-      'data-autosize',
-      'true'
-    );
+    runAssertions();
   });
 
   it('allow different keys for attrName and objKey with object', () => {
@@ -88,11 +88,7 @@ describe('addDirective', () => {
     render(html`<div data-testid="autosize"></div>`, 'body');
     apply(screen.getByTestId('autosize'), { autosize: true });
 
-    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
-    expect(screen.getByTestId('autosize')).toHaveAttribute(
-      'data-autosize',
-      'true'
-    );
+    runAssertions();
   });
 
   it('uses strict equality if `getType` is not provided', () => {
@@ -100,10 +96,6 @@ describe('addDirective', () => {
 
     render(html`<div autosize data-testid="autosize"></div>`, 'body');
 
-    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
-    expect(screen.getByTestId('autosize')).toHaveAttribute(
-      'data-autosize',
-      'true'
-    );
+    runAssertions();
   });
 });
