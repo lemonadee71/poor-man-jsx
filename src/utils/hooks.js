@@ -38,8 +38,8 @@ export const createMarkers = () => {
 
   // Use comments to easily mark the start and end
   // of where we should insert our children
-  const head = document.createComment('MARKER');
-  const tail = document.createComment('END');
+  const head = document.createComment('{poor-man-jsx-start}');
+  const tail = document.createComment('{poor-man-jsx-end}');
   setMetadata(head, 'key', `start_${id}`);
   setMetadata(tail, 'key', `end_${id}`);
 
