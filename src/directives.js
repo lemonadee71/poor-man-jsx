@@ -98,11 +98,7 @@ const getPlugins = () => {
   return map;
 };
 
-/**
- * Add a directive
- * @param {Directive}
- */
-const addDirective = ({ name, type, getType, callback }) => {
+const registerDirective = ({ name, type, getType, callback }) => {
   const typeChecker = {
     attrName: null,
     objKey: null,
@@ -124,6 +120,14 @@ const addDirective = ({ name, type, getType, callback }) => {
 
   PluginRegistry.set(name, { type, getType: typeChecker, callback });
 };
+
+/**
+ * Add directive
+ * @param  {...Directive} directives
+ * @returns
+ */
+const addDirective = (...directives) =>
+  directives.forEach((dir) => registerDirective(dir));
 
 export {
   addDirective,
