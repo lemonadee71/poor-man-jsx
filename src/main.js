@@ -120,10 +120,10 @@ const createElementFromTemplate = (template) => {
     node.replaceWith(...normalizeChildren(value));
   }
 
-  replaceCustomComponents(fragment, template.values, createElementFromTemplate);
-
   for (const child of getChildren(fragment)) {
     traverse(child, (element) => {
+      if (element.tagName === 'CUSTOM-COMPONENT') return;
+
       for (const attr of [...element.attributes]) {
         const rawName = attr.name;
         const rawValue = attr.value.trim();
@@ -182,6 +182,8 @@ const createElementFromTemplate = (template) => {
     child.normalize();
     triggerLifecycle('create', child);
   }
+
+  replaceCustomComponents(fragment, template.values, createElementFromTemplate);
 
   return fragment;
 };
