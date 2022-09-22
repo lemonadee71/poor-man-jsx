@@ -84,11 +84,19 @@ const attrsToProps = (attrs, values) => {
   const props = {};
 
   for (const attr of attrs) {
-    const name = camelize(attr.name);
-    if (isPlaceholder(attr.value)) {
-      props[name] = values[getPlaceholderId(attr.value)];
+    if (isPlaceholder(attr.name)) {
+      let value = values[getPlaceholderId(attr.name)];
+      value = [value].flat();
+
+      for (const o of value) Object.assign(props, o);
     } else {
-      props[name] = stringToRaw(attr.value);
+      const name = camelize(attr.name);
+
+      if (isPlaceholder(attr.value)) {
+        props[name] = values[getPlaceholderId(attr.value)];
+      } else {
+        props[name] = stringToRaw(attr.value);
+      }
     }
   }
 

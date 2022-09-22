@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/extend-expect';
-import { screen } from '@testing-library/dom';
+import { fireEvent, screen } from '@testing-library/dom';
 import PoorManJSX, { html, render } from '../src';
 
 describe('custom components', () => {
@@ -63,6 +63,22 @@ describe('custom components', () => {
       due: '2022-01-01',
       notes: 'This is an example task',
     });
+  });
+
+  it('object/array passed inside the opening tags are treated as props', () => {
+    PoorManJSX.customComponents.define(
+      'Foo',
+      ({ props }) => html`<div data-testid="foo" ${{ ...props }}>Test</div>`
+    );
+
+    render(
+      html`<Foo ${{ onClick: mockCallback, 'data-div': true }} />`,
+      'body'
+    );
+    fireEvent.click(screen.getByTestId('foo'));
+
+    expect(screen.getByTestId('foo')).toHaveAttribute('data-div');
+    expect(mockCallback).toBeCalledTimes(1);
   });
 
   it('all attributes names (kebab and snake case) are converted to camelCase', () => {
