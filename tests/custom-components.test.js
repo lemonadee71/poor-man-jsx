@@ -117,6 +117,21 @@ describe('custom components', () => {
     });
   });
 
+  it('default props can be defined', () => {
+    const Foo = ({ props }) =>
+      html`<div data-testid="foo" readonly=${props.readonly}></div>`;
+
+    Foo.defaultProps = {
+      readonly: true,
+    };
+
+    PoorManJSX.customComponents.define('Foo', Foo);
+
+    render(html`<Foo />`, 'body');
+
+    expect(screen.getByTestId('foo')).toHaveAttribute('readonly');
+  });
+
   it('anything passed between tags is passed as children', () => {
     PoorManJSX.customComponents.define(
       'PlaceholderText',

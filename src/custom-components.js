@@ -59,11 +59,16 @@ export const replaceCustomComponents = (parent, values, create) => {
 
   for (const element of custom) {
     const component = CustomElements.get(element.getAttribute(':is'));
+    const defaultProps = component.defaultProps || {};
+
     element.removeAttribute(':is');
 
     const children = processChildren(element);
     const props = attrsToProps([...element.attributes], values);
-    const actual = component({ children, props });
+    const actual = component({
+      children,
+      props: Object.assign(defaultProps, props),
+    });
 
     if (!isTemplate(actual) && !isNode(actual)) {
       throw new Error('Custom component must be a Template or a Node');
