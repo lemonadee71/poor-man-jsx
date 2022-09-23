@@ -173,4 +173,19 @@ describe('custom components', () => {
       about: screen.getByTestId('about'),
     });
   });
+
+  it('can be nested', () => {
+    PoorManJSX.customComponents.define({
+      'custom-b': ({ children }) =>
+        html`<b data-testid="nested">${children}</b>`,
+      'custom-p': ({ children }) =>
+        html`<p><custom-b>${children}</custom-b></p>`,
+      'custom-div': ({ children }) =>
+        html`<div><custom-p>${children}</custom-p></div>`,
+    });
+
+    render(html`<custom-div>Test</custom-div>`, 'body');
+
+    expect(screen.getByTestId('nested')).toHaveTextContent('Test');
+  });
 });
