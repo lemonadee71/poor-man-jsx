@@ -4,11 +4,23 @@ import {
   getAttrDirectives,
   getKeyDirectives,
 } from '../directives';
+import { isArray, isString } from './is';
+
+const getType = (str, directives) => {
+  for (const predicate of directives) {
+    const result = predicate(str);
+    if (isString(result)) return [result, str];
+    if (isArray(result)) return result;
+  }
+
+  // Any unrecognizable key will be treated as attr
+  return ['attr', str];
+};
 
 /**
  * Get the type based on attribute name
  * @param {string} attrName
- * @returns {[string,string|null]}
+ * @returns {[string,string]}
  */
 export const getTypeOfAttrName = (attrName) => {
   const allDirectives = [
@@ -16,19 +28,13 @@ export const getTypeOfAttrName = (attrName) => {
     ...getAdditionalAttrDirectives(),
   ];
 
-  for (const predicate of allDirectives) {
-    const result = predicate(attrName);
-    if (result) return result;
-  }
-
-  // Any unrecognizable key will be treated as attr
-  return ['attr', attrName];
+  return getType(attrName, allDirectives);
 };
 
 /**
  * Get the type of object key
  * @param {string} objKey
- * @returns {[string,string|null]}
+ * @returns {[string,string]}
  */
 export const getTypeOfKey = (objKey) => {
   const allDirectives = [
@@ -38,11 +44,5 @@ export const getTypeOfKey = (objKey) => {
     ...getAdditionalKeyDirectives(),
   ];
 
-  for (const predicate of allDirectives) {
-    const result = predicate(objKey);
-    if (result) return result;
-  }
-
-  // Any unrecognizable key will be treated as attr
-  return ['attr', objKey];
+  return getType(objKey, allDirectives);
 };
