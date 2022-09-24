@@ -48,6 +48,7 @@ describe('addDirective', () => {
   };
 
   afterEach(() => {
+    PoorManJSX.plugins.removeDirective('autosize');
     document.body.innerHTML = '';
   });
 

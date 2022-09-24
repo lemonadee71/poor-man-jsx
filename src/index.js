@@ -1,5 +1,5 @@
 import { define, remove } from './custom-components';
-import { addDirective } from './directives';
+import { addDirective, removeDirective } from './directives';
 import { html, render, apply } from './main';
 import { createHook } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
@@ -16,6 +16,7 @@ const PoorManJSX = {
     addPreprocessor,
     removePreprocessor,
     addDirective,
+    removeDirective,
   },
   customComponents: { define, remove },
 };

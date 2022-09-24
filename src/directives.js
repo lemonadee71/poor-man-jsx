@@ -132,8 +132,17 @@ const registerDirective = ({ name, type, getType, callback }) => {
 const addDirective = (...directives) =>
   directives.forEach((dir) => registerDirective(dir));
 
+/**
+ * Remove a directive
+ * @param  {...string} names
+ * @returns
+ */
+const removeDirective = (...names) =>
+  names.forEach((name) => PluginRegistry.delete(name));
+
 export {
   addDirective,
+  removeDirective,
   getPlugins,
   getAttrDirectives,
   getKeyDirectives,
