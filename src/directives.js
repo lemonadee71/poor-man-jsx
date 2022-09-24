@@ -25,9 +25,11 @@ import isPlainObject from './utils/is-plain-obj';
  */
 
 const attrNameDirectives = [
-  (key) => (['on', 'class', 'style'].includes(key) ? [key] : null),
-  (key) => (key === ':key' ? ['key'] : null),
-  (key) => (key === ':skip' ? ['skip'] : null),
+  (key) => ['on', 'class', 'style'].includes(key) && key,
+  (key) =>
+    key.startsWith('style:') && ['style:prop', key.replace('style:', '')],
+  (key) =>
+    key.startsWith('class:') && ['class:name', key.replace('class:', '')],
   (key) => {
     const k = key.toLowerCase().trim();
     const name = k.replace('on', '');
@@ -47,27 +49,25 @@ const attrNameDirectives = [
       ? ['bool', key.replace('bool:', '')]
       : null;
   },
-  (key) =>
-    key.startsWith('style:') ? ['style:prop', key.replace('style:', '')] : null,
-  (key) =>
-    key.startsWith('class:') ? ['class:name', key.replace('class:', '')] : null,
-  (key) => (key.startsWith(':text') ? ['text'] : null),
-  (key) => (key.startsWith(':html') ? ['html'] : null),
-  (key) => (key.startsWith(':children') ? ['children'] : null),
-  (key) =>
-    key.startsWith(':show') ? ['show', key.replace(':show', '')] : null,
-  (key) => (key.startsWith(':ref') ? ['ref'] : null),
+  (key) => key === ':key' && 'key',
+  (key) => key === ':skip' && 'skip',
+  (key) => key === ':text' && 'text',
+  (key) => key === ':html' && 'html',
+  (key) => key === ':children' && 'children',
+  (key) => key === ':ref' && 'ref',
+  (key) => key.startsWith(':show') && ['show', key.replace(':show', '')],
 ];
 
 // Reserved object keys
 const objKeyDirectives = [
-  (key) => (key === 'textContent' ? ['text'] : null),
-  (key) => (key === 'innerHTML' ? ['html'] : null),
-  (key) => (key === 'children' ? ['children'] : null),
-  (key) => (key === 'key' ? ['key'] : null),
-  (key) => (key === '_skip' ? ['skip'] : null),
-  (key) => (key === '_ref' ? ['ref'] : null),
-  (key) => (key === '_show' ? ['show', key.replace('_show', '')] : null),
+  (key) => key === 'textContent' && 'text',
+  (key) => key === 'innerHTML' && 'html',
+  (key) => key === 'html' && 'html',
+  (key) => key === 'children' && 'children',
+  (key) => key === '_key' && 'key',
+  (key) => key === '_skip' && 'skip',
+  (key) => key === '_ref' && 'ref',
+  (key) => key === '_show' && ['show', key.replace('_show', '')],
 ];
 
 const getAttrDirectives = () => [...attrNameDirectives];
