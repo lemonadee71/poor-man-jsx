@@ -244,6 +244,16 @@ describe('core', () => {
       expect(screen.getByTestId('ref')).toEqual(ref.current);
     });
 
+    it(':ref - can use a custom key instead of `current`', () => {
+      const ref = {};
+      render(
+        html`<div :ref=${['self', ref]} data-testid="ref">Test</div>`,
+        'body'
+      );
+
+      expect(screen.getByTestId('ref')).toEqual(ref.self);
+    });
+
     it(':show - shows/hides element based on attribute value', () => {
       render(
         html`<div style="display: block" :show=${false} data-testid="show">

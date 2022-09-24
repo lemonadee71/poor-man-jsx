@@ -238,13 +238,19 @@ export const modifyElement = (target, type, data, context = document) => {
 
       break;
     }
-    case 'ref':
-      if (!isPlainObject(data.value)) {
+    case 'ref': {
+      const [key, o] = isArray(data.value)
+        ? data.value
+        : ['current', data.value];
+
+      if (!isPlainObject(o)) {
         throw new TypeError('Ref only accepts plain object');
       }
-      data.value.current = element;
+
+      o[key] = element;
 
       break;
+    }
     case 'show': {
       const [, options] = data.key.split('.');
       let display = element.__meta?.og_display;
