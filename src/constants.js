@@ -5,7 +5,13 @@ export const WRAPPING_BRACKETS = /^\[|\]$/g;
 export const WRAPPING_QUOTES = /^['"]|['"]$/g;
 
 // NOTE: Reserved words for event listener names
-export const LIFECYCLE_METHODS = ['create', 'destroy', 'mount', 'unmount'];
+export const LIFECYCLE_METHODS = [
+  'create',
+  'destroy',
+  'mount',
+  'unmount',
+  'load',
+];
 export const BOOLEAN_ATTRS = [
   'allowfullscreen',
   'allowpaymentrequest',

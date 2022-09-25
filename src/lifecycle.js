@@ -1,4 +1,5 @@
 import { traverse } from './utils/dom';
+import { setMetadata } from './utils/meta';
 
 let observer;
 const OBSERVER_CONFIG = { childList: true, subtree: true };
@@ -16,6 +17,11 @@ export const mutationCallback = (mutations) => {
   mutations.forEach((mutation) => {
     if (mutation.type === 'childList') {
       mutation.addedNodes.forEach((node) => {
+        if (!node.__meta?.loaded) {
+          triggerLifecycle('load', node);
+          setMetadata(node, 'loaded', true);
+        }
+
         triggerLifecycle('mount', node);
       });
 

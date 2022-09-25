@@ -25,7 +25,7 @@ import {
   isTemplate,
 } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
-import { addKeyRecursive } from './utils/meta';
+import { addKeyRecursive, setMetadata } from './utils/meta';
 import Template from './utils/Template';
 import { getTypeOfAttrName, getTypeOfKey } from './utils/type';
 
@@ -177,6 +177,8 @@ const createElementFromTemplate = (template) => {
           }
         }
       }
+
+      setMetadata(element, 'loaded', false);
     });
 
     child.normalize();

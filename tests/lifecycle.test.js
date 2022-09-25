@@ -11,6 +11,7 @@ import { html, render } from '../src';
 describe('lifecycle methods', () => {
   const onCreate = jest.fn((e) => e);
   const onDestroy = jest.fn((e) => e);
+  const onLoad = jest.fn((e) => e);
   const onMount = jest.fn((e) => e);
   const onUnmount = jest.fn((e) => e);
 
@@ -61,6 +62,39 @@ describe('lifecycle methods', () => {
       setTimeout(() => {
         try {
           expect(onDestroy).not.toHaveBeenCalled();
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+  });
+
+  describe('@load', () => {
+    const div = html`<div onLoad=${onLoad}>Hello, World!</div>`;
+
+    it('runs on mount', (done) => {
+      render(div, 'body');
+
+      setTimeout(() => {
+        try {
+          expect(onLoad).toHaveBeenCalledTimes(1);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 0);
+    });
+
+    it('does not run when node is moved', (done) => {
+      const el = render(div, 'body').firstElementChild;
+      render(html`<div id="test"></div>`, 'body');
+
+      setTimeout(() => document.getElementById('test').append(el), 0);
+
+      setTimeout(() => {
+        try {
+          expect(onLoad).toHaveBeenCalledTimes(1);
           done();
         } catch (error) {
           done(error);
