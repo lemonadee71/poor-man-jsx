@@ -1,6 +1,6 @@
 {
   "name": "poor-man-jsx",
-  "version": "4.0.0-2",
+  "version": "4.0.0-3",
   "description": "Create DOM elements painlessly with tagged template literals.",
   "main": "src/index.js",
   "scripts": {
