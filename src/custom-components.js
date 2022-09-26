@@ -61,7 +61,7 @@ export const replaceCustomComponents = (parent, values, create) => {
     const component = CustomElements.get(element.getAttribute(':is'));
     const defaultProps = component.defaultProps || {};
 
-    element.addEventListener('@load', () => element.removeAttribute(':is'));
+    element.removeAttribute(':is');
 
     const children = processChildren(element);
     const props = attrsToProps([...element.attributes], values);
@@ -89,8 +89,7 @@ const attrsToProps = (attrs, values) => {
   const props = {};
 
   for (const attr of attrs) {
-    if (attr.name === ':is') continue;
-    else if (isPlaceholder(attr.name)) {
+    if (isPlaceholder(attr.name)) {
       let value = values[getPlaceholderId(attr.name)];
       value = [value].flat();
 
