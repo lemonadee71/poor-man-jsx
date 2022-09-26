@@ -1,7 +1,7 @@
 import { define, remove } from './custom-components';
 import { addDirective, removeDirective } from './directives';
 import { html, render, apply } from './main';
-import { createHook } from './hooks';
+import { createHook, unwatch, watch } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
 import { addPreprocessor, removePreprocessor } from './preprocess';
 
@@ -21,5 +21,5 @@ const PoorManJSX = {
   customComponents: { define, remove },
 };
 
-export { html, render, apply, createHook };
+export { html, render, apply, createHook, watch, unwatch };
 export default PoorManJSX;

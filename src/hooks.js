@@ -5,7 +5,7 @@ import { compose, resolve } from './utils/general';
 import { uid } from './utils/id';
 import isPlainObject from './utils/is-plain-obj';
 
-const HooksRegistry = new WeakMap();
+const Registry = new WeakMap();
 
 /**
  * Creates a hook
@@ -16,14 +16,10 @@ const HooksRegistry = new WeakMap();
 const createHook = (value, seal = true) => {
   let obj = isPlainObject(value) ? value : { value };
   obj = seal ? Object.seal(obj) : obj;
-  HooksRegistry.set(obj, new Map());
 
-  const proxy = new Proxy(obj, {
-    get: getter,
-    set: setter,
-  });
+  Registry.set(obj, { subscribers: new Map(), observers: new Map() });
 
-  return proxy;
+  return new Proxy(obj, { get: getter, set: setter });
 };
 
 const methodForwarder = (target, prop) => {
@@ -74,9 +70,12 @@ const getter = (target, rawProp, receiver) => {
 };
 
 const setter = (target, prop, value, receiver) => {
-  const bindedElements = HooksRegistry.get(target);
+  const { subscribers, observers } = Registry.get(target);
+  const callbacks = observers.get(prop) || [];
 
-  bindedElements.forEach((handlers, id) => {
+  for (const fn of callbacks) fn(value);
+
+  subscribers.forEach((handlers, id) => {
     const element = document.querySelector(`[data-proxyid="${id}"]`);
 
     // check if element exists otherwise remove handlers
@@ -90,7 +89,7 @@ const setter = (target, prop, value, receiver) => {
           });
         });
     } else {
-      bindedElements.delete(id);
+      subscribers.delete(id);
     }
   });
 
@@ -118,7 +117,7 @@ const registerIfHook = (value, options) => {
       "You can't dynamically set lifecycle methods or event listeners"
     );
 
-  const bindedElements = HooksRegistry.get(hook[HOOK_REF]);
+  const { subscribers } = Registry.get(hook[HOOK_REF]);
   const handler = {
     type: options.type,
     linkedProp: hook.data.prop,
@@ -127,12 +126,47 @@ const registerIfHook = (value, options) => {
   };
 
   // store handler
-  bindedElements.set(id, [...(bindedElements.get(id) || []), handler]);
+  subscribers.set(id, [...(subscribers.get(id) || []), handler]);
 
   // delete handlers when deleted
-  options.element.addEventListener('@destroy', () => bindedElements.delete(id));
+  options.element.addEventListener('@destroy', () => subscribers.delete(id));
 
   return resolve(hook.data.value, hook.data.trap);
 };
 
-export { createHook, registerIfHook };
+/**
+ * Subscribe to a hook
+ * @param {*} value - the hook to watch
+ * @param  {...Function} callback - the function/s to be called when there is a change
+ * @returns {Function} unsubscribe function
+ */
+const watch = (value, ...callback) => {
+  if (!isHook(value)) throw new TypeError('value must be a hook');
+  const hook = value;
+
+  const { observers } = Registry.get(hook[HOOK_REF]);
+  observers.set(hook.data.prop, [
+    ...(observers.get(hook.data.prop) || []),
+    ...callback,
+  ]);
+
+  return () => unwatch(value, ...callback);
+};
+
+/**
+ * Remove a subscription to a hook
+ * @param {*} value - the hook
+ * @param  {...Function} callback - the function/s to be removed
+ */
+const unwatch = (value, ...callback) => {
+  if (!isHook(value)) throw new TypeError('value must be a hook');
+  const hook = value;
+
+  const { observers } = Registry.get(hook[HOOK_REF]);
+  observers.set(
+    hook.data.prop,
+    observers.get(hook.data.prop).filter((fn) => !callback.includes(fn))
+  );
+};
+
+export { createHook, registerIfHook, watch, unwatch };
