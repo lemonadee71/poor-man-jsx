@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { apply, html, render, createHook } from '../src';
+import { apply, html, render, createHook, watch, unwatch } from '../src';
 
 describe('hook', () => {
   afterEach(() => {
@@ -129,5 +129,42 @@ describe('hook', () => {
 
     expect(screen.getByTestId('sole-class')).not.toHaveClass('foo');
     expect(screen.getByTestId('sole-class')).toHaveClass('bar');
+  });
+
+  it('changes can be observed with `watch`', () => {
+    const mock = jest.fn();
+    const count = createHook(1);
+    watch(count.$value, mock);
+
+    count.value = 5;
+
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(5);
+  });
+
+  it('observer can be removed with `unwatch`', () => {
+    const mock = jest.fn();
+    const count = createHook(1);
+
+    watch(count.$value, mock);
+    count.value = 5;
+    unwatch(count.$value, mock);
+    count.value = 10;
+
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(5);
+  });
+
+  it('observer can be removed with cleanup function returned by `watch`', () => {
+    const mock = jest.fn();
+    const count = createHook(1);
+
+    const cleanup = watch(count.$value, mock);
+    count.value = 5;
+    cleanup();
+    count.value = 10;
+
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(5);
   });
 });
