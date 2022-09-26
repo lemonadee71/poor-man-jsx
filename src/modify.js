@@ -111,11 +111,11 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     case 'lifecycle': {
       const fns = [data.value].flat();
+      const key = data.key === 'load' ? 'mount' : data.key;
+      const once = data.key === 'create' || data.key === 'load';
 
       for (const fn of fns) {
-        element.addEventListener(`@${data.key}`, fn, {
-          once: data.key === 'create',
-        });
+        element.addEventListener(`@${key}`, fn, { once });
       }
       break;
     }
