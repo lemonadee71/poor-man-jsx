@@ -80,9 +80,11 @@ export const modifyElement = (target, type, data, context = document) => {
     }
     case 'class':
       if (isString(data.value)) {
-        element.setAttribute('class', data.value);
+        element.classList.add(...data.value.split(' '));
       } else if (isArray(data.value)) {
-        element.setAttribute('class', data.value.join(' '));
+        for (const value of data.value) {
+          modifyElement(element, 'class', { value });
+        }
       } else if (isPlainObject(data.value)) {
         for (const [n, v] of Object.entries(data.value)) {
           modifyElement(element, 'class:name', { key: n, value: v });

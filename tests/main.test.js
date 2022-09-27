@@ -307,15 +307,20 @@ describe('core', () => {
       expect(screen.getByTestId('classObject')).not.toHaveClass('visible');
     });
 
-    it('class - accepts an array of strings', () => {
+    it('class - accepts an array of acceptable values', () => {
       render(
-        html`<div class=${['hidden', 'visible']} data-testid="classArray">
+        html`<div
+          class=${['test hidden', { visible: true }]}
+          data-testid="classArray"
+        >
           Test
         </div>`,
         'body'
       );
 
-      expect(screen.getByTestId('classArray')).toHaveClass('hidden visible');
+      expect(screen.getByTestId('classArray')).toHaveClass(
+        'test hidden visible'
+      );
     });
 
     it('style - accepts an object (shortcut for multiple style:prop)', () => {
