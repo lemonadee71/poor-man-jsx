@@ -4,6 +4,13 @@ import { isPlaceholder } from './is';
 import { getKey, setMetadata } from './meta';
 
 /**
+ * Check if a node is in the document
+ * @param {Node} node
+ * @returns {boolean}
+ */
+export const inTheDocument = (node) => document.body.contains(node);
+
+/**
  * Returns children of element as array
  * @param {HTMLElement} parent
  * @returns {Array.<Node>}

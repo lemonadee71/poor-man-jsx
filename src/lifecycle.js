@@ -1,4 +1,4 @@
-import { traverse } from './utils/dom';
+import { inTheDocument, traverse } from './utils/dom';
 
 let observer;
 const OBSERVER_CONFIG = { childList: true, subtree: true };
@@ -22,7 +22,7 @@ export const mutationCallback = (mutations) => {
       mutation.removedNodes.forEach((node) => {
         triggerLifecycle('unmount', node);
 
-        if (!document.body.contains(node)) {
+        if (!inTheDocument(node)) {
           triggerLifecycle('destroy', node);
         }
       });
