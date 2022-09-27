@@ -9,10 +9,16 @@ import {
   getChildren,
   getPlaceholders,
   traverse,
+  createMarkers,
+  getBoundary,
 } from './utils/dom';
-import { escapeHTML, getPlaceholderId } from './utils/general';
+import {
+  compose,
+  escapeHTML,
+  getPlaceholderId,
+  resolve,
+} from './utils/general';
 import { uid } from './utils/id';
-import { addTrap, createMarkers, getBoundary } from './utils/hooks';
 import {
   isArray,
   isFragment,
@@ -186,6 +192,13 @@ const createElementFromTemplate = (template) => {
   replaceCustomComponents(fragment, template.values, createElementFromTemplate);
 
   return fragment;
+};
+
+const addTrap = (hook, callback) => {
+  const previousTrap = hook.data.trap;
+  hook.data.trap = compose((value) => resolve(value, previousTrap), callback);
+
+  return hook;
 };
 
 // NOTE: Creates a circular reference

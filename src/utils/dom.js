@@ -1,5 +1,7 @@
 import { PLACEHOLDER_REGEX } from '../constants';
+import { uid } from './id';
 import { isPlaceholder } from './is';
+import { getKey, setMetadata } from './meta';
 
 /**
  * Returns children of element as array
@@ -84,4 +86,35 @@ export const getPlaceholders = (root) => {
   }
 
   return newNodes.filter((node) => isPlaceholder(node.textContent));
+};
+
+/**
+ * Get the index of bounding comment markers
+ * @param {string} id
+ * @param {Node[]} nodes
+ * @returns {[number, number]}
+ */
+export const getBoundary = (id, nodes) => {
+  const start = nodes.findIndex((n) => getKey(n) === `start_${id}`);
+  const end = nodes.findIndex((n) => getKey(n) === `end_${id}`);
+
+  return [start + 1, end];
+};
+
+/**
+ * Create marker comments to easily mark the start and end
+ * of where the hook is passed in the body
+ * @returns {[Comment,Comment,string]}
+ */
+export const createMarkers = () => {
+  const id = uid();
+
+  // Use comments to easily mark the start and end
+  // of where we should insert our children
+  const head = document.createComment('{poor-man-jsx-start}');
+  const tail = document.createComment('{poor-man-jsx-end}');
+  setMetadata(head, 'key', `start_${id}`);
+  setMetadata(tail, 'key', `end_${id}`);
+
+  return [head, tail, id];
 };

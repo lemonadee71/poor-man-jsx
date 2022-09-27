@@ -1,4 +1,3 @@
-import { getChildNodes } from './dom';
 import { hash } from './id';
 import { isElement, isTextNode } from './is';
 
@@ -61,6 +60,6 @@ export const addKeyRecursive = (nodes) => {
       }
     }
 
-    if (isElement(item)) addKeyRecursive(getChildNodes(item));
+    if (isElement(item)) addKeyRecursive([...item.childNodes]);
   }
 };

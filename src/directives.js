@@ -56,6 +56,7 @@ const attrNameDirectives = [
   (key) => key === ':children' && 'children',
   (key) => key === ':ref' && 'ref',
   (key) => key.startsWith(':show') && ['show', key.replace(':show', '')],
+  (key) => key === ':if' && 'if',
 ];
 
 // Reserved object keys
