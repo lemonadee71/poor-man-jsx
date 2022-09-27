@@ -69,7 +69,6 @@ const objKeyDirectives = [
   (key) => key === '_skip' && 'skip',
   (key) => key === '_ref' && 'ref',
   (key) => key === '_show' && ['show', key.replace('_show', '')],
-  (key) => key === '_if' && 'if',
 ];
 
 const getAttrDirectives = () => [...attrNameDirectives];
