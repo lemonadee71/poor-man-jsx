@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { createEvent, fireEvent, screen } from '@testing-library/dom';
-import { apply, html, render } from '../src';
+import { apply, createHook, html, render } from '../src';
 
 describe('core', () => {
   const mockCallback = jest.fn(() => true);
@@ -274,6 +274,47 @@ describe('core', () => {
       expect(screen.getByTestId('show')).toHaveStyle({
         visibility: 'hidden',
       });
+    });
+
+    it(':if - mounts element only if value is truthy', () => {
+      render(
+        html`
+          <div :if="true" data-testid="foo">First</div>
+          <div :if="false" data-testid="bar">Second</div>
+        `,
+        'body'
+      );
+
+      expect(screen.getByTestId('foo')).toBeInTheDocument();
+      expect(() => screen.getByTestId('bar')).toThrowError();
+    });
+
+    it(':else - provides a fallback for :if if value is falsy', () => {
+      render(
+        html`
+          <div :if="false" data-testid="foo">First</div>
+          <div :else data-testid="bar">Second</div>
+        `,
+        'body'
+      );
+
+      expect(document.body.children.length).toBe(1);
+      expect(() => screen.getByTestId('foo')).toThrowError();
+      expect(screen.getByTestId('bar')).toBeInTheDocument();
+    });
+
+    it(':if/:else - works with hooks', () => {
+      const state = createHook({ showFirst: true });
+
+      render(
+        html` <div :if=${state.$showFirst} data-testid="foo">Test</div> `,
+        'body'
+      );
+
+      state.showFirst = false;
+
+      expect(document.body.children.length).toBe(0);
+      expect(() => screen.getByTestId('bar')).toThrowError();
     });
   });
 

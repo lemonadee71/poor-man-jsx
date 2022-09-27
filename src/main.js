@@ -1,6 +1,6 @@
 import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
 import { replaceCustomComponents } from './custom-components';
-import { registerIfHook } from './hooks';
+import { registerIfHook, watch } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
 import { preprocess } from './preprocess';
@@ -11,6 +11,7 @@ import {
   traverse,
   createMarkers,
   getBoundary,
+  inTheDocument,
 } from './utils/dom';
 import {
   compose,
@@ -29,6 +30,7 @@ import {
   isPlaceholder,
   isString,
   isTemplate,
+  isTruthy,
 } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
 import { addKeyRecursive } from './utils/meta';
@@ -169,7 +171,9 @@ const createElementFromTemplate = (template) => {
             ? template.values[getPlaceholderId(match[0])]
             : rawValue;
 
-          if (type !== 'attr') {
+          if (type === 'if') {
+            ifElseDirective(element, value);
+          } else if (type !== 'attr') {
             element.removeAttribute(rawName);
 
             modifyElement(element, type, {
@@ -192,6 +196,48 @@ const createElementFromTemplate = (template) => {
   replaceCustomComponents(fragment, template.values, createElementFromTemplate);
 
   return fragment;
+};
+
+// `apply` should only be used to set up this directive not to dynamically trigger it
+// if needed to be dynamic, use a hook instead
+const ifElseDirective = (element, value) => {
+  let final = value;
+
+  const marker = document.createComment('{poor-man-jsx-marker}');
+  element.before(marker);
+
+  const sibling = element.nextElementSibling;
+  const hasElse = !isNullOrUndefined(sibling?.getAttribute(':else'));
+
+  if (isHook(value)) {
+    const unsubscribe = watch(value, (x) => {
+      if (isTruthy(x)) {
+        sibling?.remove();
+        if (!inTheDocument(element)) marker.after(element);
+      } else {
+        element.remove();
+        if (sibling && !inTheDocument(sibling)) marker.after(sibling);
+      }
+    });
+
+    // if the element is never mounted, observer won't be removed
+    element.addEventListener(
+      '@mount',
+      () => {
+        marker.parentElement.addEventListener('@destroy', unsubscribe);
+      },
+      { once: true }
+    );
+
+    final = value.data.value;
+  }
+
+  if (isTruthy(final)) {
+    if (hasElse) sibling.remove();
+  } else element.remove();
+
+  element.removeAttribute(':if');
+  sibling?.removeAttribute(':else');
 };
 
 const addTrap = (hook, callback) => {
@@ -238,10 +284,14 @@ const hydrateFromObject = (element, changes) => {
   for (const [rawKey, value] of Object.entries(changes)) {
     const [type, key] = getTypeOfKey(rawKey);
 
-    modifyElement(element, type, {
-      key,
-      value: resolveValue(value, { element, type, target: key }),
-    });
+    if (type === 'if') {
+      ifElseDirective(element, value);
+    } else {
+      modifyElement(element, type, {
+        key,
+        value: resolveValue(value, { element, type, target: key }),
+      });
+    }
   }
 
   return element;
