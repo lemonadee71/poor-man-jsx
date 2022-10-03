@@ -80,7 +80,7 @@ export const modifyElement = (target, type, data, context = document) => {
     }
     case 'class':
       if (isString(data.value)) {
-        element.classList.add(...data.value.split(' '));
+        element.classList.add(...data.value.split(' ').filter(isTruthy));
       } else if (isArray(data.value)) {
         for (const value of data.value) {
           modifyElement(element, 'class', { value });
