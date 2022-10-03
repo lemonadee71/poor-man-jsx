@@ -27,12 +27,7 @@ export const setMetadata = (node, key, value) => {
  * @param {Node} node
  * @returns {string}
  */
-export const getKey = (node) => {
-  const data = node.__meta;
-  if (data?.keystring && isElement(node))
-    return node.getAttribute(data?.keystring);
-  return data?.key;
-};
+export const getKey = (node) => node.__meta?.key;
 
 /**
  * Add key to nodes if they don't have one.
