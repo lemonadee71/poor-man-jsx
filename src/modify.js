@@ -254,7 +254,6 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     }
     case 'show': {
-      const [, options] = data.key.split('.');
       let display = element.__meta?.og_display;
 
       if (!display) {
@@ -263,17 +262,16 @@ export const modifyElement = (target, type, data, context = document) => {
         setMetadata(element, 'og_display', display);
       }
 
-      if (options?.includes('visibility')) {
-        if (isTruthy(data.value)) element.style.visibility = 'visible';
-        else element.style.visibility = 'hidden';
-      } else if (isTruthy(data.value)) {
-        element.style.display = display;
-      } else {
-        element.style.display = 'none';
-      }
+      if (isTruthy(data.value)) element.style.display = display;
+      else element.style.display = 'none';
 
       break;
     }
+    case 'visible':
+      if (isTruthy(data.value)) element.style.visibility = 'visible';
+      else element.style.visibility = 'hidden';
+
+      break;
 
     default:
       plugins[type]?.(element, data, modifyElement);

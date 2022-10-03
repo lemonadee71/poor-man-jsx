@@ -269,13 +269,13 @@ describe('core', () => {
       expect(screen.getByTestId('show')).toHaveStyle({ display: 'none' });
     });
 
-    it(':show.visibility - toggles visibility instead of display', () => {
+    it(":visible - toggles element's visibility based on attribute value", () => {
       render(
-        html`<div :show.visibility=${false} data-testid="show">Test</div>`,
+        html`<div :visible=${false} data-testid="visible">Test</div>`,
         'body'
       );
 
-      expect(screen.getByTestId('show')).toHaveStyle({
+      expect(screen.getByTestId('visible')).toHaveStyle({
         visibility: 'hidden',
       });
     });

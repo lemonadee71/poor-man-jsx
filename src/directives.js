@@ -55,7 +55,8 @@ const attrNameDirectives = [
   (key) => key === ':html' && 'html',
   (key) => key === ':children' && 'children',
   (key) => key === ':ref' && 'ref',
-  (key) => key.startsWith(':show') && ['show', key.replace(':show', '')],
+  (key) => key === ':show' && 'show',
+  (key) => key === ':visible' && 'visible',
   (key) => key === ':if' && 'if',
 ];
 
@@ -68,7 +69,8 @@ const objKeyDirectives = [
   (key) => key === '_key' && 'key',
   (key) => key === '_skip' && 'skip',
   (key) => key === '_ref' && 'ref',
-  (key) => key === '_show' && ['show', key.replace('_show', '')],
+  (key) => key === '_show' && 'show',
+  (key) => key === '_visible' && 'visible',
 ];
 
 const getAttrDirectives = () => [...attrNameDirectives];
