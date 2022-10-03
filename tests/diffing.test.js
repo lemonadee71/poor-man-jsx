@@ -296,7 +296,7 @@ describe('diffing', () => {
         :key="test"
         :skip="data-state"
         data-testid="foo"
-        bool:data-state=${bool}
+        toggle:data-state=${bool}
       >
         Test
       </p>

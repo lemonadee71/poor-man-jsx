@@ -45,7 +45,7 @@ export const modifyElement = (target, type, data, context = document) => {
     case 'attr':
       element.setAttribute(data.key, data.value);
       break;
-    case 'bool': {
+    case 'toggle': {
       const [arg, option] = data.key.split('.');
       const attrs = arg.replace(WRAPPING_BRACKETS, '').split(',');
 

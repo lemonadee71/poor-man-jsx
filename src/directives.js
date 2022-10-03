@@ -45,8 +45,8 @@ const attrNameDirectives = [
     // remove modifiers
     const [k] = key.split('.');
 
-    return BOOLEAN_ATTRS.includes(k) || k.startsWith('bool:')
-      ? ['bool', key.replace('bool:', '')]
+    return BOOLEAN_ATTRS.includes(k) || k.startsWith('toggle:')
+      ? ['toggle', key.replace('toggle:', '')]
       : null;
   },
   (key) => key === ':key' && 'key',

@@ -136,44 +136,48 @@ describe('core', () => {
       expect(screen.getByTestId('span')).toBeInTheDocument();
     });
 
-    it('bool:attr - shows/hides an attribute depending on value', () => {
+    it('toggle:attr - shows/hides an attribute depending on value', () => {
       render(
-        html`<div data-testid="bool" bool:data-div="undefined">Test</div>`,
+        html`<div data-testid="bool" toggle:data-div="undefined">Test</div>`,
         'body'
       );
 
       expect(screen.getByTestId('bool')).not.toHaveAttribute('data-div');
     });
 
-    it('bool:attr.preserve - make the attr value same as passed value', () => {
+    it('toggle:attr.preserve - make the attr value same as passed value', () => {
       render(
-        html`<div data-testid="bool" bool:data-div.preserve="true">Test</div>`,
+        html`<div data-testid="toggle" toggle:data-div.preserve="true">
+          Test
+        </div>`,
         'body'
       );
 
-      expect(screen.getByTestId('bool')).toHaveAttribute('data-div', 'true');
+      expect(screen.getByTestId('toggle')).toHaveAttribute('data-div', 'true');
     });
 
-    it('bool:attr.mirror - make the attr value same as attr name', () => {
+    it('toggle:attr.mirror - make the attr value same as attr name', () => {
       render(
-        html`<div data-testid="bool" readonly.mirror="test">Test</div>`,
+        html`<div data-testid="toggle" readonly.mirror="test">Test</div>`,
         'body'
       );
 
-      expect(screen.getByTestId('bool')).toHaveAttribute(
+      expect(screen.getByTestId('toggle')).toHaveAttribute(
         'readonly',
         'readonly'
       );
     });
 
-    it('bool:[attr,] - show/hide multiple attributes at once', () => {
+    it('toggle:[attr,] - show/hide multiple attributes at once', () => {
       render(
-        html`<div data-testid="bool" bool:[hidden,visible]="false">Test</div>`,
+        html`<div data-testid="toggle" toggle:[hidden,visible]="false">
+          Test
+        </div>`,
         'body'
       );
 
-      expect(screen.getByTestId('bool')).not.toHaveAttribute('hidden');
-      expect(screen.getByTestId('bool')).not.toHaveAttribute('visible');
+      expect(screen.getByTestId('toggle')).not.toHaveAttribute('hidden');
+      expect(screen.getByTestId('toggle')).not.toHaveAttribute('visible');
     });
 
     it('class:name - toggles a className individually', () => {
