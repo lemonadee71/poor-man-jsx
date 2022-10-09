@@ -38,10 +38,14 @@ describe('addDirective', () => {
       element.removeAttribute(':autosize');
     },
   };
+  const attrName = (str) => str === ':autosize';
+  const objKey = (str) => str === 'autosize';
 
-  const runAssertions = () => {
-    expect(screen.getByTestId('autosize')).not.toHaveAttribute(':autosize');
-    expect(screen.getByTestId('autosize')).toHaveAttribute(
+  const runAssertions = (id = '') => {
+    expect(screen.getByTestId(`autosize${id}`)).not.toHaveAttribute(
+      ':autosize'
+    );
+    expect(screen.getByTestId(`autosize${id}`)).toHaveAttribute(
       'data-autosize',
       'true'
     );
@@ -53,8 +57,10 @@ describe('addDirective', () => {
   });
 
   it('allow users to add their own directive', () => {
-    const getType = (str) => (str === ':autosize' ? ['autosize'] : null);
-    PoorManJSX.addDirective({ ...directive, getType });
+    PoorManJSX.addDirective({
+      ...directive,
+      predicate: attrName,
+    });
 
     render(html`<div :autosize data-testid="autosize"></div>`, 'body');
 
@@ -62,34 +68,37 @@ describe('addDirective', () => {
   });
 
   it('allow different keys for attrName and objKey with array', () => {
-    const getTypeFromAttr = (str) =>
-      str === ':autosize' ? ['autosize'] : null;
-    const getTypeFromKey = (str) => (str === 'autosize' ? ['autosize'] : null);
-
     PoorManJSX.addDirective({
       ...directive,
-      getType: [getTypeFromAttr, getTypeFromKey],
+      predicate: [attrName, objKey],
     });
 
-    render(html`<div data-testid="autosize"></div>`, 'body');
-    apply(screen.getByTestId('autosize'), { autosize: true });
+    render(
+      html`<div data-testid="autosize1"></div>
+        <div :autosize data-testid="autosize2"></div>`,
+      'body'
+    );
+    apply(screen.getByTestId('autosize1'), { autosize: true });
 
-    runAssertions();
+    runAssertions(1);
+    runAssertions(2);
   });
 
   it('allow different keys for attrName and objKey with object', () => {
-    const attrName = (str) => (str === ':autosize' ? ['autosize'] : null);
-    const objKey = (str) => (str === 'autosize' ? ['autosize'] : null);
-
     PoorManJSX.addDirective({
       ...directive,
-      getType: { attrName, objKey },
+      predicate: { attrName, objKey },
     });
 
-    render(html`<div data-testid="autosize"></div>`, 'body');
-    apply(screen.getByTestId('autosize'), { autosize: true });
+    render(
+      html`<div data-testid="autosize1"></div>
+        <div :autosize data-testid="autosize2"></div>`,
+      'body'
+    );
+    apply(screen.getByTestId('autosize1'), { autosize: true });
 
-    runAssertions();
+    runAssertions(1);
+    runAssertions(2);
   });
 
   it('uses strict equality if `getType` is not provided', () => {

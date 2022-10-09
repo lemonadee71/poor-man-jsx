@@ -3,7 +3,7 @@ import { isArray, isFunction } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
 
 /**
- * @callback DirectiveType
+ * @callback DirectivePredicate
  * @param {string} key - the string to be processed
  * @returns {[string,string|null]|null}
  */
@@ -20,7 +20,7 @@ import isPlainObject from './utils/is-plain-obj';
  * @typedef {Object} Directive
  * @property {string} name - the name of the directive
  * @property {string} type - the id of the directive
- * @property {DirectiveType|DirectiveType[]|{ attrName: DirectiveType, objKey: DirectiveType }} getType - callbacks used to determine the type based from attr name or object key
+ * @property {DirectivePredicate|DirectivePredicate[]|{ attrName: DirectivePredicate, objKey: DirectivePredicate }} [predicate] - callbacks used to determine the type based from attr name or object key
  * @property {Modifier} callback - the function to modify the element based on type
  */
 
@@ -30,12 +30,12 @@ const DirectivesRegistry = new Map();
 
 const getAdditionalAttrDirectives = () =>
   [...DirectivesRegistry.values()]
-    .map((dir) => dir.getType.attrName)
+    .map((dir) => dir.predicate.attrName)
     .filter((fn) => fn);
 
 const getAdditionalKeyDirectives = () =>
   [...DirectivesRegistry.values()]
-    .map((dir) => dir.getType.objKey)
+    .map((dir) => dir.predicate.objKey)
     .filter((fn) => fn);
 
 /**
@@ -51,27 +51,30 @@ const getPlugins = () => {
   return map;
 };
 
-const registerDirective = ({ name, type, getType, callback }) => {
+const createPredicate = (type, fn) => (key) =>
+  (fn ? fn(key) : key === type) && [type, key];
+
+const registerDirective = ({ name, type, predicate, callback }) => {
   const typeChecker = {
     attrName: null,
     objKey: null,
   };
 
-  if (!getType) {
-    const defaultFn = (str) => (str === type ? [type, type] : null);
-    typeChecker.attrName = defaultFn;
-    typeChecker.objKey = defaultFn;
-  } else if (isFunction(getType)) {
-    typeChecker.attrName = getType;
-    typeChecker.objKey = getType;
-  } else if (isArray(getType)) {
-    typeChecker.attrName = getType[0];
-    typeChecker.objKey = getType[1];
-  } else if (isPlainObject(getType)) {
-    Object.assign(typeChecker, getType);
+  if (!predicate) {
+    typeChecker.attrName = createPredicate(type);
+    typeChecker.objKey = createPredicate(type);
+  } else if (isFunction(predicate)) {
+    typeChecker.attrName = createPredicate(type, predicate);
+    typeChecker.objKey = createPredicate(type, predicate);
+  } else if (isArray(predicate)) {
+    typeChecker.attrName = createPredicate(type, predicate[0]);
+    typeChecker.objKey = createPredicate(type, predicate[1]);
+  } else if (isPlainObject(predicate)) {
+    typeChecker.attrName = createPredicate(type, predicate.attrName);
+    typeChecker.objKey = createPredicate(type, predicate.objKey);
   }
 
-  DirectivesRegistry.set(name, { type, getType: typeChecker, callback });
+  DirectivesRegistry.set(name, { type, predicate: typeChecker, callback });
 };
 
 /**
