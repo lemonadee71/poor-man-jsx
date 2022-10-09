@@ -31,7 +31,6 @@ describe('preprocessor', () => {
 
 describe('addDirective', () => {
   const directive = {
-    name: 'autosize',
     type: 'autosize',
     callback: (element, _, modify) => {
       modify(element, 'attr', { key: 'data-autosize', value: 'true' });

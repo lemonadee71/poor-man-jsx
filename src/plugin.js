@@ -18,7 +18,7 @@ import isPlainObject from './utils/is-plain-obj';
 
 /**
  * @typedef {Object} Directive
- * @property {string} name - the name of the directive
+ * @property {string} [name] - the name of the directive. This will serve as the id for the directive to be able to remove it later. If not provided, will default to `type`.
  * @property {string} type - the id of the directive
  * @property {DirectivePredicate|DirectivePredicate[]|{ attrName: DirectivePredicate, objKey: DirectivePredicate }} [predicate] - callbacks used to determine the type based from attr name or object key
  * @property {Modifier} callback - the function to modify the element based on type
@@ -74,7 +74,11 @@ const registerDirective = ({ name, type, predicate, callback }) => {
     typeChecker.objKey = createPredicate(type, predicate.objKey);
   }
 
-  DirectivesRegistry.set(name, { type, predicate: typeChecker, callback });
+  DirectivesRegistry.set(name || type, {
+    type,
+    predicate: typeChecker,
+    callback,
+  });
 };
 
 /**
