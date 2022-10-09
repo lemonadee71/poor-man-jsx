@@ -1,9 +1,8 @@
+import { getAttrDirectives, getKeyDirectives } from '../directives';
 import {
   getAdditionalAttrDirectives,
   getAdditionalKeyDirectives,
-  getAttrDirectives,
-  getKeyDirectives,
-} from '../directives';
+} from '../plugin';
 import { isArray, isString } from './is';
 
 const getType = (str, directives) => {

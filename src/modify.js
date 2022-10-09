@@ -1,6 +1,6 @@
 import { LIFECYCLE_METHODS, WRAPPING_BRACKETS } from './constants';
 import { patchElement, rearrangeNodes } from './diffing';
-import { getPlugins } from './directives';
+import { getPlugins } from './plugin';
 import {
   cloneNode,
   getChildNodes,

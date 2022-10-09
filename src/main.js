@@ -3,7 +3,7 @@ import { replaceCustomComponents } from './custom-components';
 import { registerIfHook } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
-import { preprocess } from './preprocess';
+import { runBeforeCreate } from './plugin';
 import {
   getChildNodes,
   getChildren,
@@ -90,7 +90,7 @@ const render = (template, target) => {
 };
 
 const createElementFromTemplate = (template) => {
-  const str = preprocess(template.template);
+  const str = runBeforeCreate(template.template);
   const fragment = document.createRange().createContextualFragment(str);
 
   for (const node of getPlaceholders(fragment)) {

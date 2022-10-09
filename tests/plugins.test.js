@@ -9,12 +9,12 @@ describe('preprocessor', () => {
   });
 
   it('process template string before creation', () => {
-    const preprocessor = jest.fn((str) => str.replace(/x-/g, 'data-'));
+    const fn = jest.fn((str) => str.replace(/x-/g, 'data-'));
 
-    PoorManJSX.plugins.addPreprocessor(preprocessor);
+    PoorManJSX.onBeforeCreate(fn);
     render(html`<div x-testid="preprocessed"></div>`, 'body');
 
-    expect(preprocessor).toBeCalledTimes(1);
+    expect(fn).toBeCalledTimes(1);
     expect(screen.getByTestId('preprocessed')).toBeInTheDocument();
   });
 
@@ -48,13 +48,13 @@ describe('addDirective', () => {
   };
 
   afterEach(() => {
-    PoorManJSX.plugins.removeDirective('autosize');
+    PoorManJSX.removeDirective('autosize');
     document.body.innerHTML = '';
   });
 
   it('allow users to add their own directive', () => {
     const getType = (str) => (str === ':autosize' ? ['autosize'] : null);
-    PoorManJSX.plugins.addDirective({ ...directive, getType });
+    PoorManJSX.addDirective({ ...directive, getType });
 
     render(html`<div :autosize data-testid="autosize"></div>`, 'body');
 
@@ -66,7 +66,7 @@ describe('addDirective', () => {
       str === ':autosize' ? ['autosize'] : null;
     const getTypeFromKey = (str) => (str === 'autosize' ? ['autosize'] : null);
 
-    PoorManJSX.plugins.addDirective({
+    PoorManJSX.addDirective({
       ...directive,
       getType: [getTypeFromAttr, getTypeFromKey],
     });
@@ -81,7 +81,7 @@ describe('addDirective', () => {
     const attrName = (str) => (str === ':autosize' ? ['autosize'] : null);
     const objKey = (str) => (str === 'autosize' ? ['autosize'] : null);
 
-    PoorManJSX.plugins.addDirective({
+    PoorManJSX.addDirective({
       ...directive,
       getType: { attrName, objKey },
     });
@@ -93,7 +93,7 @@ describe('addDirective', () => {
   });
 
   it('uses strict equality if `getType` is not provided', () => {
-    PoorManJSX.plugins.addDirective(directive);
+    PoorManJSX.addDirective(directive);
 
     render(html`<div autosize data-testid="autosize"></div>`, 'body');
 

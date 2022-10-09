@@ -1,4 +1,4 @@
-import { addPreprocessor } from './preprocess';
+import { onBeforeCreate } from './plugin';
 import { getChildNodes } from './utils/dom';
 import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
 import {
@@ -148,7 +148,7 @@ define('Fragment', ({ children }) => {
   return fragment;
 });
 
-addPreprocessor(
+onBeforeCreate(
   (template) =>
     template.replace('<>', '<Fragment>').replace('</>', '</Fragment>'),
   replaceCustomTags

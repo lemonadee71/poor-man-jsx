@@ -1,9 +1,13 @@
 import { define, remove } from './custom-components';
-import { addDirective, removeDirective } from './directives';
 import { html, render, apply } from './main';
 import { createHook, unwatch, watch } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
-import { addPreprocessor, removePreprocessor } from './preprocess';
+import {
+  addDirective,
+  removeDirective,
+  onBeforeCreate,
+  removeOnBeforeCreate,
+} from './plugin';
 
 enableLifecycle();
 
@@ -12,12 +16,10 @@ enableLifecycle();
  */
 const PoorManJSX = {
   disableLifecycle,
-  plugins: {
-    addPreprocessor,
-    removePreprocessor,
-    addDirective,
-    removeDirective,
-  },
+  onBeforeCreate,
+  removeOnBeforeCreate,
+  addDirective,
+  removeDirective,
   customComponents: { define, remove },
 };
 
