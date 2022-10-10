@@ -62,7 +62,11 @@ const replaceCustomComponents = (parent, values, create) => {
       throw new Error('Custom component must be a Template or a Node');
     }
 
-    element.replaceWith(_.isTemplate(actual) ? create(actual) : actual);
+    element.replaceWith(
+      _.isTemplate(actual)
+        ? create({ ...actual, values: { ...actual.values, ...values } })
+        : actual
+    );
   }
 };
 
@@ -148,7 +152,7 @@ export default [
         replaceCustomTags
       );
 
-      PoorManJSX.onAfterHydrate(replaceCustomComponents);
+      PoorManJSX.onBeforeHydrate(replaceCustomComponents);
     },
     define,
     remove,
