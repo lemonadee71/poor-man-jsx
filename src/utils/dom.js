@@ -39,13 +39,16 @@ export const removeChildren = (parent) => {
  * and calls a function for each
  * @param {HTMLElement} element
  * @param {Function} callback
+ * @param {boolean} topDown - if true, the callback will be called from parent to grandchildren. It's the opposite if false
  */
-export const traverse = (element, callback) => {
-  callback(element);
+export const traverse = (element, callback, topDown = true) => {
+  if (topDown) callback(element);
 
-  if (element.children && element.children.length) {
+  if (element.childElementCount) {
     getChildren(element).forEach((child) => traverse(child, callback));
   }
+
+  if (!topDown) callback(element);
 };
 
 /**
