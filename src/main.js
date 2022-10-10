@@ -1,6 +1,5 @@
 import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
 import { registerIfHook } from './hooks';
-import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
 import { lifecycle } from './plugin';
 import {
@@ -30,7 +29,7 @@ import {
   isTemplate,
 } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
-import { addKeyRecursive } from './utils/meta';
+import { addKeyRecursive, setMetadata } from './utils/meta';
 import Template from './utils/Template';
 import { getTypeOfAttrName, getTypeOfKey } from './utils/type';
 
@@ -139,6 +138,8 @@ const createElementFromTemplate = (template) => {
 
   for (const child of getChildren(fragment)) {
     traverse(child, (element) => {
+      if (element.__meta?.hydrated) return;
+
       for (const attr of [...element.attributes]) {
         const rawName = attr.name;
         const rawValue = attr.value.trim();
@@ -192,10 +193,12 @@ const createElementFromTemplate = (template) => {
           }
         }
       }
+
+      setMetadata(element, 'hydrated', true);
+      element.dispatchEvent(new Event(`@create`));
     });
 
     child.normalize();
-    triggerLifecycle('create', child);
   }
 
   lifecycle.runAfterHydrate(
