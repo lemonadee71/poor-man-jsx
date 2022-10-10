@@ -1,5 +1,4 @@
 import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
-import { replaceCustomComponents } from './custom-components';
 import { registerIfHook } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
@@ -140,8 +139,6 @@ const createElementFromTemplate = (template) => {
 
   for (const child of getChildren(fragment)) {
     traverse(child, (element) => {
-      if (element.tagName === 'CUSTOM-COMPONENT') return;
-
       for (const attr of [...element.attributes]) {
         const rawName = attr.name;
         const rawValue = attr.value.trim();
@@ -206,8 +203,6 @@ const createElementFromTemplate = (template) => {
     template.values,
     createElementFromTemplate
   );
-
-  replaceCustomComponents(fragment, template.values, createElementFromTemplate);
 
   return fragment;
 };

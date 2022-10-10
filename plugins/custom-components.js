@@ -1,18 +1,6 @@
-import { lifecycle } from './plugin';
-import { getChildNodes } from './utils/dom';
-import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
-import {
-  isArray,
-  isElement,
-  isFunction,
-  isNode,
-  isNumber,
-  isPlaceholder,
-  isString,
-  isTemplate,
-} from './utils/is';
-import isPlainObject from './utils/is-plain-obj';
+import PoorManJSX from '../src';
 
+const _ = PoorManJSX.utils;
 const CustomElements = new Map();
 const VALID_COMPONENT_NAME = /^[\w-]+$/;
 
@@ -20,14 +8,14 @@ const VALID_COMPONENT_NAME = /^[\w-]+$/;
  * Define one or more custom components.
  * @param  {...any} data
  */
-export const define = (...data) => {
-  if (data.length === 2 && isString(data[0]) && isFunction(data[1])) {
+const define = (...data) => {
+  if (data.length === 2 && _.isString(data[0]) && _.isFunction(data[1])) {
     register(data[0], data[1]);
-  } else if (data.every(isPlainObject)) {
+  } else if (data.every(_.isPlainObject)) {
     for (const value of data) {
       Object.entries(value).forEach((x) => register(...x));
     }
-  } else if (data.every(isArray)) {
+  } else if (data.every(_.isArray)) {
     for (const value of data) register(...value);
   }
 };
@@ -50,11 +38,11 @@ const register = (name, component) => {
  * @param {...string} names - the names of the component to be removed
  * @returns
  */
-export const remove = (...names) => {
+const remove = (...names) => {
   for (const name of names) CustomElements.delete(name);
 };
 
-export const replaceCustomComponents = (parent, values, create) => {
+const replaceCustomComponents = (parent, values, create) => {
   const custom = [...parent.querySelectorAll('custom-component')];
 
   for (const element of custom) {
@@ -70,35 +58,37 @@ export const replaceCustomComponents = (parent, values, create) => {
       props: Object.assign(defaultProps, props),
     });
 
-    if (!isTemplate(actual) && !isNode(actual)) {
+    if (!_.isTemplate(actual) && !_.isNode(actual)) {
       throw new Error('Custom component must be a Template or a Node');
     }
 
-    element.replaceWith(isTemplate(actual) ? create(actual) : actual);
+    element.replaceWith(_.isTemplate(actual) ? create(actual) : actual);
   }
 };
+
+const camelize = (str) => str.replace(/[-_]./g, (x) => x[1].toUpperCase());
 
 const stringToRaw = (value) => {
   if (value === 'true') return true;
   if (value === 'false') return false;
-  if (isNumber(+value)) return +value;
-  return unescapeHTML(value);
+  if (_.isNumber(+value)) return +value;
+  return _.unescapeHTML(value);
 };
 
 const attrsToProps = (attrs, values) => {
   const props = {};
 
   for (const attr of attrs) {
-    if (isPlaceholder(attr.name)) {
-      let value = values[getPlaceholderId(attr.name)];
+    if (_.isPlaceholder(attr.name)) {
+      let value = values[_.getPlaceholderId(attr.name)];
       value = [value].flat();
 
       for (const o of value) Object.assign(props, o);
     } else {
       const name = camelize(attr.name);
 
-      if (isPlaceholder(attr.value)) {
-        props[name] = values[getPlaceholderId(attr.value)];
+      if (_.isPlaceholder(attr.value)) {
+        props[name] = values[_.getPlaceholderId(attr.value)];
       } else {
         props[name] = stringToRaw(attr.value);
       }
@@ -109,11 +99,11 @@ const attrsToProps = (attrs, values) => {
 };
 
 const processChildren = (parent) => {
-  const children = getChildNodes(parent);
+  const children = [...parent.childNodes];
   children.named = [];
   children.unnamed = [];
 
-  for (const child of children.filter(isElement)) {
+  for (const child of children.filter(_.isElement)) {
     const name = child.getAttribute(':slot');
 
     if (name) {
@@ -141,15 +131,26 @@ const replaceCustomTags = (template) => {
   return str;
 };
 
-define('Fragment', ({ children }) => {
-  const fragment = document.createDocumentFragment();
-  fragment.append(...children);
+export default [
+  'customComponents',
+  {
+    _init: function () {
+      define('Fragment', ({ children }) => {
+        const fragment = document.createDocumentFragment();
+        fragment.append(...children);
 
-  return fragment;
-});
+        return fragment;
+      });
 
-lifecycle.onBeforeCreate(
-  (template) =>
-    template.replace('<>', '<Fragment>').replace('</>', '</Fragment>'),
-  replaceCustomTags
-);
+      PoorManJSX.onBeforeCreate(
+        (template) =>
+          template.replace('<>', '<Fragment>').replace('</>', '</Fragment>'),
+        replaceCustomTags
+      );
+
+      PoorManJSX.onAfterHydrate(replaceCustomComponents);
+    },
+    define,
+    remove,
+  },
+];

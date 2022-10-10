@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, screen } from '@testing-library/dom';
 import PoorManJSX, { html, render } from '../src';
+import customComponents from '../plugins/custom-components';
+
+PoorManJSX.mount(...customComponents);
 
 describe('custom components', () => {
   const mockCallback = jest.fn(() => true);
@@ -11,7 +14,7 @@ describe('custom components', () => {
   });
 
   it('define - registers a custom component', () => {
-    PoorManJSX.customComponents.define(
+    PoorManJSX.plugins.customComponents.define(
       'HelloWorld',
       () => html`<div data-testid="custom"><p>Hello, World!</p></div>`
     );
@@ -23,12 +26,15 @@ describe('custom components', () => {
 
   it('define - only accepts valid html tag', () => {
     expect(() => {
-      PoorManJSX.customComponents.define('custom item', () => {});
+      PoorManJSX.plugins.customComponents.define('custom item', () => {});
     }).toThrowError();
   });
 
   it('define - component function must return a Template or Element', () => {
-    PoorManJSX.customComponents.define('HelloWorld', () => 'Hello, World!');
+    PoorManJSX.plugins.customComponents.define(
+      'HelloWorld',
+      () => 'Hello, World!'
+    );
 
     expect(() => {
       render(html`<HelloWorld />`, 'body');
@@ -36,11 +42,11 @@ describe('custom components', () => {
   });
 
   it('remove - removes a custom component', () => {
-    PoorManJSX.customComponents.define(
+    PoorManJSX.plugins.customComponents.define(
       'hello-world',
       () => html`<p>Hello, World!</p>`
     );
-    PoorManJSX.customComponents.remove('hello-world');
+    PoorManJSX.plugins.customComponents.remove('hello-world');
     render(html`<hello-world />`, 'body');
 
     expect(document.body.querySelector('hello-world')).toBeInTheDocument();
@@ -48,7 +54,7 @@ describe('custom components', () => {
 
   it('all attributes in custom component is passed as props', () => {
     let data;
-    PoorManJSX.customComponents.define('Task', ({ props }) => {
+    PoorManJSX.plugins.customComponents.define('Task', ({ props }) => {
       data = props;
       return html`<div data-testid=${props.id}>This is a task</div>`;
     });
@@ -66,7 +72,7 @@ describe('custom components', () => {
   });
 
   it('object/array passed inside the opening tags are treated as props', () => {
-    PoorManJSX.customComponents.define(
+    PoorManJSX.plugins.customComponents.define(
       'Foo',
       ({ props }) => html`<div data-testid="foo" ${{ ...props }}>Test</div>`
     );
@@ -83,7 +89,7 @@ describe('custom components', () => {
 
   it('all attributes names (kebab and snake case) are converted to camelCase', () => {
     let data;
-    PoorManJSX.customComponents.define('Task', ({ props }) => {
+    PoorManJSX.plugins.customComponents.define('Task', ({ props }) => {
       data = props;
       return html`<div>This is a task</div>`;
     });
@@ -103,7 +109,7 @@ describe('custom components', () => {
     let data;
     const date = new Date();
 
-    PoorManJSX.customComponents.define('Task', ({ props }) => {
+    PoorManJSX.plugins.customComponents.define('Task', ({ props }) => {
       data = props;
       return html`<div data-testid=${props.id}>This is a task</div>`;
     });
@@ -125,7 +131,7 @@ describe('custom components', () => {
       readonly: true,
     };
 
-    PoorManJSX.customComponents.define('Foo', Foo);
+    PoorManJSX.plugins.customComponents.define('Foo', Foo);
 
     render(html`<Foo />`, 'body');
 
@@ -133,7 +139,7 @@ describe('custom components', () => {
   });
 
   it('anything passed between tags is passed as children', () => {
-    PoorManJSX.customComponents.define(
+    PoorManJSX.plugins.customComponents.define(
       'PlaceholderText',
       ({ children }) => html`<p data-testid="placeholder">${children}</p>`
     );
@@ -150,7 +156,7 @@ describe('custom components', () => {
 
   it('elements with :slot attribute can be accessed through children[slot]', () => {
     let data;
-    PoorManJSX.customComponents.define('Router', ({ children }) => {
+    PoorManJSX.plugins.customComponents.define('Router', ({ children }) => {
       data = {
         home: children.home,
         about: children.about,
@@ -175,7 +181,7 @@ describe('custom components', () => {
   });
 
   it('can be nested', () => {
-    PoorManJSX.customComponents.define({
+    PoorManJSX.plugins.customComponents.define({
       'custom-b': ({ children }) =>
         html`<b data-testid="nested">${children}</b>`,
       'custom-p': ({ children }) =>

@@ -6,15 +6,6 @@
 export const getPlaceholderId = (str) => str.replaceAll('__', '');
 
 /**
- * Convert kebab-case to camelCase.
- * Taken from https://stackoverflow.com/questions/57556471
- * @param {string} str
- * @returns {string}
- */
-export const camelize = (str) =>
-  str.replace(/[-_]./g, (x) => x[1].toUpperCase());
-
-/**
  * Escape unsafe html entities from a string.
  * Taken from: https://stackoverflow.com/questions/6234773
  * @param {string} unsafe - string to escape
