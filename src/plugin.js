@@ -1,3 +1,4 @@
+/* eslint-disable import/no-import-module-exports */
 import { compose } from './utils/general';
 import { isArray, isFunction } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
@@ -38,10 +39,6 @@ const getAdditionalKeyDirectives = () =>
     .map((dir) => dir.predicate.objKey)
     .filter((fn) => fn);
 
-/**
- * Return all plugin processors
- * @returns {Object.<string,Modifier>}
- */
 const getPlugins = () => {
   const map = {};
   for (const data of DirectivesRegistry.values()) {
@@ -84,39 +81,45 @@ const registerDirective = ({ name, type, predicate, callback }) => {
 /**
  * Add directive
  * @param  {...Directive} directives
- * @returns
  */
-const addDirective = (...directives) =>
+const addDirective = (...directives) => {
   directives.forEach((dir) => registerDirective(dir));
+};
 
 /**
  * Remove a directive
  * @param  {...string} names
- * @returns
  */
-const removeDirective = (...names) =>
+const removeDirective = (...names) => {
   names.forEach((name) => DirectivesRegistry.delete(name));
-
-// ============= LIFECYCLE =============
-let processors = [];
-
-/**
- * Add a callback that will process the html string before creation
- * @param  {...Function|Function[]} callback
- * @returns
- */
-const onBeforeCreate = (...callback) => processors.push(...callback);
-
-/**
- * Remove a processor callback
- * @param {Function} callback
- */
-const removeOnBeforeCreate = (callback) => {
-  processors = processors.filter((fn) => fn !== callback);
 };
 
-const runBeforeCreate = (htmlString) =>
-  processors.reduce(
+// ============= LIFECYCLE =============
+const lifecycle = {
+  beforeCreate: [],
+  afterCreate: [],
+  beforeHydrate: [],
+  afterHydrate: [],
+};
+
+const exports = Object.keys(lifecycle).reduce((o, key) => {
+  const name = key[0].toUpperCase() + key.slice(1);
+
+  const add = (...callback) => lifecycle[key].push(...callback);
+  const remove = (callback) => {
+    lifecycle[key] = lifecycle[key].filter((fn) => fn !== callback);
+  };
+  const run = (...args) => lifecycle[key].forEach((fn) => fn(...args));
+
+  o[`on${name}`] = add;
+  o[`remove${name}`] = remove;
+  o[`run${name}`] = run;
+
+  return o;
+}, {});
+
+exports.runBeforeCreate = (htmlString) =>
+  lifecycle.beforeCreate.reduce(
     (result, fn) => (isArray(fn) ? compose(...fn)(result) : fn(result)),
     htmlString
   );
@@ -124,10 +127,8 @@ const runBeforeCreate = (htmlString) =>
 export {
   addDirective,
   removeDirective,
-  onBeforeCreate,
-  removeOnBeforeCreate,
-  runBeforeCreate,
-  getPlugins,
   getAdditionalAttrDirectives,
   getAdditionalKeyDirectives,
+  getPlugins,
+  exports as lifecycle,
 };

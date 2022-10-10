@@ -1,4 +1,4 @@
-import { onBeforeCreate } from './plugin';
+import { lifecycle } from './plugin';
 import { getChildNodes } from './utils/dom';
 import { camelize, getPlaceholderId, unescapeHTML } from './utils/general';
 import {
@@ -148,7 +148,7 @@ define('Fragment', ({ children }) => {
   return fragment;
 });
 
-onBeforeCreate(
+lifecycle.onBeforeCreate(
   (template) =>
     template.replace('<>', '<Fragment>').replace('</>', '</Fragment>'),
   replaceCustomTags

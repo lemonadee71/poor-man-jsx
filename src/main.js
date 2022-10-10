@@ -3,7 +3,7 @@ import { replaceCustomComponents } from './custom-components';
 import { registerIfHook } from './hooks';
 import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
-import { runBeforeCreate } from './plugin';
+import { lifecycle } from './plugin';
 import {
   getChildNodes,
   getChildren,
@@ -90,8 +90,14 @@ const render = (template, target) => {
 };
 
 const createElementFromTemplate = (template) => {
-  const str = runBeforeCreate(template.template);
+  const str = lifecycle.runBeforeCreate(template.template);
   const fragment = document.createRange().createContextualFragment(str);
+
+  lifecycle.runAfterCreate(
+    fragment,
+    template.values,
+    createElementFromTemplate
+  );
 
   for (const node of getPlaceholders(fragment)) {
     const parent = node.parentElement;
@@ -125,6 +131,12 @@ const createElementFromTemplate = (template) => {
 
     node.replaceWith(...normalizeChildren(value));
   }
+
+  lifecycle.runBeforeHydrate(
+    fragment,
+    template.values,
+    createElementFromTemplate
+  );
 
   for (const child of getChildren(fragment)) {
     traverse(child, (element) => {
@@ -188,6 +200,12 @@ const createElementFromTemplate = (template) => {
     child.normalize();
     triggerLifecycle('create', child);
   }
+
+  lifecycle.runAfterHydrate(
+    fragment,
+    template.values,
+    createElementFromTemplate
+  );
 
   replaceCustomComponents(fragment, template.values, createElementFromTemplate);
 
