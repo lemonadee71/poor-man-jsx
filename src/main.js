@@ -88,9 +88,15 @@ const render = (template, target) => {
   return fragment;
 };
 
+/**
+ * Create element from a `Template` returned by `html`
+ * @param {Template} template
+ * @returns {DocumentFragment}
+ */
 const createElementFromTemplate = (template) => {
   const str = lifecycle.runBeforeCreate(template.template);
   const fragment = document.createRange().createContextualFragment(str);
+  lifecycle.runAfterCreate(fragment, template.values);
 
   const wrapup = (root) => {
     for (const child of getChildren(root)) {
@@ -99,8 +105,7 @@ const createElementFromTemplate = (template) => {
     }
   };
 
-  const process = [
-    lifecycle.runAfterCreate,
+  const fns = [
     resolveBody,
     lifecycle.runBeforeHydrate,
     resolveAttributes,
@@ -108,9 +113,8 @@ const createElementFromTemplate = (template) => {
     lifecycle.runAfterHydrate,
   ];
 
-  for (const fn of process) {
-    fn.call(null, fragment, template.values, createElementFromTemplate);
-  }
+  for (const fn of fns) fn.call(null, fragment, template.values);
+
   return fragment;
 };
 
@@ -264,4 +268,4 @@ const hydrateFromObject = (element, changes) => {
   return element;
 };
 
-export { html, render, hydrateFromObject as apply };
+export { createElementFromTemplate, html, render, hydrateFromObject as apply };

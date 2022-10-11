@@ -1,4 +1,4 @@
-import { html, render, apply } from './main';
+import { html, render, apply, createElementFromTemplate } from './main';
 import { createHook, unwatch, watch } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
 import { addDirective, removeDirective, lifecycle } from './plugin';
@@ -49,5 +49,13 @@ const PoorManJSX = {
   },
 };
 
-export { html, render, apply, createHook, watch, unwatch };
+export {
+  html,
+  render,
+  apply,
+  createElementFromTemplate,
+  createHook,
+  watch,
+  unwatch,
+};
 export default PoorManJSX;
