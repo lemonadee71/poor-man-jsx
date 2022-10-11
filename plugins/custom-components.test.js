@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, screen } from '@testing-library/dom';
 import PoorManJSX, { html, render } from '../src';
-import customComponents from '../plugins/custom-components';
+import customComponents from './custom-components';
 
 PoorManJSX.mount(...customComponents);
 
