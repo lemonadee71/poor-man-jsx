@@ -1,6 +1,6 @@
 export const HOOK_REF = Symbol('ref_obj');
 
-export const PLACEHOLDER_REGEX = /__\w+__/;
+export const PLACEHOLDER_REGEX = /__\S+__/;
 export const WRAPPING_BRACKETS = /^\[|\]$/g;
 export const WRAPPING_QUOTES = /^['"]|['"]$/g;
 
