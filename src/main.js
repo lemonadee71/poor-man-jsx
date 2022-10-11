@@ -96,26 +96,32 @@ const render = (template, target) => {
 const createElementFromTemplate = (template) => {
   const str = lifecycle.runBeforeCreate(template.template);
   const fragment = document.createRange().createContextualFragment(str);
+
   lifecycle.runAfterCreate(fragment, template.values);
+  processDirectives(fragment, template.values);
 
-  const wrapup = (root) => {
-    for (const child of getChildren(root)) {
-      child.normalize();
-      triggerLifecycle('create', child);
-    }
-  };
+  for (const child of getChildren(fragment)) {
+    // child.normalize();
+    triggerLifecycle('create', child);
+  }
 
+  return fragment;
+};
+
+/**
+ * Processes all directives of all elements under the given root
+ * @param {HTMLElement|DocumentFragment} root - the root element
+ * @param {any} context - key-value pairs that corresponds to a placeholder
+ */
+const processDirectives = (root, context) => {
   const fns = [
     resolveBody,
     lifecycle.runBeforeHydrate,
     resolveAttributes,
-    wrapup,
     lifecycle.runAfterHydrate,
   ];
 
-  for (const fn of fns) fn.call(null, fragment, template.values);
-
-  return fragment;
+  for (const fn of fns) fn.call(null, root, context);
 };
 
 const resolveBody = (root, values) => {
@@ -191,7 +197,6 @@ const resolveAttributes = (root, values) => {
         // 2: If passed as a value
         else {
           const [type, attrName] = getTypeOfAttrName(rawName);
-
           const match = rawValue.match(PLACEHOLDER_REGEX);
           const value = match ? values[getPlaceholderId(match[0])] : rawValue;
 
@@ -268,4 +273,10 @@ const hydrateFromObject = (element, changes) => {
   return element;
 };
 
-export { createElementFromTemplate, html, render, hydrateFromObject as apply };
+export {
+  createElementFromTemplate,
+  html,
+  render,
+  hydrateFromObject as apply,
+  processDirectives,
+};

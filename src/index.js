@@ -1,4 +1,10 @@
-import { html, render, apply, createElementFromTemplate } from './main';
+import {
+  html,
+  render,
+  apply,
+  processDirectives,
+  createElementFromTemplate,
+} from './main';
 import { createHook, unwatch, watch } from './hooks';
 import { enableLifecycle, disableLifecycle } from './lifecycle';
 import { addDirective, removeDirective, lifecycle } from './plugin';
@@ -53,6 +59,7 @@ export {
   html,
   render,
   apply,
+  processDirectives,
   createElementFromTemplate,
   createHook,
   watch,
