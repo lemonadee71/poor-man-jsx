@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { createEvent, fireEvent, screen } from '@testing-library/dom';
-import { apply, html, render } from '../src';
+import { apply, createHook, html, processDirectives, render } from '../src';
 
 describe('core', () => {
   const mockCallback = jest.fn(() => true);
@@ -47,6 +47,25 @@ describe('core', () => {
     expect(mockCallback).toBeCalled();
     expect(screen.getByTestId('apply')).toHaveClass('my-class');
     expect(screen.getByTestId('child')).toBeInTheDocument();
+  });
+
+  it('process - process all directives from a given root node', () => {
+    const state = createHook({ isVisible: true });
+    const context = {
+      'state.class': state.$isVisible,
+      text: html`<p>Test</p>`,
+    };
+
+    document.body.innerHTML = `
+      <div data-testid="process" class:[visible|hidden]="__state.class__">__text__</div>
+    `;
+
+    processDirectives(document.body, context);
+    state.isVisible = false;
+
+    expect(screen.getByTestId('process')).toHaveClass('hidden');
+    expect(screen.getByTestId('process')).toHaveTextContent('Test');
+    expect(screen.getByTestId('process').childElementCount).toBe(1);
   });
 
   describe('event listeners', () => {

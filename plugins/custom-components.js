@@ -1,4 +1,4 @@
-import PoorManJSX from '../src';
+import PoorManJSX, { createElementFromTemplate } from '../src';
 
 const _ = PoorManJSX.utils;
 const CustomElements = new Map();
@@ -42,7 +42,7 @@ const remove = (...names) => {
   for (const name of names) CustomElements.delete(name);
 };
 
-const replaceCustomComponents = (parent, values, create) => {
+const replaceCustomComponents = (parent, values) => {
   const custom = [...parent.querySelectorAll('custom-component')];
 
   for (const element of custom) {
@@ -64,7 +64,10 @@ const replaceCustomComponents = (parent, values, create) => {
 
     element.replaceWith(
       _.isTemplate(actual)
-        ? create({ ...actual, values: { ...actual.values, ...values } })
+        ? createElementFromTemplate({
+            ...actual,
+            values: { ...actual.values, ...values },
+          })
         : actual
     );
   }

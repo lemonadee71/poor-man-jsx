@@ -1,5 +1,6 @@
 import { PLACEHOLDER_REGEX, WRAPPING_QUOTES } from './constants';
 import { registerIfHook } from './hooks';
+import { triggerLifecycle } from './lifecycle';
 import { modifyElement } from './modify';
 import { lifecycle } from './plugin';
 import {
@@ -87,21 +88,48 @@ const render = (template, target) => {
   return fragment;
 };
 
+/**
+ * Create element from a `Template` returned by `html`
+ * @param {Template} template
+ * @returns {DocumentFragment}
+ */
 const createElementFromTemplate = (template) => {
   const str = lifecycle.runBeforeCreate(template.template);
   const fragment = document.createRange().createContextualFragment(str);
 
-  lifecycle.runAfterCreate(
-    fragment,
-    template.values,
-    createElementFromTemplate
-  );
+  lifecycle.runAfterCreate(fragment, template.values);
+  processDirectives(fragment, template.values);
 
-  for (const node of getPlaceholders(fragment)) {
+  for (const child of getChildren(fragment)) {
+    // child.normalize();
+    triggerLifecycle('create', child);
+  }
+
+  return fragment;
+};
+
+/**
+ * Processes all directives of all elements under the given root
+ * @param {HTMLElement|DocumentFragment} root - the root element
+ * @param {any} context - key-value pairs that corresponds to a placeholder
+ */
+const processDirectives = (root, context) => {
+  const fns = [
+    resolveBody,
+    lifecycle.runBeforeHydrate,
+    resolveAttributes,
+    lifecycle.runAfterHydrate,
+  ];
+
+  for (const fn of fns) fn.call(null, root, context);
+};
+
+const resolveBody = (root, values) => {
+  for (const node of getPlaceholders(root)) {
     const parent = node.parentElement;
     const text = node.textContent.trim();
 
-    let value = template.values[getPlaceholderId(text)];
+    let value = values[getPlaceholderId(text)];
 
     if (isHook(value)) {
       const [head, tail, marker] = createMarkers();
@@ -129,14 +157,10 @@ const createElementFromTemplate = (template) => {
 
     node.replaceWith(...normalizeChildren(value));
   }
+};
 
-  lifecycle.runBeforeHydrate(
-    fragment,
-    template.values,
-    createElementFromTemplate
-  );
-
-  for (const child of getChildren(fragment)) {
+const resolveAttributes = (root, values) => {
+  for (const child of getChildren(root)) {
     traverse(child, (element) => {
       if (element.__meta?.hydrated) return;
 
@@ -147,7 +171,7 @@ const createElementFromTemplate = (template) => {
         // 1: If passed as an attribute
         if (isPlaceholder(rawName)) {
           const id = getPlaceholderId(rawName);
-          const value = template.values[id];
+          const value = values[id];
 
           if (isArray(value)) {
             for (const item of value) {
@@ -173,11 +197,8 @@ const createElementFromTemplate = (template) => {
         // 2: If passed as a value
         else {
           const [type, attrName] = getTypeOfAttrName(rawName);
-
           const match = rawValue.match(PLACEHOLDER_REGEX);
-          const value = match
-            ? template.values[getPlaceholderId(match[0])]
-            : rawValue;
+          const value = match ? values[getPlaceholderId(match[0])] : rawValue;
 
           if (type !== 'attr') {
             element.removeAttribute(rawName);
@@ -195,19 +216,8 @@ const createElementFromTemplate = (template) => {
       }
 
       setMetadata(element, 'hydrated', true);
-      element.dispatchEvent(new Event(`@create`));
     });
-
-    child.normalize();
   }
-
-  lifecycle.runAfterHydrate(
-    fragment,
-    template.values,
-    createElementFromTemplate
-  );
-
-  return fragment;
 };
 
 const addTrap = (hook, callback) => {
@@ -263,4 +273,10 @@ const hydrateFromObject = (element, changes) => {
   return element;
 };
 
-export { html, render, hydrateFromObject as apply };
+export {
+  createElementFromTemplate,
+  html,
+  render,
+  hydrateFromObject as apply,
+  processDirectives,
+};
