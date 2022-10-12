@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
 import PoorManJSX, { apply, html, render } from '../src';
 
-describe('preprocessor', () => {
+describe('runBeforeCreate', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     jest.clearAllMocks();
@@ -16,16 +16,6 @@ describe('preprocessor', () => {
 
     expect(fn).toBeCalledTimes(1);
     expect(screen.getByTestId('preprocessed')).toBeInTheDocument();
-  });
-
-  it('interprets `<></>` as fragments', () => {
-    const children = new Array(3)
-      .fill()
-      .map(() => document.createElement('div'));
-
-    render(html`<>${children}</>`, 'body');
-
-    expect(document.body.children.length).toBe(3);
   });
 });
 
@@ -100,7 +90,7 @@ describe('addDirective', () => {
     runAssertions(2);
   });
 
-  it('uses strict equality if `getType` is not provided', () => {
+  it('uses strict equality if `predicate` is not provided', () => {
     PoorManJSX.addDirective(directive);
 
     render(html`<div autosize data-testid="autosize"></div>`, 'body');

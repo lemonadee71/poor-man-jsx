@@ -52,6 +52,16 @@ describe('custom components', () => {
     expect(document.body.querySelector('hello-world')).toBeInTheDocument();
   });
 
+  it('interprets `<></>` as fragments', () => {
+    const children = new Array(3)
+      .fill()
+      .map(() => document.createElement('div'));
+
+    render(html`<>${children}</>`, 'body');
+
+    expect(document.body.children.length).toBe(3);
+  });
+
   it('all attributes in custom component is passed as props', () => {
     let data;
     PoorManJSX.plugins.customComponents.define('Task', ({ props }) => {
