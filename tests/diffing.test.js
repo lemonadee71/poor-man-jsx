@@ -4,9 +4,13 @@ import { html, render, createHook } from '../src';
 import { getChildren } from '../src/utils/dom';
 import { getKey } from '../src/utils/meta';
 
+const getIds = (list) => list.map((item) => item.id).join();
+
+const getText = (list) => list.map((item) => item.text).join();
+
 const getKeys = (parent) => getChildren(parent).map(getKey).join();
 
-const getInnerText = (parent) =>
+const getContent = (parent) =>
   getChildren(parent)
     .map((child) => child.textContent.trim())
     .join();
@@ -17,7 +21,6 @@ const ListItem = (data, props = {}) => html`
 
 // TODO: Add more test cases that involves texts
 describe('diffing', () => {
-  const onCreate = jest.fn();
   const onDestroy = jest.fn();
   const onMount = jest.fn();
   const onUnmount = jest.fn();
@@ -57,10 +60,7 @@ describe('diffing', () => {
 
     setTimeout(() => {
       try {
-        expect(getKeys(screen.getByTestId('shuffled'))).toBe(
-          hook.list.map((item) => item.id).join()
-        );
-
+        expect(getKeys(screen.getByTestId('shuffled'))).toBe(getIds(hook.list));
         done();
       } catch (error) {
         done(error);
@@ -77,21 +77,16 @@ describe('diffing', () => {
       'body'
     );
 
-    setTimeout(() => {
-      hook.list = [
-        { id: '4', text: 'exercise' },
-        { id: '2', text: 'shower' },
-        { id: '3', text: 'sleep' },
-        { id: '5', text: 'read' },
-      ];
-    });
+    hook.list = [
+      { id: '4', text: 'exercise' },
+      { id: '2', text: 'shower' },
+      { id: '3', text: 'sleep' },
+      { id: '5', text: 'read' },
+    ];
 
     setTimeout(() => {
       try {
-        expect(getKeys(screen.getByTestId('added'))).toBe(
-          hook.list.map((item) => item.id).join()
-        );
-
+        expect(getKeys(screen.getByTestId('added'))).toBe(getIds(hook.list));
         done();
       } catch (error) {
         done(error);
@@ -104,7 +99,7 @@ describe('diffing', () => {
     render(
       html`<div data-testid="update">
         ${hook.$list.map((data) =>
-          ListItem(data, { onCreate, onDestroy, onMount, onUnmount })
+          ListItem(data, { onDestroy, onMount, onUnmount })
         )}
       </div>`,
       'body'
@@ -118,15 +113,12 @@ describe('diffing', () => {
 
     setTimeout(() => {
       try {
-        expect(onCreate).toBeCalledTimes(6);
         expect(onDestroy).toBeCalledTimes(1);
-        expect(onMount).toBeCalledTimes(5);
+        expect(onMount).toBeCalledTimes(5); // 3 (first mount) + 2 (move)
         expect(onUnmount).toBeCalledTimes(2);
-        expect(getKeys(screen.getByTestId('update'))).toBe(
-          hook.list.map((item) => item.id).join()
-        );
-        expect(getInnerText(screen.getByTestId('update'))).toBe(
-          hook.list.map((item) => item.text).join()
+        expect(getKeys(screen.getByTestId('update'))).toBe(getIds(hook.list));
+        expect(getContent(screen.getByTestId('update'))).toBe(
+          getText(hook.list)
         );
         done();
       } catch (error) {
@@ -148,10 +140,9 @@ describe('diffing', () => {
 
     setTimeout(() => {
       try {
-        expect(getInnerText(screen.getByTestId('shuffled'))).toBe(
-          hook.list.map((item) => item.text).join()
+        expect(getContent(screen.getByTestId('shuffled'))).toBe(
+          getText(hook.list)
         );
-
         done();
       } catch (error) {
         done(error);
@@ -167,12 +158,7 @@ describe('diffing', () => {
       <ul data-testid="nested-list">
         ${data.tags.map(
           (item) =>
-            html`<li
-              :key="${item}"
-              onCreate=${onCreate}
-              onMount=${onMount}
-              onUnmount=${onUnmount}
-            >
+            html`<li :key="${item}" onMount=${onMount} onUnmount=${onUnmount}>
               ${item}
             </li>`
         )}
@@ -184,7 +170,6 @@ describe('diffing', () => {
       html`<ul>
         ${hook.$list.map((data) =>
           ListItem(data, {
-            onCreate,
             onMount,
             onUnmount,
             children: content(data),
@@ -200,11 +185,9 @@ describe('diffing', () => {
 
     setTimeout(() => {
       try {
-        expect(getInnerText(screen.getByTestId('nested-list'))).toBe(
+        expect(getContent(screen.getByTestId('nested-list'))).toBe(
           hook.list[0].tags.join()
         );
-        // called twice for ListItem; thrice on first tags render, twice on second
-        expect(onCreate).toBeCalledTimes(7);
         expect(onMount).toBeCalledTimes(4);
         expect(onUnmount).toBeCalledTimes(1);
         done();
@@ -251,9 +234,7 @@ describe('diffing', () => {
 
     hook.list = [...defaultData].reverse();
 
-    expect(getKeys(screen.getByTestId('keystring'))).toBe(
-      hook.list.map((item) => item.id).join()
-    );
+    expect(getKeys(screen.getByTestId('keystring'))).toBe(getIds(hook.list));
   });
 
   it(':skip="attrName" - does not update ignored attributes', () => {
@@ -345,7 +326,7 @@ describe('diffing', () => {
     render(
       html`<div no-diff data-testid="no-diff">
         ${hook.$list.map((data) =>
-          ListItem(data, { onCreate, onDestroy, onMount, onUnmount })
+          ListItem(data, { onDestroy, onMount, onUnmount })
         )}
       </div>`,
       'body'
@@ -359,14 +340,13 @@ describe('diffing', () => {
 
     setTimeout(() => {
       try {
-        expect(onCreate).toBeCalledTimes(6);
         expect(onDestroy).toBeCalledTimes(3);
         expect(onMount).toBeCalledTimes(6);
         expect(onUnmount).toBeCalledTimes(3);
         expect(getKeys(screen.getByTestId('no-diff'))).toBe(
           hook.list.map((item) => item.id).join()
         );
-        expect(getInnerText(screen.getByTestId('no-diff'))).toBe(
+        expect(getContent(screen.getByTestId('no-diff'))).toBe(
           hook.list.map((item) => item.text).join()
         );
         done();
