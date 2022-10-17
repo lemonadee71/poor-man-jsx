@@ -23,6 +23,7 @@ import {
   isFunction,
   isHook,
   isNullOrUndefined,
+  isNumber,
   isObject,
   isPlaceholder,
   isString,
@@ -228,7 +229,9 @@ const normalizeChildren = (items) => {
     .flat()
     .filter((item) => item !== true && item !== false)
     .filter((item) => !isNullOrUndefined(item))
-    .map((item) => (isString(item) ? document.createTextNode(item) : item))
+    .map((item) =>
+      isString(item) || isNumber(item) ? document.createTextNode(item) : item
+    )
     .map((item) => (isTemplate(item) ? createElementFromTemplate(item) : item))
     .flatMap((item) => (isFragment(item) ? getChildNodes(item) : item));
 
