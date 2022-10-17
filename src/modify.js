@@ -1,12 +1,7 @@
 import { LIFECYCLE_METHODS, WRAPPING_BRACKETS } from './constants';
 import { patchElement, rearrangeNodes } from './diffing';
 import { getPlugins } from './plugin';
-import {
-  cloneNode,
-  getChildNodes,
-  getChildren,
-  removeChildren,
-} from './utils/dom';
+import { getBoundary, getChildNodes, getChildren } from './utils/dom';
 import { unescapeHTML } from './utils/general';
 import {
   isArray,
@@ -18,7 +13,7 @@ import {
   isTruthy,
 } from './utils/is';
 import isPlainObject from './utils/is-plain-obj';
-import { addKeyRecursive, setMetadata } from './utils/meta';
+import { setMetadata } from './utils/meta';
 
 /**
  * Modify an element based on a directive
@@ -170,41 +165,30 @@ export const modifyElement = (target, type, data, context = document) => {
       break;
     case 'children': {
       const previousActiveElement = document.activeElement;
-      const fragment = document.createDocumentFragment();
+
+      const allNodes = getChildNodes(element);
+      const [start, end] = data.key
+        ? getBoundary(data.key, allNodes)
+        : [0, allNodes.length - 1];
+      // only touch nodes between the target markers
+      const targetNodes = allNodes.slice(start, end);
 
       if (isNullOrUndefined(element.getAttribute('no-diff'))) {
-        let nodes = data.value.map((node) =>
-          document.body.contains(node) ? cloneNode(node) : node
-        );
+        const newChildren = data.value.filter(isElement);
+        const currentNodes = rearrangeNodes(element, targetNodes, data.value);
 
-        fragment.append(...nodes);
-        fragment.normalize();
+        currentNodes
+          .filter(isElement)
+          .forEach((child, i) => patchElement(child, newChildren[i]));
 
-        nodes = getChildNodes(fragment);
-
-        // we do this since we only need to do this on first patch
-        if (!element.__meta?.already_keyed) {
-          addKeyRecursive(getChildNodes(element));
-        }
-        setMetadata(element, 'already_keyed', true);
-
-        // add, remove, rearrange top-level first
-        rearrangeNodes(element, nodes);
-
-        // then update each element
-        const children = nodes.filter(isElement);
-        getChildren(element).forEach((child, i) =>
-          patchElement(child, children[i])
-        );
-
-        // after diffing, simply restore focus
-        // since we simply updated the existing elements
+        // after diffing, simply restore focus since we simply updated the existing elements
         previousActiveElement?.focus();
       } else {
-        removeChildren(element);
+        for (const node of targetNodes) element.removeChild(node);
 
-        fragment.append(...[data.value].flat());
-        element.append(fragment);
+        const fragment = document.createDocumentFragment();
+        fragment.append(...data.value);
+        element.insertBefore(fragment, allNodes[end]);
 
         // since all children are rerendered
         // we look for the 'equal' node instead and restore focus to it

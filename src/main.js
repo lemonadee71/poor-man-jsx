@@ -9,7 +9,6 @@ import {
   getPlaceholders,
   traverse,
   createMarkers,
-  getBoundary,
 } from './utils/dom';
 import {
   compose,
@@ -130,32 +129,28 @@ const resolveBody = (root, values) => {
     const text = node.textContent.trim();
 
     let value = values[getPlaceholderId(text)];
+    let normalize = normalizeChildren;
 
     if (isHook(value)) {
       const [head, tail, marker] = createMarkers();
-      node.replaceWith(head, tail);
+      normalize = (newValue) =>
+        normalizeChildren(newValue).map((item) => {
+          setMetadata(item, 'ignore', true);
+          return item;
+        });
 
-      // Register the hook
-      let hook = value;
-      hook = addTrap(hook, (newValue) => {
-        const nodes = getChildNodes(parent);
-        const [start, end] = getBoundary(marker, nodes);
+      const hook = addTrap(value, normalize);
 
-        return normalizeChildren(
-          [nodes.slice(0, start), newValue, nodes.slice(end)].flat()
-        );
+      value = registerIfHook(hook, {
+        element: parent,
+        type: 'children',
+        target: marker,
       });
 
-      value = registerIfHook(hook, { element: parent, type: 'children' });
-      value = value.slice(...getBoundary(marker, value));
-
-      // Then render initial value
-      tail.replaceWith(...value, tail);
-
-      continue;
+      value = [head, value, tail];
     }
 
-    node.replaceWith(...normalizeChildren(value));
+    node.replaceWith(...normalize(value));
   }
 };
 
