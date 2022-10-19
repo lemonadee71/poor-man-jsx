@@ -1,7 +1,7 @@
 import {
   html,
   render,
-  apply,
+  applyProps,
   processDirectives,
   createElementFromTemplate,
 } from './main';
@@ -58,7 +58,7 @@ const PoorManJSX = {
 export {
   html,
   render,
-  apply,
+  applyProps,
   processDirectives,
   createElementFromTemplate,
   createHook,

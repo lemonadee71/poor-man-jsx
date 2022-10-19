@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { apply, html, render, createHook, watch, unwatch } from '../src';
+import { applyProps, html, render, createHook, watch, unwatch } from '../src';
 
 describe('hook', () => {
   afterEach(() => {
@@ -62,10 +62,10 @@ describe('hook', () => {
     );
   });
 
-  it('can be added using `apply`', () => {
+  it('can be added using `applyProps`', () => {
     const hook = createHook('test');
     const div = document.createElement('div');
-    apply(div, { textContent: hook.$value });
+    applyProps(div, { textContent: hook.$value });
 
     document.body.append(div);
     hook.value = 'another test';

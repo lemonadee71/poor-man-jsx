@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import PoorManJSX, { apply, html, render } from '../src';
+import PoorManJSX, { applyProps, html, render } from '../src';
 
 describe('runBeforeCreate', () => {
   afterEach(() => {
@@ -67,7 +67,7 @@ describe('addDirective', () => {
         <div :autosize data-testid="autosize2"></div>`,
       'body'
     );
-    apply(screen.getByTestId('autosize1'), { autosize: true });
+    applyProps(screen.getByTestId('autosize1'), { autosize: true });
 
     runAssertions(1);
     runAssertions(2);
@@ -84,7 +84,7 @@ describe('addDirective', () => {
         <div :autosize data-testid="autosize2"></div>`,
       'body'
     );
-    apply(screen.getByTestId('autosize1'), { autosize: true });
+    applyProps(screen.getByTestId('autosize1'), { autosize: true });
 
     runAssertions(1);
     runAssertions(2);

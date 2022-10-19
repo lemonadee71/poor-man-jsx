@@ -172,7 +172,7 @@ const resolveAttributes = (root, values) => {
           if (isArray(value)) {
             for (const item of value) {
               if (isPlainObject(item)) {
-                hydrateFromObject(element, item);
+                applyProps(element, item);
               } else if (isString(item)) {
                 const [n, v] = item.split('=');
                 element.setAttribute(n, (v || '').replace(WRAPPING_QUOTES, ''));
@@ -183,7 +183,7 @@ const resolveAttributes = (root, values) => {
               }
             }
           } else if (isPlainObject(value)) {
-            hydrateFromObject(element, value);
+            applyProps(element, value);
           } else {
             throw new Error('You can only pass plain objects or arrays');
           }
@@ -258,7 +258,7 @@ const resolveValue = (value, options) => {
  * @param {Object} changes - changes to be made
  * @returns {HTMLElement}
  */
-const hydrateFromObject = (element, changes) => {
+const applyProps = (element, changes) => {
   for (const [rawKey, value] of Object.entries(changes)) {
     const [type, key] = getTypeOfKey(rawKey);
 
@@ -275,6 +275,6 @@ export {
   createElementFromTemplate,
   html,
   render,
-  hydrateFromObject as apply,
+  applyProps,
   processDirectives,
 };
