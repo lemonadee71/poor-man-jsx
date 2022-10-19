@@ -169,7 +169,7 @@ export const modifyElement = (target, type, data, context = document) => {
       const allNodes = getChildNodes(element);
       const [start, end] = data.key
         ? getBoundary(data.key, allNodes)
-        : [0, allNodes.length - 1];
+        : [0, allNodes.length];
       // only touch nodes between the target markers
       const targetNodes = allNodes.slice(start, end);
 
@@ -188,7 +188,14 @@ export const modifyElement = (target, type, data, context = document) => {
 
         const fragment = document.createDocumentFragment();
         fragment.append(...data.value);
-        element.insertBefore(fragment, allNodes[end]);
+
+        // this check is for if there's no data-key
+        // since end === nodes.length
+        if (end >= allNodes.length) {
+          element.append(fragment);
+        } else {
+          element.insertBefore(fragment, allNodes[end]);
+        }
 
         // since all children are rerendered
         // we look for the 'equal' node instead and restore focus to it
