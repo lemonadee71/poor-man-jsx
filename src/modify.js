@@ -7,7 +7,6 @@ import {
   isArray,
   isElement,
   isFunction,
-  isNullOrUndefined,
   isString,
   isSVG,
   isTruthy,
@@ -173,7 +172,7 @@ export const modifyElement = (target, type, data, context = document) => {
       // only touch nodes between the target markers
       const targetNodes = allNodes.slice(start, end);
 
-      if (isNullOrUndefined(element.getAttribute('no-diff'))) {
+      if (element.__meta?.diff) {
         const newChildren = data.value.filter(isElement);
         const currentNodes = rearrangeNodes(element, targetNodes, data.value);
 
@@ -208,6 +207,9 @@ export const modifyElement = (target, type, data, context = document) => {
 
       break;
     }
+    case 'diff':
+      setMetadata(element, 'diff', true);
+      break;
     case 'key': {
       const key = data.value.startsWith('$')
         ? element.getAttribute(data.value.replace('$', ''))

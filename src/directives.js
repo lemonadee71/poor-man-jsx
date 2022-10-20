@@ -33,7 +33,7 @@ const attrNameDirectives = [
   (key) => key === ':ref' && 'ref',
   (key) => key === ':show' && 'show',
   (key) => key === ':visible' && 'visible',
-  (key) => key === ':if' && 'if',
+  (key) => key === ':diff' && 'diff',
 ];
 
 // Reserved object keys
@@ -47,6 +47,7 @@ const objKeyDirectives = [
   (key) => key === '_ref' && 'ref',
   (key) => key === '_show' && 'show',
   (key) => key === '_visible' && 'visible',
+  (key) => key === '_diff' && 'diff',
 ];
 
 export const getAttrDirectives = () => [...attrNameDirectives];
