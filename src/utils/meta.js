@@ -6,7 +6,7 @@ import { isElement, isTextNode } from './is';
  * @param {Node} node - the target node
  * @param {string} key - the prop to be set; can be nested
  * @param {any} value - the value
- * @returns {Object}
+ * @returns {Node}
  */
 export const setMetadata = (node, key, value) => {
   if (!node.__meta) node.__meta = {};
@@ -19,7 +19,7 @@ export const setMetadata = (node, key, value) => {
   for (const k of path) prev = prev[k];
   prev[_key] = value;
 
-  return node.__meta;
+  return node;
 };
 
 /**
