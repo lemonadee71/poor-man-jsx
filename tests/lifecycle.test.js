@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/extend-expect';
 import { html, render } from '../src';
+import { defer, setup, teardown } from './utils';
 
 /**
  * Notes:
@@ -15,17 +16,15 @@ describe('lifecycle methods', () => {
   const onMount = jest.fn((e) => e);
   const onUnmount = jest.fn((e) => e);
 
-  afterEach(() => {
-    document.body.innerHTML = '';
-    jest.clearAllMocks();
-  });
+  beforeEach(setup);
+  afterEach(teardown);
 
   describe('@create', () => {
     const div = html`<div onCreate=${onCreate}>Hello, World!</div>`;
 
     it('runs on element creation', () => {
       render(div);
-      expect(onCreate).toHaveBeenCalledTimes(1);
+      expect(onCreate).toBeCalledTimes(1);
     });
 
     it('runs only once', () => {
@@ -33,7 +32,7 @@ describe('lifecycle methods', () => {
       el.dispatchEvent(new Event('@create'));
       el.dispatchEvent(new Event('@create'));
 
-      expect(onCreate).toHaveBeenCalledTimes(1);
+      expect(onCreate).toBeCalledTimes(1);
     });
   });
 
@@ -42,15 +41,7 @@ describe('lifecycle methods', () => {
 
     it('runs when element is destroyed', (done) => {
       render(div, 'body').firstElementChild.remove();
-
-      setTimeout(() => {
-        try {
-          expect(onDestroy).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onDestroy).toBeCalledTimes(1), done);
     });
 
     it('does not run when node is moved', (done) => {
@@ -59,14 +50,7 @@ describe('lifecycle methods', () => {
       document.body.append(extraEl);
       extraEl.append(el);
 
-      setTimeout(() => {
-        try {
-          expect(onDestroy).not.toHaveBeenCalled();
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onDestroy).not.toBeCalled(), done);
     });
   });
 
@@ -75,31 +59,15 @@ describe('lifecycle methods', () => {
 
     it('runs on mount', (done) => {
       render(div, 'body');
-
-      setTimeout(() => {
-        try {
-          expect(onLoad).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onLoad).toBeCalledTimes(1), done);
     });
 
     it('does not run when node is moved', (done) => {
       const el = render(div, 'body').firstElementChild;
-      render(html`<div id="test"></div>`, 'body');
+      render(html`<div id="target"></div>`, 'body');
 
-      setTimeout(() => document.getElementById('test').append(el), 0);
-
-      setTimeout(() => {
-        try {
-          expect(onLoad).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => document.getElementById('target').append(el));
+      defer(() => expect(onLoad).toBeCalledTimes(1), done);
     });
   });
 
@@ -108,31 +76,15 @@ describe('lifecycle methods', () => {
 
     it('runs on mount', (done) => {
       render(div, 'body');
-
-      setTimeout(() => {
-        try {
-          expect(onMount).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onMount).toBeCalledTimes(1), done);
     });
 
     it('runs when node is moved', (done) => {
       const el = render(div, 'body').firstElementChild;
-      render(html`<div id="test"></div>`, 'body');
+      render(html`<div id="target"></div>`, 'body');
 
-      setTimeout(() => document.getElementById('test').append(el), 0);
-
-      setTimeout(() => {
-        try {
-          expect(onMount).toHaveBeenCalledTimes(2);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => document.getElementById('target').append(el));
+      defer(() => expect(onMount).toBeCalledTimes(2), done);
     });
   });
 
@@ -141,15 +93,7 @@ describe('lifecycle methods', () => {
 
     it('runs when element is destroyed', (done) => {
       render(div, 'body').firstElementChild.remove();
-
-      setTimeout(() => {
-        try {
-          expect(onUnmount).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onUnmount).toBeCalledTimes(1), done);
     });
 
     it('runs when node is moved', (done) => {
@@ -158,21 +102,14 @@ describe('lifecycle methods', () => {
       document.body.append(extraEl);
       extraEl.append(el);
 
-      setTimeout(() => {
-        try {
-          expect(onUnmount).toHaveBeenCalledTimes(1);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }, 0);
+      defer(() => expect(onUnmount).toBeCalledTimes(1), done);
     });
   });
 
   it('run recursively', () => {
     render(html`<div><div onCreate=${onCreate}>Hello, World!</div></div>`);
 
-    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onCreate).toBeCalledTimes(1);
   });
 
   it('pass the element as e.target to the callback', () => {
@@ -192,14 +129,9 @@ describe('lifecycle methods', () => {
     render(div, 'body');
     document.body.innerHTML = '';
 
-    setTimeout(() => {
-      try {
-        expect(mock).toHaveBeenCalledTimes(1);
-        expect(onDestroy).toHaveBeenCalledTimes(1);
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
+    defer(() => {
+      expect(mock).toBeCalledTimes(1);
+      expect(onDestroy).toBeCalledTimes(1);
+    }, done);
   });
 });

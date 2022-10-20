@@ -1,8 +1,15 @@
 import '@testing-library/jest-dom/extend-expect';
 import { screen } from '@testing-library/dom';
-import { html, render, createHook } from '../src';
+import { html, createHook } from '../src';
 import { getChildren } from '../src/utils/dom';
 import { getKey } from '../src/utils/meta';
+import {
+  defer,
+  getTarget as target,
+  renderToBody as render,
+  setup,
+  teardown,
+} from './utils';
 
 const getIds = (list) => list.map((item) => item.id).join();
 
@@ -16,7 +23,13 @@ const getContent = (parent) =>
     .join();
 
 const ListItem = (data, props = {}) => html`
-  <li :key="${data.id}" ${props}>${data.text}</li>
+  <li :key="${data.id}" data-testid="${data.id}" ${props}>${data.text}</li>
+`;
+
+const List = (children) => html`
+  <ul :diff data-target>
+    ${children}
+  </ul>
 `;
 
 // TODO: Add more test cases that involves texts
@@ -31,78 +44,17 @@ describe('diffing', () => {
     { id: '3', text: 'sleep' },
   ];
 
-  beforeEach(() => {
-    // to make sure mocks are cleared before each test
-    // since mutation observer batches changes
-    // and might trigger lifecycle even if the test was finished
-    jest.clearAllMocks();
-  });
+  beforeEach(setup);
+  afterEach(teardown);
 
-  afterEach(() => {
-    document.body.innerHTML = '';
-    jest.clearAllMocks();
-  });
-
-  it('reflect changes in order', (done) => {
+  it('is not the default behavior', (done) => {
     const hook = createHook({ list: defaultData });
     render(
-      html`<ul data-testid="shuffled">
-        ${hook.$list.map((data) => ListItem(data))}
-      </ul>`,
-      'body'
-    );
-
-    hook.list = [
-      { id: '2', text: 'shower' },
-      { id: '1', text: 'eat' },
-      { id: '3', text: 'sleep' },
-    ];
-
-    setTimeout(() => {
-      try {
-        expect(getKeys(screen.getByTestId('shuffled'))).toBe(getIds(hook.list));
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
-  });
-
-  it('adds/removes items', (done) => {
-    const hook = createHook({ list: defaultData });
-    render(
-      html`<ul data-testid="added">
-        ${hook.$list.map((data) => ListItem(data))}
-      </ul>`,
-      'body'
-    );
-
-    hook.list = [
-      { id: '4', text: 'exercise' },
-      { id: '2', text: 'shower' },
-      { id: '3', text: 'sleep' },
-      { id: '5', text: 'read' },
-    ];
-
-    setTimeout(() => {
-      try {
-        expect(getKeys(screen.getByTestId('added'))).toBe(getIds(hook.list));
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
-  });
-
-  it('only updates what was changed', (done) => {
-    const hook = createHook({ list: defaultData });
-    render(
-      html`<div data-testid="update">
+      html`<ul data-target>
         ${hook.$list.map((data) =>
           ListItem(data, { onDestroy, onMount, onUnmount })
         )}
-      </div>`,
-      'body'
+      </ul>`
     );
 
     hook.list = [
@@ -111,105 +63,147 @@ describe('diffing', () => {
       { id: '1', text: 'eating' },
     ];
 
-    setTimeout(() => {
-      try {
-        expect(onDestroy).toBeCalledTimes(1);
-        expect(onMount).toBeCalledTimes(5); // 3 (first mount) + 2 (move)
-        expect(onUnmount).toBeCalledTimes(2);
-        expect(getKeys(screen.getByTestId('update'))).toBe(getIds(hook.list));
-        expect(getContent(screen.getByTestId('update'))).toBe(
-          getText(hook.list)
-        );
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
+    defer(() => {
+      expect(onDestroy).toBeCalledTimes(3);
+      expect(onMount).toBeCalledTimes(6);
+      expect(onUnmount).toBeCalledTimes(3);
+      expect(getKeys(target())).toBe(getIds(hook.list));
+      expect(getContent(target())).toBe(getText(hook.list));
+    }, done);
   });
 
-  it('updates non-keyed nodes', (done) => {
+  it('reflect changes in order', () => {
+    const hook = createHook({ list: defaultData });
+    render(List(hook.$list.map((data) => ListItem(data))));
+
+    hook.list = [
+      { id: '2', text: 'shower' },
+      { id: '1', text: 'eat' },
+      { id: '3', text: 'sleep' },
+    ];
+
+    expect(getKeys(target())).toBe(getIds(hook.list));
+  });
+
+  it('adds/removes items', () => {
+    const hook = createHook({ list: defaultData });
+    render(List(hook.$list.map((data) => ListItem(data))));
+
+    hook.list = [
+      { id: '4', text: 'exercise' },
+      { id: '2', text: 'shower' },
+      { id: '3', text: 'sleep' },
+      { id: '5', text: 'read' },
+    ];
+
+    expect(getKeys(target())).toBe(getIds(hook.list));
+  });
+
+  it('only updates what was changed', (done) => {
     const hook = createHook({ list: defaultData });
     render(
-      html`<ul data-testid="shuffled">
+      List(
+        hook.$list.map((data) =>
+          ListItem(data, { onDestroy, onMount, onUnmount })
+        )
+      )
+    );
+
+    hook.list = [
+      { id: '2', text: 'shower' },
+      { id: '4', text: 'exercise' },
+      { id: '1', text: 'eating' },
+    ];
+
+    defer(() => {
+      expect(onDestroy).toBeCalledTimes(1);
+      expect(onMount).toBeCalledTimes(5); // 3 (first mount) + 2 (move)
+      expect(onUnmount).toBeCalledTimes(2);
+      expect(getKeys(target())).toBe(getIds(hook.list));
+      expect(getContent(target())).toBe(getText(hook.list));
+    }, done);
+  });
+
+  it('updates non-keyed nodes', () => {
+    const hook = createHook({ list: defaultData });
+    render(
+      html`<ul :diff data-target>
         ${hook.$list.map((data) => html`<li>${data.text}</li>`)}
-      </ul>`,
-      'body'
+      </ul>`
     );
 
     hook.list = [{ text: 'shower' }, { text: 'eat' }, { text: 'sleep' }];
 
-    setTimeout(() => {
-      try {
-        expect(getContent(screen.getByTestId('shuffled'))).toBe(
-          getText(hook.list)
-        );
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
+    expect(getContent(target())).toBe(getText(hook.list));
+  });
+
+  it('handles text only content', () => {
+    const hook = createHook({ list: defaultData.map((item) => item.text) });
+    render(html`<div data-target>${hook.$list}</div>`);
+
+    hook.list = ['shower', 'eat', 'sleep'];
+
+    expect(target()).toHaveTextContent(hook.list.join(''));
   });
 
   it('applied recursively', (done) => {
-    const tags = new Array(3).fill().map((_, i) => `Tag ${i + 1}`);
-    const hook = createHook({ list: [{ id: '1', text: 'eat', tags }] });
-
-    const content = (data) => html`
-      <ul data-testid="nested-list">
-        ${data.tags.map(
-          (item) =>
-            html`<li :key="${item}" onMount=${onMount} onUnmount=${onUnmount}>
-              ${item}
-            </li>`
-        )}
-      </ul>
-      <p>${data.text}</p>
-    `;
+    const tasklists = [
+      { name: 'today', items: defaultData },
+      { name: 'week', items: [...defaultData].reverse() },
+    ];
+    const project = createHook({ lists: tasklists });
 
     render(
-      html`<ul>
-        ${hook.$list.map((data) =>
-          ListItem(data, {
-            onMount,
-            onUnmount,
-            children: content(data),
-          })
-        )}
-      </ul>`,
-      'body'
+      html`
+        <main :diff>
+          ${project.$lists.map(
+            (list) => html`
+              <section>
+                <h2>${list.name}</h2>
+                <ul :key="$data-testid" data-testid="${list.name}">
+                  ${list.items.map((task) =>
+                    ListItem(task, {
+                      'data-testid': `${list.name}_${task.id}`,
+                      onMount,
+                      onUnmount,
+                    })
+                  )}
+                </ul>
+              </section>
+            `
+          )}
+        </main>
+      `
     );
 
-    setTimeout(() => {
-      hook.list = [{ id: '1', text: 'eating', tags: tags.slice(1) }];
-    });
+    tasklists[1].items = JSON.parse(JSON.stringify(defaultData));
+    tasklists[1].items[0].text = 'eating';
+    project.lists = tasklists;
 
-    setTimeout(() => {
-      try {
-        expect(getContent(screen.getByTestId('nested-list'))).toBe(
-          hook.list[0].tags.join()
-        );
-        expect(onMount).toBeCalledTimes(4);
-        expect(onUnmount).toBeCalledTimes(1);
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
+    defer(() => {
+      expect(getKeys(screen.getByTestId('week'))).toBe('1,2,3');
+      expect(screen.getByTestId('week_1')).toHaveTextContent('eating');
+      expect(onMount).toBeCalledTimes(6 + 2);
+      expect(onUnmount).toBeCalledTimes(2);
+    }, done);
   });
 
   it('restore focus to previous active element', () => {
     const hook = createHook({ list: defaultData });
     render(
-      html`<div data-testid="focus">
-        ${hook.$list.map(
-          (data) =>
-            html`<button id=${data.id} :key=${data.id}>${data.text}</button>`
-        )}
-      </div>`,
-      'body'
+      html`
+        <div :diff>
+          ${hook.$list.map(
+            (data) =>
+              html`<button id="btn-${data.id}" :key=${data.id}>
+                ${data.text}
+              </button>`
+          )}
+        </div>
+      `
     );
 
-    document.getElementById('2').focus();
+    document.getElementById('btn-2').focus();
     const previousActiveElement = document.activeElement;
 
     hook.list = [
@@ -221,23 +215,22 @@ describe('diffing', () => {
     expect(previousActiveElement).toHaveFocus();
   });
 
-  it(':key - value can be other attribute using $attr syntax', () => {
+  it('key value can be another attribute with `:key="$attr"` syntax', () => {
     const hook = createHook({ list: defaultData });
     render(
-      html`<ul data-testid="keystring">
-        ${hook.$list.map(
+      List(
+        hook.$list.map(
           (data) => html` <li :key="$id" id=${data.id}>${data.text}</li> `
-        )}
-      </ul>`,
-      'body'
+        )
+      )
     );
 
     hook.list = [...defaultData].reverse();
 
-    expect(getKeys(screen.getByTestId('keystring'))).toBe(getIds(hook.list));
+    expect(getKeys(target())).toBe(getIds(hook.list));
   });
 
-  it(':skip="attrName" - does not update ignored attributes', () => {
+  it(':skip="attr" - does not update ignored attributes', () => {
     const hook = createHook(1);
     const child = (_, i) => {
       const current = createHook(Math.random());
@@ -254,9 +247,9 @@ describe('diffing', () => {
       `;
     };
     const component = html`
-      <div>${hook.$value((n) => new Array(n).fill().map(child))}</div>
+      <div :diff>${hook.$value((n) => new Array(n).fill().map(child))}</div>
     `;
-    render(component, 'body');
+    render(component);
 
     const el = screen.getByTestId('test-child-0');
     const proxyId = el.dataset.proxyid;
@@ -269,31 +262,26 @@ describe('diffing', () => {
     expect(el.textContent).not.toBe(dataId);
   });
 
-  it(':skip="attrName" - does not remove ignored attributes', () => {
+  it(':skip="attr" - does not remove ignored attributes', () => {
     const hook = createHook(true);
 
     const child = (bool) => html`
-      <p
-        :key="test"
-        :skip="data-state"
-        data-testid="foo"
-        toggle:data-state=${bool}
-      >
+      <p :key="test" :skip="data-state" data-target toggle:data-state=${bool}>
         Test
       </p>
     `;
-    const component = html`<div>${hook.$value(child)}</div>`;
-    render(component, 'body');
+    const component = html`<div :diff>${hook.$value(child)}</div>`;
+    render(component);
 
     hook.value = false;
 
-    expect(screen.getByTestId('foo')).toHaveAttribute('data-state');
+    expect(target()).toHaveAttribute('data-state');
   });
 
   it(':skip | :skip="all" - will skip update of the element', () => {
     const hook = createHook({ list: defaultData });
     render(
-      html`<ul>
+      html`<ul :diff>
         ${hook.$list.map((data) =>
           ListItem(
             data,
@@ -306,53 +294,17 @@ describe('diffing', () => {
               : {}
           )
         )}
-      </ul>`,
-      'body'
+      </ul>`
     );
     const rand = screen.getByTestId('skip').dataset.num;
 
     hook.list = [
-      { id: '1', text: 'read' }, // eat --> read
+      { id: '1', text: 'read' }, // read <-- eat
       { id: '2', text: 'shower' },
       { id: '3', text: 'sleep' },
     ];
 
     expect(screen.getByTestId('skip')).toHaveTextContent('eat');
     expect(screen.getByTestId('skip')).toHaveAttribute('data-num', rand);
-  });
-
-  it('can be opt out of with `no-diff` attribute on parent', (done) => {
-    const hook = createHook({ list: defaultData });
-    render(
-      html`<div no-diff data-testid="no-diff">
-        ${hook.$list.map((data) =>
-          ListItem(data, { onDestroy, onMount, onUnmount })
-        )}
-      </div>`,
-      'body'
-    );
-
-    hook.list = [
-      { id: '2', text: 'shower' },
-      { id: '4', text: 'exercise' },
-      { id: '1', text: 'eating' },
-    ];
-
-    setTimeout(() => {
-      try {
-        expect(onDestroy).toBeCalledTimes(3);
-        expect(onMount).toBeCalledTimes(6);
-        expect(onUnmount).toBeCalledTimes(3);
-        expect(getKeys(screen.getByTestId('no-diff'))).toBe(
-          hook.list.map((item) => item.id).join()
-        );
-        expect(getContent(screen.getByTestId('no-diff'))).toBe(
-          hook.list.map((item) => item.text).join()
-        );
-        done();
-      } catch (error) {
-        done(error);
-      }
-    }, 0);
   });
 });
