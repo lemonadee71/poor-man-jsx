@@ -213,12 +213,15 @@ const addTrap = (hook, callback) => {
 const normalizeChildren = (items) => {
   const normalized = [items]
     .flat()
-    .filter((item) => item !== true && item !== false)
-    .filter((item) => !isNullOrUndefined(item))
-    .map((item) =>
-      isString(item) || isNumber(item) ? document.createTextNode(item) : item
+    .filter(
+      (item) => item !== true && item !== false && !isNullOrUndefined(item)
     )
-    .map((item) => (isTemplate(item) ? createElementFromTemplate(item) : item))
+    .map((item) => {
+      if (isString(item) || isNumber(item))
+        return document.createTextNode(item);
+      if (isTemplate(item)) return createElementFromTemplate(item);
+      return item;
+    })
     .flatMap((item) => (isFragment(item) ? getChildNodes(item) : item));
 
   addKeyRecursive(normalized);
