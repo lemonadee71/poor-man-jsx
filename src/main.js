@@ -126,32 +126,18 @@ const processDirectives = (root, context) => {
 
 const resolveBody = (root, values) => {
   for (const node of getPlaceholders(root)) {
-    const parent = node.parentElement;
     const text = node.textContent.trim();
-
-    let value = values[getPlaceholderId(text)];
-    let normalize = normalizeChildren;
+    const value = values[getPlaceholderId(text)];
+    const options = { element: node.parentElement, type: 'children' };
 
     if (isHook(value)) {
       const [head, tail, marker] = createMarkers();
-      normalize = (newValue) =>
-        normalizeChildren(newValue).map((item) => {
-          setMetadata(item, 'ignore', true);
-          return item;
-        });
-
-      const hook = addTrap(value, normalize);
-
-      value = registerIfHook(hook, {
-        element: parent,
-        type: 'children',
-        target: marker,
-      });
-
-      value = [head, value, tail];
+      options.target = marker;
+      node.before(head);
+      node.after(tail);
     }
 
-    node.replaceWith(...normalize(value));
+    node.replaceWith(...resolveValue(value, options));
   }
 };
 
@@ -245,7 +231,12 @@ const resolveValue = (value, options) => {
 
   if (options.type === 'children') {
     final = isHook(final)
-      ? addTrap(final, normalizeChildren)
+      ? addTrap(
+          final,
+          compose(normalizeChildren, (items) =>
+            items.map((item) => setMetadata(item, 'ignore', true))
+          )
+        )
       : normalizeChildren(final);
   }
 
